@@ -17,7 +17,7 @@ permissions:
   contents: write
 
 jobs:
-  prepare-deps:
+  prepare-deps-linux:
     runs-on: ubuntu-22.04
     outputs:
       cache-key: ${{ steps.cache-key.outputs.key }}
@@ -60,7 +60,7 @@ jobs:
 
   build-linux:
     runs-on: ubuntu-22.04
-    needs: prepare-deps
+    needs: prepare-deps-linux
     outputs:
       basename: ${{ steps.artifact.outputs.basename }}
       release-tag: ${{ steps.artifact.outputs.release_tag }}
@@ -84,7 +84,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: .deps
-          key: ${{ needs.prepare-deps.outputs.cache-key }}
+          key: ${{ needs.prepare-deps-linux.outputs.cache-key }}
           fail-on-cache-miss: true
 
       - name: Build extension
@@ -133,8 +133,48 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  prepare-deps-windows:
+    runs-on: windows-2022
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Resolve dependency cache key
+        id: cache-key
+        shell: bash
+        run: |
+          echo "key=windows-deps-${{ runner.os }}-${{ hashFiles('scripts/fetch-windows-deps.ps1', 'scripts/build-windows-l4d2.ps1', 'Makefile', 'configure.py', 'AMBuildScript', 'AMBuilder', 'PackageScript') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore dependency cache
+        id: deps-cache-restore
+        uses: actions/cache/restore@v5
+        with:
+          path: .deps
+          key: ${{ steps.cache-key.outputs.key }}
+
+      - name: Fetch Windows build dependencies
+        if: steps.deps-cache-restore.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: make deps-windows
+
+      - name: Save dependency cache
+        if: steps.deps-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: .deps
+          key: ${{ steps.cache-key.outputs.key }}
+
   build-windows:
     runs-on: windows-2022
+    needs: prepare-deps-windows
     outputs:
       basename: ${{ steps.artifact.outputs.basename }}
     env:
@@ -149,9 +189,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch Windows build dependencies
-        shell: pwsh
-        run: make deps-windows
+      - name: Restore dependency cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .deps
+          key: ${{ needs.prepare-deps-windows.outputs.cache-key }}
+          fail-on-cache-miss: true
 
       - name: Build Windows extension
         shell: pwsh

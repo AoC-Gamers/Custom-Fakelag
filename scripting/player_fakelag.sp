@@ -8,6 +8,8 @@
 #include <left4dhooks_stocks>
 
 Handle g_FakeLagBalanceVote = null;
+GlobalForward g_FwdOnSetPlayerLatency = null;
+GlobalForward g_FwdOnPlayerLatencyChanged = null;
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int errMax)
 {
@@ -31,9 +33,13 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
+	g_FwdOnSetPlayerLatency = new GlobalForward("PlayerFakelag_OnSetPlayerLatency", ET_Hook, Param_Cell, Param_Float, Param_FloatByRef, Param_Cell);
+	g_FwdOnPlayerLatencyChanged = new GlobalForward("PlayerFakelag_OnPlayerLatencyChanged", ET_Ignore, Param_Cell, Param_Float, Param_Float, Param_Cell);
+
 	LoadTranslations("custom_fakelag_player.phrases");
 
 	RegAdminCmd("sm_fakelag", FakeLagCmd, ADMFLAG_CONFIG, "Set fake lag for a player; use 0 to clear");
+	RegAdminCmd("sm_fakelag_status", StatusLagCmd, ADMFLAG_CONFIG, "Show fake lag status for a player");
 	RegAdminCmd("sm_fakelag_balance", BalanceLagCmd, ADMFLAG_CONFIG, "Balance fake lag across survivors and infected using average ping");
 	RegAdminCmd("sm_fakelag_balance_preview", PreviewBalanceLagCmd, ADMFLAG_CONFIG, "Preview fake lag balance across survivors and infected using average ping");
 	RegAdminCmd("sm_fakelag_clear", ClearLagCmd, ADMFLAG_CONFIG, "Clear fake lag for a player");
@@ -41,6 +47,36 @@ public void OnPluginStart()
 	RegAdminCmd("sm_fakelag_list", PrintLagCmd, ADMFLAG_CONFIG, "Print active fake lag entries");
 	
 	RegConsoleCmd("sm_fakelag_balance_vote", BalanceLagVoteCmd, "Start a fake lag balance vote");
+}
+
+stock void FakelagReplyPlayerStatus(int client, int target)
+{
+	if (!CFakeLag_IsClientSupported(target)) {
+		CReplyToCommandEx(client, target, "{olive}[Fakelag]{default} %N is not a valid human target.", target);
+		return;
+	}
+
+	float averagePing = FakelagGetClientAveragePingMs(target);
+	float fakeLag = CFakeLag_GetPlayerLatency(target);
+	bool isLagged = CFakeLag_HasPlayerLatency(target);
+
+	if (!isLagged) {
+		CReplyToCommandEx(
+			client,
+			target,
+			"{olive}[Fakelag]{default} %N avg ping: %.1fms | fake lag: disabled",
+			target,
+			averagePing);
+		return;
+	}
+
+	CReplyToCommandEx(
+		client,
+		target,
+		"{olive}[Fakelag]{default} %N avg ping: %.1fms | fake lag: %.1fms",
+		target,
+		averagePing,
+		fakeLag);
 }
 
 stock bool FakelagIsSupportedBalanceTeam(L4DTeam team)
@@ -419,6 +455,30 @@ public Action FakeLagCmd(int client, int args)
 	return Plugin_Handled;
 }
 
+public Action StatusLagCmd(int client, int args)
+{
+	if (!FakelagCommandRequiresClient(client)) {
+		return Plugin_Handled;
+	}
+
+	if (args < 1) {
+		CReplyToCommand(client, "{olive}[Fakelag]{default} Usage: sm_fakelag_status <target>");
+		return Plugin_Handled;
+	}
+
+	char targetStr[256];
+	GetCmdArg(1, targetStr, sizeof(targetStr));
+
+	int target = FindTarget(client, targetStr, true);
+	if (target < 0) {
+		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagTargetNotFound", targetStr);
+		return Plugin_Handled;
+	}
+
+	FakelagReplyPlayerStatus(client, target);
+	return Plugin_Handled;
+}
+
 public Action ClearLagCmd(int client, int args)
 {
 	if (!FakelagCommandRequiresClient(client)) {
@@ -574,4 +634,28 @@ public int Native_StartBalanceVote(Handle plugin, int numParams)
 public int Native_IsBalanceVoteInProgress(Handle plugin, int numParams)
 {
 	return g_FakeLagBalanceVote != null;
+}
+
+public Action CFakeLag_OnSetPlayerLatency(int client, float oldLag, float &newLag, CFakeLagChangeReason reason)
+{
+	Action result = Plugin_Continue;
+
+	Call_StartForward(g_FwdOnSetPlayerLatency);
+	Call_PushCell(client);
+	Call_PushFloat(oldLag);
+	Call_PushFloatRef(newLag);
+	Call_PushCell(reason);
+	Call_Finish(result);
+
+	return result;
+}
+
+public void CFakeLag_OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason)
+{
+	Call_StartForward(g_FwdOnPlayerLatencyChanged);
+	Call_PushCell(client);
+	Call_PushFloat(oldLag);
+	Call_PushFloat(newLag);
+	Call_PushCell(reason);
+	Call_Finish();
 }

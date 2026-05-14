@@ -33,6 +33,8 @@ make build-windows
 - `AMBuildScript`: configuracion general del build
 - `extension/AMBuilder`: lista de fuentes de la extension
 - `extension/`: codigo nativo C++, headers y librerias auxiliares
+- `extension/latency/`: estado de fake lag por jugador, validacion y bridge de API
+- `extension/network/`: colas, politica de despacho y estructuras de paquetes
 - `PackageScript`: define que entra al paquete final
 - `scripts/`: bootstrap y builds por plataforma
 - `gamedata/`: archivos `.games.txt`

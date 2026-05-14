@@ -191,6 +191,8 @@ Estructura nativa
 La parte nativa del proyecto sigue ahora el mismo patron general de `SteamWorks`:
 
 - `extension/`: fuentes C++, headers, `AMBuilder` y librerias auxiliares
+- `extension/latency/`: reglas y estado de fake lag por jugador
+- `extension/network/`: manejo de paquetes, colas y politica de despacho
 - `gamedata/`: firmas y offsets
 - `scripting/`: include SourcePawn y plugin de ejemplo
 - `scripts/`: bootstrap de dependencias y entrypoints de build

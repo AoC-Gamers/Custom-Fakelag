@@ -4,23 +4,24 @@
 #include <mathlib.h>
 #include "smsdk_ext.h"
 #include "cdetour/detours.h"
-#include "PlayerLagManager.h"
+#include "latency/PlayerLatencyApiBridge.h"
+#include "latency/PlayerLatencyService.h"
 
-enum class CFakeLagChangeReason {
-	Manual = 0,
-	Clear,
-	Disconnect
-};
-
-class CustomFakelag : public SDKExtension, public IClientListener
+class CustomFakelag : public SDKExtension,
+					  public IClientListener,
+					  public IPlayerLagManagerEvents,
+					  public IClientRegistry
 {
 private:
+	EngineClientNetAdrResolver* m_NetAdrResolver = nullptr;
 	PlayerLagManager* m_LagManager = nullptr;
-	IForward* m_OnSetPlayerLatency = nullptr;
-	IForward* m_OnPlayerLatencyChanged = nullptr;
+	PlayerLatencyService* m_PlayerLatencyService = nullptr;
+	PlayerLatencyApiBridge* m_PlayerLatencyApiBridge = nullptr;
 
-	bool ApplyPlayerLatencyChange(int client, float lagTime, CFakeLagChangeReason reason, bool allowPreForward = true);
-	void NotifyPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason);
+	void OnClientNetAdrResolutionFailed(int client) override;
+	void OnPlayerLagChanged(int client, const dumb_netadr_t& netadr, float lagTime) override;
+	ClientEligibility GetClientEligibility(int client, IGamePlayer** player = nullptr) const override;
+	int GetMaxClients() const override;
 
 public:
 	void SetPlayerLatency(int client, float lagTime);
@@ -29,6 +30,7 @@ public:
 	void ClearPlayerLatency(int client);
 	void ClearAllPlayerLatencies();
 	bool IsClientSupported(int client) const;
+	bool ThrowIfUnsupportedClient(IPluginContext* context, int client) const;
 	int GetLaggedClientCount() const;
 
 public:
