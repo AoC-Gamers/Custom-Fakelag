@@ -4,7 +4,7 @@
 #include <eiface.h>
 #include <inetchannel.h>
 #include <amtl/am-hashmap.h>
-#include "net_structures.h"
+#include "../network/net_structures.h"
 
 struct NetAdrHashPolicy_s {
 	static uint32_t hash(const dumb_netadr_t& value)
@@ -29,17 +29,47 @@ struct NetAdrHashPolicy_s {
 	}
 };
 
+class IClientNetAdrResolver
+{
+public:
+	virtual ~IClientNetAdrResolver() = default;
+	virtual bool TryResolveClientNetAdr(int client, dumb_netadr_t* netadr) const = 0;
+};
+
+class IPlayerLagManagerEvents
+{
+public:
+	virtual ~IPlayerLagManagerEvents() = default;
+	virtual void OnClientNetAdrResolutionFailed(int client) = 0;
+	virtual void OnPlayerLagChanged(int client, const dumb_netadr_t& netadr, float lagTime) = 0;
+};
+
+class EngineClientNetAdrResolver final : public IClientNetAdrResolver
+{
+private:
+	IVEngineServer* m_Engine;
+
+public:
+	explicit EngineClientNetAdrResolver(IVEngineServer* engine)
+		: m_Engine(engine) {}
+
+	bool TryResolveClientNetAdr(int client, dumb_netadr_t* netadr) const override;
+};
+
 class PlayerLagManager
 {
 private:
-	IVEngineServer* m_pEngine;
+	const IClientNetAdrResolver* m_NetAdrResolver;
+	IPlayerLagManagerEvents* m_Events;
 	ke::HashMap<dumb_netadr_t, float, NetAdrHashPolicy_s> m_LagTimes;
 
 	bool TryGetClientNetAdr(int client, dumb_netadr_t* netadr) const;
 	void RemoveLagEntry(const dumb_netadr_t& netadr);
 
 public:
-	explicit PlayerLagManager(IVEngineServer* engine) : m_pEngine(engine) {
+	explicit PlayerLagManager(const IClientNetAdrResolver* netAdrResolver, IPlayerLagManagerEvents* events = nullptr)
+		: m_NetAdrResolver(netAdrResolver),
+		  m_Events(events) {
 		m_LagTimes.init(32);
 	}
 

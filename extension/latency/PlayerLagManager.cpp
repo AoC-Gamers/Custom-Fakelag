@@ -1,13 +1,11 @@
 #include "PlayerLagManager.h"
-#include "extension.h"
-
-bool PlayerLagManager::TryGetClientNetAdr(int client, dumb_netadr_t* netadr) const
+bool EngineClientNetAdrResolver::TryResolveClientNetAdr(int client, dumb_netadr_t* netadr) const
 {
-	if (netadr == nullptr) {
+	if (netadr == nullptr || m_Engine == nullptr) {
 		return false;
 	}
 
-	INetChannel* pNetChan = static_cast<INetChannel*>(m_pEngine->GetPlayerNetInfo(client));
+	INetChannel* pNetChan = static_cast<INetChannel*>(m_Engine->GetPlayerNetInfo(client));
 	if (pNetChan == nullptr) {
 		return false;
 	}
@@ -16,6 +14,15 @@ bool PlayerLagManager::TryGetClientNetAdr(int client, dumb_netadr_t* netadr) con
 	static_assert(sizeof(*netadr) <= sizeof(remoteAddress), "dumb_netadr_t must fit within netadr_t.");
 	std::memcpy(netadr, &remoteAddress, sizeof(*netadr));
 	return true;
+}
+
+bool PlayerLagManager::TryGetClientNetAdr(int client, dumb_netadr_t* netadr) const
+{
+	if (netadr == nullptr || m_NetAdrResolver == nullptr) {
+		return false;
+	}
+
+	return m_NetAdrResolver->TryResolveClientNetAdr(client, netadr);
 }
 
 void PlayerLagManager::RemoveLagEntry(const dumb_netadr_t& netadr)
@@ -30,7 +37,9 @@ void PlayerLagManager::SetPlayerLag(int client, float lagTime)
 {
 	dumb_netadr_t netadr;
 	if (!TryGetClientNetAdr(client, &netadr)) {
-		g_pSM->LogError(myself, "Failed to resolve network address for client index %d.", client);
+		if (m_Events != nullptr) {
+			m_Events->OnClientNetAdrResolutionFailed(client);
+		}
 		return;
 	}
 
@@ -44,15 +53,10 @@ void PlayerLagManager::SetPlayerLag(int client, float lagTime)
 		m_LagTimes.add(i, netadr);
 	}
 	i->value = lagTime;
-	g_pSM->LogMessage(myself,
-		"Lagging player index %d with net address %d.%d.%d.%d:%d for %.01fms",
-		client,
-		netadr.ip[0],
-		netadr.ip[1],
-		netadr.ip[2],
-		netadr.ip[3],
-		netadr.port,
-		lagTime);
+
+	if (m_Events != nullptr) {
+		m_Events->OnPlayerLagChanged(client, netadr, lagTime);
+	}
 }
 
 void PlayerLagManager::ClearPlayerLag(int client)

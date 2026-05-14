@@ -40,6 +40,28 @@ native bool PlayerFakelag_StartBalanceVote(int initiator = 0);
  */
 native bool PlayerFakelag_IsBalanceVoteInProgress();
 
+/**
+ * @brief Called before player_fakelag applies or clears fakelag on a player.
+ *
+ * @param client		Client index being modified.
+ * @param oldLag		Current lag value in milliseconds.
+ * @param newLag		Requested lag value in milliseconds. Modify to override.
+ * @param reason		Reason for the change request.
+ * @return		Plugin_Continue to allow, Plugin_Changed to allow with edits,
+ *              Plugin_Handled or Plugin_Stop to block the change.
+ */
+forward Action PlayerFakelag_OnSetPlayerLatency(int client, float oldLag, float &newLag, CFakeLagChangeReason reason);
+
+/**
+ * @brief Called after player_fakelag applies or clears fakelag on a player.
+ *
+ * @param client		Client index that changed.
+ * @param oldLag		Previous lag value in milliseconds.
+ * @param newLag		Applied lag value in milliseconds.
+ * @param reason		Reason for the change.
+ */
+forward void PlayerFakelag_OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason);
+
 public SharedPlugin __pl_player_fakelag =
 {
 	name = "player_fakelag",

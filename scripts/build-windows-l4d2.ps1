@@ -44,6 +44,25 @@ $playerFakelagSource = if ($env:PLAYER_FAKELAG_SOURCE) { $env:PLAYER_FAKELAG_SOU
 $venvPython = Join-Path $venvDir "Scripts\python.exe"
 $venvAmbuild = Join-Path $venvDir "Scripts\ambuild.exe"
 
+function Find-SourcePawnCompiler {
+  param([string]$ScriptingDir)
+
+  $candidates = @(
+    (Join-Path $ScriptingDir "spcomp.exe"),
+    (Join-Path $ScriptingDir "spcomp"),
+    (Join-Path $ScriptingDir "spcomp64.exe"),
+    (Join-Path $ScriptingDir "spcomp64")
+  )
+
+  foreach ($candidate in $candidates) {
+    if (Test-Path $candidate) {
+      return $candidate
+    }
+  }
+
+  return $null
+}
+
 function Find-VsWhere {
   $candidates = @(
     "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe",
@@ -171,14 +190,14 @@ if ($extBin -ne $canonicalExtBin) {
   $extBin = $canonicalExtBin
 }
 
-$spcomp = Join-Path $sourcemodPackageDir "addons\sourcemod\scripting\spcomp.exe"
+$spcomp = Find-SourcePawnCompiler (Join-Path $sourcemodPackageDir "addons\sourcemod\scripting")
 $spIncludeDir = Join-Path $sourcemodPackageDir "addons\sourcemod\scripting\include"
 $pluginIncludeDir = Join-Path $root "scripting\include"
 $pluginOutputDir = Join-Path $buildDir "package\addons\sourcemod\plugins"
 $playerFakelagBinary = Join-Path $pluginOutputDir "player_fakelag.smx"
 
 if (-not (Test-Path $spcomp)) {
-  throw "Missing spcomp compiler at $spcomp"
+  throw "Missing SourcePawn compiler in $(Join-Path $sourcemodPackageDir 'addons\sourcemod\scripting')"
 }
 
 New-Item -ItemType Directory -Force $pluginOutputDir | Out-Null
