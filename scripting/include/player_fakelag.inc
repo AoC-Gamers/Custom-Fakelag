@@ -62,6 +62,14 @@ forward Action PlayerFakelag_OnSetPlayerLatency(int client, float oldLag, float 
  */
 forward void PlayerFakelag_OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason);
 
+/**
+ * @brief Called when player_fakelag is being unloaded.
+ *
+ * This forward is fired at the beginning of OnPluginEnd(), before active votes
+ * are cancelled and before all fake lag entries are cleared.
+ */
+forward void PlayerFakelag_OnPluginEnd();
+
 public SharedPlugin __pl_player_fakelag =
 {
 	name = "player_fakelag",

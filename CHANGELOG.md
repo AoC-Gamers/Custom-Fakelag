@@ -27,6 +27,7 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 - Se agregaron forwards high-level en `player_fakelag.inc` para que otros plugins puedan interceptar y observar cambios de fake lag desde `player_fakelag`:
   - `PlayerFakelag_OnSetPlayerLatency`
   - `PlayerFakelag_OnPlayerLatencyChanged`
+  - `PlayerFakelag_OnPluginEnd`
 - Se agrego `custom_fakelag_forward.sp` como plugin de ejemplo para los forwards low-level de la extension.
 - Se agregaron translations para la UX del plugin `player_fakelag`.
 - Se agregaron scripts de bootstrap y compilacion para Linux y Windows bajo `scripts/`.
@@ -67,6 +68,7 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 - Se actualizo `PackageScript` para incluir `player_fakelag.smx` en el artefacto final cuando este compilado.
 - Se actualizo el empaquetado para excluir `custom_fakelag_forward.sp` y su binario del artefacto final.
 - Se actualizo el plugin `player_fakelag` a sintaxis moderna (`newdecls`) y se simplifico su salida hacia translations en lugar de logs ruidosos al servidor.
+- Se actualizo `player_fakelag` para notificar su descarga mediante `PlayerFakelag_OnPluginEnd` antes de cancelar votos y limpiar de forma destructiva todas las entradas activas de fake lag.
 - Se movio la logica de balanceo por ping al plugin SourcePawn en lugar de dejarla en la extension.
 - Se integraron `builtinvotes`, `colors` y `left4dhooks_stocks` en el flujo del plugin de administracion.
 - Se actualizo la salida del build para dejar unicamente los binarios canonicos `custom_fakelag.ext.so` y `custom_fakelag.ext.dll` en el paquete final.
