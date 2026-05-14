@@ -12,6 +12,8 @@ Este repositorio deriva del proyecto original publicado por `ProdigySim`:
 La base original de la extension, su idea y la implementacion inicial
 corresponden a ese trabajo.
 
+Este repositorio toma como base historica la version `1.0.0` de ese proyecto.
+
 Estado
 ------
 
