@@ -47,7 +47,9 @@ public:
 	void ClearPlayerLag(int client);
 	void ClearAll();
 
+	bool HasPlayerLag(int client) const;
 	float GetPlayerLag(int client) const;
+	size_t GetLagCount() const { return m_LagTimes.elements(); }
 
 	float GetPlayerLag(const dumb_netadr_t& netadr) const;
 };

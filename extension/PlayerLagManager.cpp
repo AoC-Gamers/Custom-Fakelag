@@ -70,6 +70,11 @@ void PlayerLagManager::ClearAll()
 	m_LagTimes.clear();
 }
 
+bool PlayerLagManager::HasPlayerLag(int client) const
+{
+	return GetPlayerLag(client) > 0.0f;
+}
+
 float PlayerLagManager::GetPlayerLag(int client) const
 {
 	dumb_netadr_t netadr;

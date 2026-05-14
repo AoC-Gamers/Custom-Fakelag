@@ -10,6 +10,7 @@ folder_list = [
   'addons/sourcemod/extensions',
   'addons/sourcemod/scripting',
   'addons/sourcemod/scripting/include',
+  'addons/sourcemod/translations',
   'addons/sourcemod/gamedata',
 ]
 
@@ -36,8 +37,13 @@ CopyFiles('gamedata', 'addons/sourcemod/gamedata',
   [ 'custom_fakelag.games.txt', ]
 )
 
+CopyFiles('translations', 'addons/sourcemod/translations',
+  [ 'custom_fakelag_player.phrases.txt', ]
+)
+
 CopyFiles('scripting', 'addons/sourcemod/scripting',
-  [ 'player_fakelag.sp', ]
+  [ 'player_fakelag.sp',
+    'custom_fakelag_forward.sp', ]
 )
 
 # Copy binaries.

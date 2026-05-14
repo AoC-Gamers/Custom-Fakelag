@@ -1,0 +1,98 @@
+"Phrases"
+{
+	"Tag"
+	{
+		"en"        "[{olive}Fakelag{default}]"
+		"es"        "[{olive}Fakelag{default}]"
+	}
+
+	"Use"
+	{
+		"en"        "{lightgreen}Usage:{default}"
+		"es"        "{lightgreen}Uso:{default}"
+	}
+
+	"FakelagClientOnlyCommand"
+	{
+		"en"        "{lightgreen}This command{default} can only be used by an in-game client."
+		"es"        "{lightgreen}Este comando{default} solo puede usarse desde un cliente dentro del juego."
+	}
+
+	"FakelagTargetNotFound"
+	{
+		"en"        "{lightgreen}Unable to find target{default} \"{green}%s{default}\""
+		"es"        "{lightgreen}No se pudo encontrar el objetivo{default} \"{green}%s{default}\""
+	}
+
+	"FakelagPlayerNotInGame"
+	{
+		"en"        "Player {teamcolor}%N{default} is {lightgreen}not in game{default} yet."
+		"es"        "El jugador {teamcolor}%N{default} {lightgreen}todavia no esta en juego{default}."
+	}
+
+	"FakelagPlayerIsBot"
+	{
+		"en"        "Player {teamcolor}%N{default} is a fake client and {lightgreen}can't be lagged{default}."
+		"es"        "El jugador {teamcolor}%N{default} es un cliente falso y {lightgreen}no puede recibir fakelag{default}."
+	}
+
+	"FakelagLagNonNegative"
+	{
+		"en"        "{lightgreen}Lag{default} must be greater than or equal to {green}0{default}."
+		"es"        "El {lightgreen}lag{default} debe ser mayor o igual a {green}0{default}."
+	}
+
+	"FakelagPlayerNotLagged"
+	{
+		"en"        "Player {teamcolor}%N{default} does not currently have {lightgreen}fake lag{default}."
+		"es"        "El jugador {teamcolor}%N{default} no tiene {lightgreen}fakelag{default} aplicado actualmente."
+	}
+
+	"FakelagPlayerUnsupported"
+	{
+		"en"        "Player {teamcolor}%N{default} {lightgreen}cannot be lagged{default} right now."
+		"es"        "No se puede {lightgreen}aplicar fakelag{default} al jugador {teamcolor}%N{default} en este momento."
+	}
+
+	"FakelagClearedOnPlayer"
+	{
+		"en"        "{lightgreen}Cleared fake lag{default} on player {teamcolor}%N{default}"
+		"es"        "Se {lightgreen}quito el fakelag{default} al jugador {teamcolor}%N{default}"
+	}
+
+	"FakelagSetOnPlayer"
+	{
+		"en"        "{lightgreen}Set fake lag{default} of {green}%dms{default} on player {teamcolor}%N{default}"
+		"es"        "Se {lightgreen}aplico un fakelag{default} de {green}%dms{default} al jugador {teamcolor}%N{default}"
+	}
+
+	"FakelagNoEntriesToClear"
+	{
+		"en"        "There are no {lightgreen}active fake lag entries{default} to clear."
+		"es"        "No hay {lightgreen}entradas activas de fakelag{default} para limpiar."
+	}
+
+	"FakelagClearedAll"
+	{
+		"en"        "{lightgreen}Cleared all fake lag entries{default} ({green}%d{default} active)"
+		"es"        "Se {lightgreen}limpiaron todas las entradas de fakelag{default} ({green}%d{default} activas)"
+	}
+
+	"FakelagNoPlayersLagged"
+	{
+		"en"        "No players currently have {lightgreen}fake lag{default} applied."
+		"es"        "Ningun jugador tiene {lightgreen}fakelag{default} aplicado actualmente."
+	}
+
+	"FakelagActiveEntries"
+	{
+		"en"        "{lightgreen}Active fake lag entries:{default} {green}%d{default}"
+		"es"        "{lightgreen}Entradas activas de fakelag:{default} {green}%d{default}"
+	}
+
+	"FakelagPlayerEntry"
+	{
+		"en"        "{teamcolor}%N{default}: {green}%.1fms{default}"
+		"es"        "{teamcolor}%N{default}: {green}%.1fms{default}"
+	}
+}
