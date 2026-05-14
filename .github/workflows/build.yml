@@ -13,6 +13,9 @@ concurrency:
   group: custom-fakelag-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   prepare-deps:
     runs-on: ubuntu-22.04
@@ -58,6 +61,11 @@ jobs:
   build-linux:
     runs-on: ubuntu-22.04
     needs: prepare-deps
+    outputs:
+      basename: ${{ steps.artifact.outputs.basename }}
+      release-tag: ${{ steps.artifact.outputs.release_tag }}
+      release-name: ${{ steps.artifact.outputs.release_name }}
+      prerelease: ${{ steps.artifact.outputs.prerelease }}
     env:
       RELEASE_CHANNEL: ${{ github.ref_name == 'develop' && 'develop' || 'latest' }}
 
@@ -83,25 +91,52 @@ jobs:
         shell: bash
         run: make build-linux
 
+      - name: Resolve Linux artifact metadata
+        id: artifact
+        shell: bash
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            main|master)
+              echo "basename=custom-fakelag-linux-latest" >> "$GITHUB_OUTPUT"
+              echo "release_tag=channel/latest" >> "$GITHUB_OUTPUT"
+              echo "release_name=Latest" >> "$GITHUB_OUTPUT"
+              echo "prerelease=false" >> "$GITHUB_OUTPUT"
+              ;;
+            develop)
+              echo "basename=custom-fakelag-linux-develop" >> "$GITHUB_OUTPUT"
+              echo "release_tag=channel/develop" >> "$GITHUB_OUTPUT"
+              echo "release_name=Develop" >> "$GITHUB_OUTPUT"
+              echo "prerelease=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "basename=custom-fakelag-linux-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+              echo "release_tag=" >> "$GITHUB_OUTPUT"
+              echo "release_name=" >> "$GITHUB_OUTPUT"
+              echo "prerelease=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
       - name: Prepare release archive
         shell: bash
         run: |
           mkdir -p dist/release
           (
             cd ".build/linux-l4d2/package"
-            zip -r "$GITHUB_WORKSPACE/dist/release/custom-fakelag-linux-${RELEASE_CHANNEL}.zip" addons
+            zip -r "$GITHUB_WORKSPACE/dist/release/${{ steps.artifact.outputs.basename }}.zip" addons
           )
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v7
         with:
-          name: custom-fakelag-linux-${{ env.RELEASE_CHANNEL }}
-          path: dist/release/custom-fakelag-linux-${{ env.RELEASE_CHANNEL }}.zip
+          name: ${{ steps.artifact.outputs.basename }}
+          path: dist/release/${{ steps.artifact.outputs.basename }}.zip
           if-no-files-found: error
           retention-days: 14
 
   build-windows:
     runs-on: windows-2022
+    outputs:
+      basename: ${{ steps.artifact.outputs.basename }}
     env:
       RELEASE_CHANNEL: ${{ github.ref_name == 'develop' && 'develop' || 'latest' }}
 
@@ -122,16 +157,89 @@ jobs:
         shell: pwsh
         run: make build-windows
 
+      - name: Resolve Windows artifact metadata
+        id: artifact
+        shell: bash
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            main|master)
+              echo "basename=custom-fakelag-windows-latest" >> "$GITHUB_OUTPUT"
+              ;;
+            develop)
+              echo "basename=custom-fakelag-windows-develop" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "basename=custom-fakelag-windows-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
       - name: Prepare Windows archive
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist\release | Out-Null
-          Compress-Archive -Path ".build\windows-l4d2\package\addons" -DestinationPath "dist\release\custom-fakelag-windows-$env:RELEASE_CHANNEL.zip" -Force
+          Compress-Archive -Path ".build\windows-l4d2\package\addons" -DestinationPath "dist\release\${{ steps.artifact.outputs.basename }}.zip" -Force
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v7
         with:
-          name: custom-fakelag-windows-${{ env.RELEASE_CHANNEL }}
-          path: dist/release/custom-fakelag-windows-${{ env.RELEASE_CHANNEL }}.zip
+          name: ${{ steps.artifact.outputs.basename }}
+          path: dist/release/${{ steps.artifact.outputs.basename }}.zip
           if-no-files-found: error
           retention-days: 14
+
+  publish:
+    runs-on: ubuntu-22.04
+    needs: [build-linux, build-windows]
+    if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'master' || github.ref_name == 'develop')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build-linux.outputs.basename }}
+          path: dist/release
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build-windows.outputs.basename }}
+          path: dist/release
+
+      - name: Move channel tag
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "${{ needs.build-linux.outputs.release-tag }}" "$GITHUB_SHA"
+          git push origin "refs/tags/${{ needs.build-linux.outputs.release-tag }}" --force
+
+      - name: Publish channel release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag="${{ needs.build-linux.outputs.release-tag }}"
+          title="${{ needs.build-linux.outputs.release-name }}"
+          linux_asset="dist/release/${{ needs.build-linux.outputs.basename }}.zip"
+          windows_asset="dist/release/${{ needs.build-windows.outputs.basename }}.zip"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            if [[ "${{ needs.build-linux.outputs.prerelease }}" == "true" ]]; then
+              gh release edit "$tag" --title "$title" --prerelease --latest=false
+            else
+              gh release edit "$tag" --title "$title" --latest=false
+            fi
+          else
+            if [[ "${{ needs.build-linux.outputs.prerelease }}" == "true" ]]; then
+              gh release create "$tag" --title "$title" --prerelease --latest=false --target "$GITHUB_SHA"
+            else
+              gh release create "$tag" --title "$title" --latest=false --target "$GITHUB_SHA"
+            fi
+          fi
+
+          gh release upload "$tag" "$linux_asset" "$windows_asset" --clobber
