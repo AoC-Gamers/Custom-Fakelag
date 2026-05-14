@@ -1,104 +1,138 @@
-name: build
+name: Build custom_fakelag
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: custom-fakelag-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-        - os: ubuntu-latest
-          sourcemod_version: 1.10-dev
-          sdk: l4d2
-          cc: clang
-          cxx: clang++
+  prepare-deps:
+    runs-on: ubuntu-22.04
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
 
-        - os: windows-latest
-          sourcemod_version: 1.10-dev
-          sdk: l4d2
-          cc: ""
-          cxx: ""
-    runs-on: ${{ matrix.os }}
     steps:
-      - name: checkout repo
-        uses: actions/checkout@v2
-        with:
-          path: 'src'
-        
-      - name: download ${{ matrix.sdk }} sdk
-        uses: actions/checkout@v2
-        with:
-          repository: alliedmodders/hl2sdk
-          ref: ${{ matrix.sdk }}
-          path: hl2sdk-${{ matrix.sdk }}
-        
-      - name: download sourcemod
-        uses: actions/checkout@v2
-        with:
-          repository: alliedmodders/sourcemod
-          ref: ${{ matrix.sourcemod_version }}
-          path: 'sourcemod'
-        
-      - name: download sourcemod submodules
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        shell: bash
         run: |
-          cd sourcemod
-          git submodule update --init --recursive
-        
-      - name: download metamod
-        uses: actions/checkout@v2
-        with:
-          repository: alliedmodders/metamod-source
-          ref: 1.11-dev
-          path: 'mmsource-1.11'
-        
-      - name: download ambuild
-        uses: actions/checkout@v2
-        with:
-          repository: alliedmodders/ambuild
-          path: 'ambuild'
-        
-      - name: install ambuild
-        if: runner.os == 'Windows'
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-venv make gcc-multilib g++-multilib clang zip
+
+      - name: Resolve dependency cache key
+        id: cache-key
+        shell: bash
         run: |
-          cd ambuild
-          python setup.py install
-        
-      - name: install ambuild
-        if: runner.os == 'Linux'
+          echo "key=linux-deps-${{ runner.os }}-${{ hashFiles('scripts/fetch-linux-deps.sh', 'scripts/build-linux-l4d2.sh', 'Makefile', 'configure.py', 'AMBuildScript', 'AMBuilder', 'PackageScript') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore dependency cache
+        id: deps-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .deps
+          key: ${{ steps.cache-key.outputs.key }}
+
+      - name: Fetch build dependencies
+        if: steps.deps-cache-restore.outputs.cache-hit != 'true'
+        shell: bash
+        run: make deps-linux
+
+      - name: Save dependency cache
+        if: steps.deps-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .deps
+          key: ${{ steps.cache-key.outputs.key }}
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    needs: prepare-deps
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        shell: bash
         run: |
-          cd ambuild
-          sudo python setup.py install
-          
-      - name: install linux packages
-        if: runner.os == 'Linux'
-        run: sudo apt update && sudo apt install -y --no-install-recommends gcc-multilib g++-multilib
-        
-      - uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-venv make gcc-multilib g++-multilib clang zip
+
+      - name: Restore dependency cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .deps
+          key: ${{ needs.prepare-deps.outputs.cache-key }}
+          fail-on-cache-miss: true
+
+      - name: Build extension
+        shell: bash
+        run: make build-linux-l4d2
+
+      - name: Prepare release archive
+        shell: bash
+        run: |
+          mkdir -p dist/release
+          (
+            cd ".build/linux-l4d2/package"
+            zip -r "$GITHUB_WORKSPACE/dist/release/custom_fakelag-linux.zip" addons
+          )
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom_fakelag-linux
+          path: dist/release/custom_fakelag-linux.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  build-windows:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up MSVC x86 environment
+        uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x86
 
-      - name: set cc and cxx variables
-        if: runner.os == 'Linux'
-        uses: allenevans/set-env@v2.0.0
-        with:
-          CC: clang
-          CXX: clang++
+      - name: Fetch Windows build dependencies
+        shell: pwsh
+        run: make deps-windows
 
-      - name: configure ambuild
-        run: |
-          cd src
-          mkdir build
-          cd build
-          python ../configure.py --sdks ${{ matrix.sdk }} --mms-path ../../mmsource-1.11 --enable-optimize
-              
-      - name: build
-        run: |
-          cd src/build
-          ambuild
+      - name: Build Windows extension
+        shell: pwsh
+        run: make build-windows-l4d2
 
-      - name: upload extension artifact
-        uses: actions/upload-artifact@master
+      - name: Prepare Windows archive
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist\release | Out-Null
+          Compress-Archive -Path ".build\windows-l4d2\package\addons" -DestinationPath "dist\release\custom_fakelag-windows.zip" -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}_${{ github.sha }}
-          path: src/build/package/
+          name: custom_fakelag-windows
+          path: dist/release/custom_fakelag-windows.zip
+          if-no-files-found: error
+          retention-days: 14

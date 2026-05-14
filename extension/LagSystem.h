@@ -1,27 +1,29 @@
 #ifndef _CUSTOM_FAKELAG_LAG_SYSTEM_H_
 #define _CUSTOM_FAKELAG_LAG_SYSTEM_H_
+
 #include <amtl/am-priority-queue.h>
 #include "net_structures.h"
 
-
-// This is only 3 in L4D2, but it's listed as 5 in VSES 2007 source. Doesn't really hurt to have extra empty slots....
-#define MAX_SOCKETS 6
+static constexpr int kMaxSockets = 6;
 
 struct PacketEarlier {
 	constexpr bool operator ()(const _netpacket_t& left, const _netpacket_t& right) const {
 		return left.received < right.received;
 	}
 };
+
 class LagSystem {
 private:
-	ke::PriorityQueue<_netpacket_t, PacketEarlier> m_LagPackets[MAX_SOCKETS];
+	ke::PriorityQueue<_netpacket_t, PacketEarlier> m_LagPackets[kMaxSockets];
 	const double* m_pNetTime;
 
-	inline double GetNetTime() { return *m_pNetTime; }
+	double GetNetTime() const { return *m_pNetTime; }
+
 public:
-	LagSystem(const double* pNetTime) : m_pNetTime(pNetTime) {
-		assert(pNetTime != NULL);
+	explicit LagSystem(const double* pNetTime) : m_pNetTime(pNetTime) {
+		assert(pNetTime != nullptr);
 	}
+
 	void LagPacket(_netpacket_t* pPacket, float lagTime);
 	bool GetNextPacket(int socket, _netpacket_t* destPacket);
 };

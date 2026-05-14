@@ -37,4 +37,12 @@ Debug/
 *.vcxproj.user
 
 build/
-pkg/
+.build/
+.deps/
+dist/
+.env
+
+# Temporary directories
+tmp/
+temp/
+.tmp/
