@@ -167,7 +167,7 @@ if (-not $extBin) {
 
 $canonicalExtBin = Join-Path $packageDir "custom_fakelag.ext.dll"
 if ($extBin -ne $canonicalExtBin) {
-  Copy-Item $extBin $canonicalExtBin -Force
+  Move-Item $extBin $canonicalExtBin -Force
   $extBin = $canonicalExtBin
 }
 

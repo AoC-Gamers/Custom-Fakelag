@@ -133,7 +133,7 @@ if [[ -z "$EXT_BIN" || ! -f "$EXT_BIN" ]]; then
 fi
 
 if [[ "$EXT_BIN" != "$CANONICAL_EXT_BIN" ]]; then
-  cp "$EXT_BIN" "$CANONICAL_EXT_BIN"
+  mv "$EXT_BIN" "$CANONICAL_EXT_BIN"
   EXT_BIN="$CANONICAL_EXT_BIN"
 fi
 
