@@ -5,6 +5,7 @@
 #include "net_structures.h"
 
 static constexpr int kMaxSockets = 6;
+static constexpr double kMillisecondsToSeconds = 1000.0;
 
 struct PacketEarlier {
 	constexpr bool operator ()(const _netpacket_t& left, const _netpacket_t& right) const {
@@ -18,13 +19,15 @@ private:
 	const double* m_pNetTime;
 
 	double GetNetTime() const { return *m_pNetTime; }
+	bool IsValidSocket(int socket) const { return socket >= 0 && socket < kMaxSockets; }
+	bool HasReadyPacket(int socket) const;
 
 public:
 	explicit LagSystem(const double* pNetTime) : m_pNetTime(pNetTime) {
 		assert(pNetTime != nullptr);
 	}
 
-	void LagPacket(_netpacket_t* pPacket, float lagTime);
+	bool LagPacket(_netpacket_t* pPacket, float lagTime);
 	bool GetNextPacket(int socket, _netpacket_t* destPacket);
 };
 

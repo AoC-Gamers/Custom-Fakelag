@@ -1,36 +1,55 @@
 #include <cstddef>
-#include <cstring>
 #include "LagSystem.h"
 
-void LagSystem::LagPacket(_netpacket_t* pPacket, float lagTime)
+bool LagSystem::HasReadyPacket(int socket) const
 {
+	if (!IsValidSocket(socket)) {
+		return false;
+	}
+
+	const auto& packetQueue = m_LagPackets[socket];
+	if (packetQueue.empty()) {
+		return false;
+	}
+
+	return packetQueue.peek().received <= GetNetTime();
+}
+
+bool LagSystem::LagPacket(_netpacket_t* pPacket, float lagTime)
+{
+	if (pPacket == nullptr) {
+		return false;
+	}
+
+	if (!IsValidSocket(pPacket->source)) {
+		return false;
+	}
+
 	auto newPacket = _netpacket_t(*pPacket);
 
 	// Delay the packet by shifting its visible receive time forward.
-	newPacket.received += (lagTime / 1000.0f);
+	newPacket.received += (lagTime / kMillisecondsToSeconds);
 
 	m_LagPackets[newPacket.source].add(newPacket);
+	return true;
 }
 
 bool LagSystem::GetNextPacket(int socket, _netpacket_t* destPacket)
 {
+	if (destPacket == nullptr) {
+		return false;
+	}
+
+	if (!IsValidSocket(socket)) {
+		return false;
+	}
+
+	if (!HasReadyPacket(socket)) {
+		return false;
+	}
+
 	auto packetQueue = &m_LagPackets[socket];
-	if (packetQueue->empty()) {
-		return false;
-	}
-
-	if (packetQueue->peek().received > GetNetTime()) {
-		return false;
-	}
-
 	const _netpacket_t topPacket = packetQueue->pop();
-
-	destPacket->from = topPacket.from;
-	destPacket->pNext = nullptr;
-	destPacket->received = topPacket.received;
-	destPacket->size = topPacket.size;
-	destPacket->wiresize = topPacket.wiresize;
-	destPacket->stream = topPacket.stream;
-	std::memcpy(destPacket->data, topPacket.data, topPacket.size);
+	topPacket.CopyToLivePacket(destPacket);
 	return true;
 }

@@ -50,7 +50,7 @@ public Action FakeLagCmd(int client, int args)
 
 public Action PrintLagCmd(int client, int args)
 {
-	for(int i = 1; i < MaxClients; i++) {
+	for (int i = 1; i <= MaxClients; i++) {
 		if (IsClientInGame(i) && !IsFakeClient(i)) {
 			ReplyToCommand(client, "%N: %fms", i, CFakeLag_GetPlayerLatency(i));
 		}

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstring>
 #include <mathlib.h>
 #include <eiface.h>
 #include <inetchannel.h>
@@ -8,12 +9,21 @@
 struct NetAdrHashPolicy_s {
 	static uint32_t hash(const dumb_netadr_t& value)
 	{
-		return *reinterpret_cast<const uint32_t*>(value.ip);
+		uint32_t hash = 2166136261u;
+		for (unsigned char octet : value.ip) {
+			hash ^= octet;
+			hash *= 16777619u;
+		}
+		hash ^= value.port;
+		hash *= 16777619u;
+		hash ^= static_cast<uint32_t>(value.type);
+		hash *= 16777619u;
+		return hash;
 	}
 
 	static bool matches(const dumb_netadr_t& value, const dumb_netadr_t& key)
 	{
-		return *reinterpret_cast<const uint32_t*>(value.ip) == *reinterpret_cast<const uint32_t*>(key.ip)
+		return std::memcmp(value.ip, key.ip, sizeof(value.ip)) == 0
 			&& value.port == key.port
 			&& value.type == key.type;
 	}
@@ -25,7 +35,8 @@ private:
 	IVEngineServer* m_pEngine;
 	ke::HashMap<dumb_netadr_t, float, NetAdrHashPolicy_s> m_LagTimes;
 
-	const dumb_netadr_t& GetClientNetAdr(int client) const;
+	bool TryGetClientNetAdr(int client, dumb_netadr_t* netadr) const;
+	void RemoveLagEntry(const dumb_netadr_t& netadr);
 
 public:
 	explicit PlayerLagManager(IVEngineServer* engine) : m_pEngine(engine) {
@@ -33,6 +44,8 @@ public:
 	}
 
 	void SetPlayerLag(int client, float lagTime);
+	void ClearPlayerLag(int client);
+	void ClearAll();
 
 	float GetPlayerLag(int client) const;
 

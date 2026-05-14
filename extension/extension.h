@@ -6,7 +6,7 @@
 #include "cdetour/detours.h"
 #include "PlayerLagManager.h"
 
-class CustomFakelag : public SDKExtension
+class CustomFakelag : public SDKExtension, public IClientListener
 {
 private:
 	PlayerLagManager* m_LagManager = nullptr;
@@ -16,9 +16,10 @@ public:
 	float GetPlayerLatency(int client);
 
 public:
-	virtual bool SDK_OnLoad(char *error, size_t maxlen, bool late);
-	virtual void SDK_OnUnload();
-	virtual void SDK_OnAllLoaded();
+	bool SDK_OnLoad(char* error, size_t maxlen, bool late) override;
+	void SDK_OnUnload() override;
+	void SDK_OnAllLoaded() override;
+	void OnClientDisconnecting(int client) override;
 public:
 #if defined SMEXT_CONF_METAMOD
 	//virtual bool SDK_OnMetamodLoad(ISmmAPI *ismm, char *error, size_t maxlen, bool late);

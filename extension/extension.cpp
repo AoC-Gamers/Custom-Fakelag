@@ -5,6 +5,22 @@ CustomFakelag g_Sample;
 extern sp_nativeinfo_t g_CFakeLagNatives[];
 IGameConfig* g_pGameConf = nullptr;
 
+static IGamePlayer* GetLagTargetOrError(IPluginContext* pContext, int client)
+{
+	auto player = playerhelpers->GetGamePlayer(client);
+	if (player == nullptr) {
+		pContext->ThrowNativeError("Client index %d is not valid", client);
+		return nullptr;
+	}
+
+	if (player->IsFakeClient()) {
+		pContext->ThrowNativeError("Client index %d is a fake client and can't be lagged.", client);
+		return nullptr;
+	}
+
+	return player;
+}
+
 bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 {
 	char conf_error[255];
@@ -19,6 +35,8 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 
 	double* pNetTime = nullptr;
 	if (!g_pGameConf->GetAddress("net_time", reinterpret_cast<void**>(&pNetTime))) {
+		gameconfs->CloseGameConfigFile(g_pGameConf);
+		g_pGameConf = nullptr;
 		ke::SafeSprintf(error, maxlen, "Could not find net_time address in memory");
 		return false;
 	}
@@ -29,12 +47,17 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 	CDetourManager::Init(g_pSM->GetScriptingEngine(), g_pGameConf);
 
 	if (!LagDetour_Init(m_LagManager, pNetTime)) {
+		delete m_LagManager;
+		m_LagManager = nullptr;
+		gameconfs->CloseGameConfigFile(g_pGameConf);
+		g_pGameConf = nullptr;
 		ke::SafeSprintf(error, maxlen, "Could not detour Net_LagPacket.");
 		return false;
 	}
 
 	sharesys->AddNatives(myself, g_CFakeLagNatives);
 	sharesys->RegisterLibrary(myself, "custom_fakelag");
+	playerhelpers->AddClientListener(this);
 	return true;
 }
 
@@ -43,9 +66,27 @@ void CustomFakelag::SDK_OnAllLoaded()
 }
 
 void CustomFakelag::SDK_OnUnload() {
+	playerhelpers->RemoveClientListener(this);
+
+	if (m_LagManager != nullptr) {
+		m_LagManager->ClearAll();
+	}
+
 	LagDetour_Shutdown();
 	delete m_LagManager;
 	m_LagManager = nullptr;
+
+	if (g_pGameConf != nullptr) {
+		gameconfs->CloseGameConfigFile(g_pGameConf);
+		g_pGameConf = nullptr;
+	}
+}
+
+void CustomFakelag::OnClientDisconnecting(int client)
+{
+	if (m_LagManager != nullptr) {
+		m_LagManager->ClearPlayerLag(client);
+	}
 }
 
 void CustomFakelag::SetPlayerLatency(int client, float lagTime)
@@ -67,14 +108,14 @@ cell_t CFakeLag_SetPlayerLatency(IPluginContext* pContext, const cell_t* params)
 {
 	int client = params[1];
 	float lagTime = sp_ctof(params[2]);
-	auto player = playerhelpers->GetGamePlayer(client);
-	if (player == nullptr) {
-		return pContext->ThrowNativeError("Client index %d is not valid", client);
+	if (GetLagTargetOrError(pContext, client) == nullptr) {
+		return 0;
 	}
 
-	if (player->IsFakeClient()) {
-		return pContext->ThrowNativeError("Client index %d is a fake client and can't be lagged.", client);
+	if (lagTime < 0.0f) {
+		return pContext->ThrowNativeError("Lag time must be greater than or equal to 0.");
 	}
+
 	g_Sample.SetPlayerLatency(client, lagTime);
 	return 1;
 }
@@ -82,14 +123,10 @@ cell_t CFakeLag_SetPlayerLatency(IPluginContext* pContext, const cell_t* params)
 cell_t CFakeLag_GetPlayerLatency(IPluginContext* pContext, const cell_t* params)
 {
 	int client = params[1];
-	auto player = playerhelpers->GetGamePlayer(client);
-	if (player == nullptr) {
-		return pContext->ThrowNativeError("Client index %d is not valid", client);
+	if (GetLagTargetOrError(pContext, client) == nullptr) {
+		return 0;
 	}
 
-	if (player->IsFakeClient()) {
-		return pContext->ThrowNativeError("Client index %d is a fake client and can't be lagged.", client);
-	}
 	return sp_ftoc(g_Sample.GetPlayerLatency(client));
 }
 

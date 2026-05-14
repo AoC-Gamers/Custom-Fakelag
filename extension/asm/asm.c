@@ -103,8 +103,9 @@ int copy_bytes(unsigned char *func, unsigned char *dest, int required_len)
 
 	ud_set_input_buffer(&ud_obj, func, 20);
 	unsigned int bytecount = 0;
+	const unsigned int required = (required_len > 0) ? (unsigned int)required_len : 0;
 	
-	while (bytecount < required_len && ud_disassemble(&ud_obj))
+	while (bytecount < required && ud_disassemble(&ud_obj))
 	{
 		unsigned int insn_len = ud_insn_len(&ud_obj);
 		bytecount += insn_len;

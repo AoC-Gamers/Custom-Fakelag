@@ -1,15 +1,44 @@
 #include "PlayerLagManager.h"
 #include "extension.h"
 
-const dumb_netadr_t& PlayerLagManager::GetClientNetAdr(int client) const
+bool PlayerLagManager::TryGetClientNetAdr(int client, dumb_netadr_t* netadr) const
 {
+	if (netadr == nullptr) {
+		return false;
+	}
+
 	INetChannel* pNetChan = static_cast<INetChannel*>(m_pEngine->GetPlayerNetInfo(client));
-	return reinterpret_cast<const dumb_netadr_t&>(pNetChan->GetRemoteAddress());
+	if (pNetChan == nullptr) {
+		return false;
+	}
+
+	const auto& remoteAddress = pNetChan->GetRemoteAddress();
+	static_assert(sizeof(*netadr) <= sizeof(remoteAddress), "dumb_netadr_t must fit within netadr_t.");
+	std::memcpy(netadr, &remoteAddress, sizeof(*netadr));
+	return true;
+}
+
+void PlayerLagManager::RemoveLagEntry(const dumb_netadr_t& netadr)
+{
+	auto existing = m_LagTimes.find(netadr);
+	if (existing.found()) {
+		m_LagTimes.remove(existing);
+	}
 }
 
 void PlayerLagManager::SetPlayerLag(int client, float lagTime)
 {
-	auto netadr = GetClientNetAdr(client);
+	dumb_netadr_t netadr;
+	if (!TryGetClientNetAdr(client, &netadr)) {
+		g_pSM->LogError(myself, "Failed to resolve network address for client index %d.", client);
+		return;
+	}
+
+	if (lagTime <= 0.0f) {
+		RemoveLagEntry(netadr);
+		return;
+	}
+
 	auto i = m_LagTimes.findForAdd(netadr);
 	if (!i.found()) {
 		m_LagTimes.add(i, netadr);
@@ -26,17 +55,36 @@ void PlayerLagManager::SetPlayerLag(int client, float lagTime)
 		lagTime);
 }
 
+void PlayerLagManager::ClearPlayerLag(int client)
+{
+	dumb_netadr_t netadr;
+	if (!TryGetClientNetAdr(client, &netadr)) {
+		return;
+	}
+
+	RemoveLagEntry(netadr);
+}
+
+void PlayerLagManager::ClearAll()
+{
+	m_LagTimes.clear();
+}
+
 float PlayerLagManager::GetPlayerLag(int client) const
 {
-	auto netadr = GetClientNetAdr(client);
+	dumb_netadr_t netadr;
+	if (!TryGetClientNetAdr(client, &netadr)) {
+		return 0.0f;
+	}
+
 	return GetPlayerLag(netadr);
 }
 
 float PlayerLagManager::GetPlayerLag(const dumb_netadr_t& netadr) const
 {
-	auto i = m_LagTimes.find(netadr);
-	if (!i.found()) {
+	auto found = m_LagTimes.find(netadr);
+	if (!found.found()) {
 		return 0.0f;
 	}
-	return i->value;
+	return found->value;
 }
