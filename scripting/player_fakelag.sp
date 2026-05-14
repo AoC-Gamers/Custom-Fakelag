@@ -52,7 +52,7 @@ public void OnPluginStart()
 stock void FakelagReplyPlayerStatus(int client, int target)
 {
 	if (!CFakeLag_IsClientSupported(target)) {
-		CReplyToCommandEx(client, target, "{olive}[Fakelag]{default} %N is not a valid human target.", target);
+		CReplyToCommand(client, "{olive}[Fakelag]{default} %N is not a valid human target.", target);
 		return;
 	}
 
@@ -61,18 +61,16 @@ stock void FakelagReplyPlayerStatus(int client, int target)
 	bool isLagged = CFakeLag_HasPlayerLatency(target);
 
 	if (!isLagged) {
-		CReplyToCommandEx(
+		CReplyToCommand(
 			client,
-			target,
 			"{olive}[Fakelag]{default} %N avg ping: %.1fms | fake lag: disabled",
 			target,
 			averagePing);
 		return;
 	}
 
-	CReplyToCommandEx(
+	CReplyToCommand(
 		client,
-		target,
 		"{olive}[Fakelag]{default} %N avg ping: %.1fms | fake lag: %.1fms",
 		target,
 		averagePing,
@@ -103,6 +101,22 @@ stock float FakelagGetClientAveragePingMs(int client)
 	return latency * 1000.0;
 }
 
+stock void FakelagBuildArgRangeString(int firstArg, int lastArg, char[] buffer, int maxlen)
+{
+	buffer[0] = '\0';
+
+	char arg[256];
+	for (int argIndex = firstArg; argIndex <= lastArg; argIndex++) {
+		GetCmdArg(argIndex, arg, sizeof(arg));
+
+		if (buffer[0] != '\0') {
+			StrCat(buffer, maxlen, " ");
+		}
+
+		StrCat(buffer, maxlen, arg);
+	}
+}
+
 stock int FakelagCollectBalanceCandidates(int clients[MAXPLAYERS + 1], float pings[MAXPLAYERS + 1], float &highestPing, int &highestClient)
 {
 	int count = 0;
@@ -110,8 +124,12 @@ stock int FakelagCollectBalanceCandidates(int clients[MAXPLAYERS + 1], float pin
 	highestClient = 0;
 
 	for (int client = 1; client <= MaxClients; client++) {
+		if (!IsClientInGame(client) || IsFakeClient(client)) {
+			continue;
+		}
+
 		L4DTeam team = L4D_GetClientTeam(client);
-		if (!FakelagIsSupportedBalanceTeam(team) || !FakelagIsBalanceCandidate(client, team)) {
+		if (!FakelagIsSupportedBalanceTeam(team)) {
 			continue;
 		}
 
@@ -149,16 +167,16 @@ stock void FakelagApplyBalance(int admin, const int clients[MAXPLAYERS + 1], con
 				cleared++;
 			}
 
-			CReplyToCommandEx(admin, target, "%T %t", "Tag", admin, "FakelagBalancePlayerUnchanged", target, ping);
+			CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalancePlayerUnchanged", target, ping);
 			continue;
 		}
 
 		CFakeLag_SetPlayerLatency(target, compensation);
 		adjusted++;
-		CReplyToCommandEx(admin, target, "%T %t", "Tag", admin, "FakelagBalancePlayerAdjusted", target, ping, compensation);
+		CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalancePlayerAdjusted", target, ping, compensation);
 	}
 
-	CReplyToCommand(admin, "%t %t", "Tag", admin, "FakelagBalanceApplied", count, adjusted, cleared, targetPing);
+	CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalanceApplied", count, adjusted, cleared, targetPing);
 }
 
 stock void FakelagPreviewBalance(int admin, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing)
@@ -171,15 +189,15 @@ stock void FakelagPreviewBalance(int admin, const int clients[MAXPLAYERS + 1], c
 		float compensation = targetPing - ping;
 
 		if (compensation <= 0.0) {
-			CReplyToCommandEx(admin, target, "%T %t", "Tag", admin, "FakelagBalancePreviewPlayerUnchanged", target, ping);
+			CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalancePreviewPlayerUnchanged", target, ping);
 			continue;
 		}
 
 		adjusted++;
-		CReplyToCommandEx(admin, target, "%T %t", "Tag", admin, "FakelagBalancePreviewPlayerAdjusted", target, ping, compensation);
+		CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalancePreviewPlayerAdjusted", target, ping, compensation);
 	}
 
-	CReplyToCommand(admin, "%t %t", "Tag", admin, "FakelagBalancePreviewApplied", count, adjusted, targetPing);
+	CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalancePreviewApplied", count, adjusted, targetPing);
 }
 
 stock bool FakelagCanUseBuiltinVotes()
@@ -192,7 +210,7 @@ stock bool FakelagTryCollectBalance(int client, int targets[MAXPLAYERS + 1], flo
 {
 	count = FakelagCollectBalanceCandidates(targets, pings, highestPing, highestClient);
 	if (count <= 0 || highestClient <= 0 || highestPing < 0.0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceNoPlayers");
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceNoPlayers");
 		return false;
 	}
 
@@ -211,7 +229,7 @@ stock void FakelagRunBalanceCommand(int client)
 		return;
 	}
 
-	CReplyToCommandEx(client, highestClient, "%T %t", "Tag", client, "FakelagBalanceTarget", highestClient, highestPing);
+	CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceTarget", highestClient, highestPing);
 	FakelagApplyBalance(client, targets, pings, count, highestPing);
 }
 
@@ -268,23 +286,23 @@ stock void FakelagRunBalancePreviewCommand(int client)
 		return;
 	}
 
-	CReplyToCommandEx(client, highestClient, "%T %t", "Tag", client, "FakelagBalancePreviewTarget", highestClient, highestPing);
+	CReplyToCommand(client, "%t %t", "Tag", "FakelagBalancePreviewTarget", highestClient, highestPing);
 	FakelagPreviewBalance(client, targets, pings, count, highestPing);
 }
 
 stock bool FakelagCanStartBalanceVote(int client)
 {
 	if (!FakelagCanUseBuiltinVotes()) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteUnavailable");
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteUnavailable");
 		return false;
 	}
 
 	if (!IsNewBuiltinVoteAllowed() || g_FakeLagBalanceVote != null) {
 		int delay = CheckBuiltinVoteDelay();
 		if (delay > 0) {
-			CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteDelay", delay);
+			CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteDelay", delay);
 		} else {
-			CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteInProgress");
+			CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteInProgress");
 		}
 		return false;
 	}
@@ -297,6 +315,11 @@ stock void FakelagGetBalanceVoteQuestion(char[] buffer, int maxlen)
 	Format(buffer, maxlen, "%T", "FakelagBalanceVoteQuestion", LANG_SERVER);
 }
 
+stock void FakelagGetBalanceVotePassText(char[] buffer, int maxlen)
+{
+	Format(buffer, maxlen, "%T", "FakelagBalanceVotePassed", LANG_SERVER);
+}
+
 stock void FakelagNotifyVoteAudience(const char[] phrase, int initiator = 0)
 {
 	for (int client = 1; client <= MaxClients; client++) {
@@ -305,9 +328,9 @@ stock void FakelagNotifyVoteAudience(const char[] phrase, int initiator = 0)
 		}
 
 		if (initiator > 0) {
-			CReplyToCommandEx(client, initiator, "%T %t", "Tag", client, phrase, initiator);
+			CReplyToCommand(client, "%t %t", "Tag", phrase, initiator);
 		} else {
-			CReplyToCommand(client, "%t %t", "Tag", client, phrase);
+			CReplyToCommand(client, "%t %t", "Tag", phrase);
 		}
 	}
 }
@@ -332,7 +355,9 @@ public void FakeLagBalanceVoteResultHandler(Handle vote, int numVotes, int numCl
 	}
 
 	FakelagNotifyVoteAudience("FakelagBalanceVotePassed");
-	DisplayBuiltinVotePass(vote);
+	char votePassed[128];
+	FakelagGetBalanceVotePassText(votePassed, sizeof(votePassed));
+	DisplayBuiltinVotePass(vote, votePassed);
 	FakelagRunBalanceCommand(0);
 }
 
@@ -342,7 +367,7 @@ stock bool FakelagCommandRequiresClient(int client)
 		return true;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", LANG_SERVER, "FakelagClientOnlyCommand");
+	CReplyToCommand(client, "%t %t", "Tag", "FakelagClientOnlyCommand");
 	return false;
 }
 
@@ -379,7 +404,7 @@ public Action BalanceLagVoteCmd(int client, int args)
 
 	Handle vote = CreateBuiltinVote(FakeLagBalanceVoteHandler, BuiltinVoteType_Custom_YesNo, BUILTINVOTE_ACTIONS_DEFAULT);
 	if (vote == null) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteUnavailable");
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteUnavailable");
 		return Plugin_Handled;
 	}
 
@@ -394,12 +419,14 @@ public Action BalanceLagVoteCmd(int client, int args)
 	if (!DisplayBuiltinVoteToAllNonSpectators(vote, 20)) {
 		g_FakeLagBalanceVote = null;
 		delete vote;
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteInProgress");
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteInProgress");
 		return Plugin_Handled;
 	}
 
+	FakeClientCommand(client, "Vote Yes");
+
 	FakelagNotifyVoteAudience("FakelagBalanceVoteAnnounce", client);
-	CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteStarted");
+	CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteStarted");
 	return Plugin_Handled;
 }
 
@@ -415,43 +442,45 @@ public Action FakeLagCmd(int client, int args)
 	}
 
 	char targetStr[256];
-	GetCmdArg(1, targetStr, sizeof(targetStr));
+	FakelagBuildArgRangeString(1, args - 1, targetStr, sizeof(targetStr));
 
 	int target = FindTarget(client, targetStr, true);
 	if (target < 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagTargetNotFound", targetStr);
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagTargetNotFound", targetStr);
 		return Plugin_Handled;
 	}
 
 	if (!IsClientInGame(target)) {
-		CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagPlayerNotInGame", target);
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerNotInGame", target);
 		return Plugin_Handled;
 	}
 
 	if (IsFakeClient(target)) {
-		CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagPlayerIsBot", target);
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerIsBot", target);
 		return Plugin_Handled;
 	}
 
-	int lagAmount = GetCmdArgInt(2);
+	char lagArg[32];
+	GetCmdArg(args, lagArg, sizeof(lagArg));
+	int lagAmount = StringToInt(lagArg);
 	if (lagAmount < 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagLagNonNegative");
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagLagNonNegative");
 		return Plugin_Handled;
 	}
 
 	if (lagAmount == 0) {
 		if (!CFakeLag_HasPlayerLatency(target)) {
-			CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagPlayerNotLagged", target);
+			CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerNotLagged", target);
 			return Plugin_Handled;
 		}
 
 		CFakeLag_ClearPlayerLatency(target);
-		CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagClearedOnPlayer", target);
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagClearedOnPlayer", target);
 		return Plugin_Handled;
 	}
 
 	CFakeLag_SetPlayerLatency(target, float(lagAmount));
-	CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagSetOnPlayer", lagAmount, target);
+	CReplyToCommand(client, "%t %t", "Tag", "FakelagSetOnPlayer", lagAmount, target);
 	return Plugin_Handled;
 }
 
@@ -467,11 +496,11 @@ public Action StatusLagCmd(int client, int args)
 	}
 
 	char targetStr[256];
-	GetCmdArg(1, targetStr, sizeof(targetStr));
+	FakelagBuildArgRangeString(1, args, targetStr, sizeof(targetStr));
 
 	int target = FindTarget(client, targetStr, true);
 	if (target < 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagTargetNotFound", targetStr);
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagTargetNotFound", targetStr);
 		return Plugin_Handled;
 	}
 
@@ -491,26 +520,26 @@ public Action ClearLagCmd(int client, int args)
 	}
 
 	char targetStr[256];
-	GetCmdArg(1, targetStr, sizeof(targetStr));
+	FakelagBuildArgRangeString(1, args, targetStr, sizeof(targetStr));
 
 	int target = FindTarget(client, targetStr, true);
 	if (target < 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagTargetNotFound", targetStr);
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagTargetNotFound", targetStr);
 		return Plugin_Handled;
 	}
 
 	if (!CFakeLag_IsClientSupported(target)) {
-		CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagPlayerUnsupported", target);
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerUnsupported", target);
 		return Plugin_Handled;
 	}
 
 	if (!CFakeLag_HasPlayerLatency(target)) {
-		CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagPlayerNotLagged", target);
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerNotLagged", target);
 		return Plugin_Handled;
 	}
 
 	CFakeLag_ClearPlayerLatency(target);
-	CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagClearedOnPlayer", target);
+	CReplyToCommand(client, "%t %t", "Tag", "FakelagClearedOnPlayer", target);
 	return Plugin_Handled;
 }
 
@@ -522,12 +551,12 @@ public Action ClearAllLagCmd(int client, int args)
 
 	int laggedClients = CFakeLag_GetLaggedClientCount();
 	if (laggedClients <= 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagNoEntriesToClear");
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagNoEntriesToClear");
 		return Plugin_Handled;
 	}
 
 	CFakeLag_ClearAllPlayerLatencies();
-	CReplyToCommand(client, "%t %t", "Tag", client, "FakelagClearedAll", laggedClients);
+	CReplyToCommand(client, "%t %t", "Tag", "FakelagClearedAll", laggedClients);
 	return Plugin_Handled;
 }
 
@@ -539,15 +568,15 @@ public Action PrintLagCmd(int client, int args)
 
 	int laggedClients = CFakeLag_GetLaggedClientCount();
 	if (laggedClients <= 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagNoPlayersLagged");
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagNoPlayersLagged");
 		return Plugin_Handled;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", client, "FakelagActiveEntries", laggedClients);
+	CReplyToCommand(client, "%t %t", "Tag", "FakelagActiveEntries", laggedClients);
 
 	for (int i = 1; i <= MaxClients; i++) {
 		if (IsClientInGame(i) && !IsFakeClient(i) && CFakeLag_HasPlayerLatency(i)) {
-			CReplyToCommandEx(client, i, "%T %t", "Tag", client, "FakelagPlayerEntry", i, CFakeLag_GetPlayerLatency(i));
+			CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerEntry", i, CFakeLag_GetPlayerLatency(i));
 		}
 	}
 
@@ -620,6 +649,10 @@ public int Native_StartBalanceVote(Handle plugin, int numParams)
 		g_FakeLagBalanceVote = null;
 		delete vote;
 		return false;
+	}
+
+	if (initiator > 0) {
+		FakeClientCommand(initiator, "Vote Yes");
 	}
 
 	if (initiator > 0) {
