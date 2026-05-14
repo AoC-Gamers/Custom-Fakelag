@@ -36,10 +36,12 @@ load_dotenv "$ENV_FILE"
 DEPS_DIR="${DEPS_DIR:-$ROOT_DIR/.deps}"
 BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/.build/linux-l4d2}"
 SOURCEMOD_DIR="${SOURCEMOD_DIR:-$DEPS_DIR/sourcemod-1.12}"
+SOURCEMOD_PACKAGE_DIR="${SOURCEMOD_PACKAGE_DIR:-$DEPS_DIR/sourcemod-package}"
 MMSOURCE_DIR="${MMSOURCE_DIR:-$DEPS_DIR/mmsource-1.12}"
 HL2SDK_DIR="${HL2SDK_DIR:-$DEPS_DIR/hl2sdk-l4d2}"
 VENV_DIR="${VENV_DIR:-$DEPS_DIR/.venv-linux}"
 CONFIGURE_SCRIPT="${CONFIGURE_SCRIPT:-$ROOT_DIR/configure.py}"
+PLAYER_FAKELAG_SOURCE="${PLAYER_FAKELAG_SOURCE:-$ROOT_DIR/scripting/player_fakelag.sp}"
 
 case "$(uname -s)" in
   Linux)
@@ -94,7 +96,7 @@ if ! VENV_AMBUILD="$(venv_ambuild)"; then
   exit 1
 fi
 
-for required_dir in "$HL2SDK_DIR" "$SOURCEMOD_DIR" "$MMSOURCE_DIR"; do
+for required_dir in "$HL2SDK_DIR" "$SOURCEMOD_DIR" "$SOURCEMOD_PACKAGE_DIR" "$MMSOURCE_DIR"; do
   if [[ ! -d "$required_dir" ]]; then
     echo "Missing required directory: $required_dir" >&2
     exit 1
@@ -135,8 +137,23 @@ if [[ "$EXT_BIN" != "$CANONICAL_EXT_BIN" ]]; then
   EXT_BIN="$CANONICAL_EXT_BIN"
 fi
 
+SPCOMP="$SOURCEMOD_PACKAGE_DIR/addons/sourcemod/scripting/spcomp"
+SP_INCLUDE_DIR="$SOURCEMOD_PACKAGE_DIR/addons/sourcemod/scripting/include"
+PLUGIN_INCLUDE_DIR="$ROOT_DIR/scripting/include"
+PLUGIN_OUTPUT_DIR="$BUILD_DIR/package/addons/sourcemod/plugins"
+PLAYER_FAKELAG_BINARY="$PLUGIN_OUTPUT_DIR/player_fakelag.smx"
+
+if [[ ! -x "$SPCOMP" ]]; then
+  echo "Missing spcomp compiler at $SPCOMP." >&2
+  exit 1
+fi
+
+mkdir -p "$PLUGIN_OUTPUT_DIR"
+"$SPCOMP" "$PLAYER_FAKELAG_SOURCE" -o"$PLAYER_FAKELAG_BINARY" -i"$PLUGIN_INCLUDE_DIR" -i"$SP_INCLUDE_DIR"
+
 cat <<EOF
 Build complete.
 BUILD_DIR=$BUILD_DIR
 EXTENSION=$EXT_BIN
+PLUGIN=$PLAYER_FAKELAG_BINARY
 EOF

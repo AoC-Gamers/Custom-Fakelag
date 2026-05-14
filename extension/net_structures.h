@@ -40,6 +40,61 @@ struct _netpacket_s
   bool stream;
   _netpacket_s* pNext;
 
+  void ResetRuntimeLinks()
+  {
+    pNext = nullptr;
+  }
+
+  void SyncMessageBuffer()
+  {
+    message.m_pData = data;
+  }
+
+  void CopyPayloadFrom(const _netpacket_s& src)
+  {
+    delete[] data;
+    data = nullptr;
+
+    if (src.size > 0 && src.data != nullptr) {
+      data = new unsigned char[src.size];
+      std::memcpy(data, src.data, src.size);
+    }
+
+    SyncMessageBuffer();
+  }
+
+  void CopyMetadataFrom(const _netpacket_s& src)
+  {
+    from = src.from;
+    source = src.source;
+    received = src.received;
+    message = src.message;
+    size = src.size;
+    wiresize = src.wiresize;
+    stream = src.stream;
+    ResetRuntimeLinks();
+  }
+
+  void CopyFrom(const _netpacket_s& src)
+  {
+    CopyMetadataFrom(src);
+    CopyPayloadFrom(src);
+  }
+
+  void CopyToLivePacket(_netpacket_s* dest) const
+  {
+    if (dest == nullptr) {
+      return;
+    }
+
+    dest->CopyMetadataFrom(*this);
+    dest->message.m_pData = dest->data;
+
+    if (size > 0 && data != nullptr && dest->data != nullptr) {
+      std::memcpy(dest->data, data, size);
+    }
+  }
+
   _netpacket_s(const _netpacket_s& src)
     :
     from(src.from),
@@ -52,10 +107,7 @@ struct _netpacket_s
     stream(src.stream),
     pNext(nullptr)
   {
-    if (src.size > 0 && src.data != nullptr) {
-      data = new unsigned char[src.size];
-      std::memcpy(data, src.data, src.size);
-    }
+    CopyPayloadFrom(src);
   }
 
   _netpacket_s& operator=(const _netpacket_s& src)
@@ -66,20 +118,7 @@ struct _netpacket_s
 
     delete[] data;
 
-    from = src.from;
-    source = src.source;
-    received = src.received;
-    data = nullptr;
-    message = src.message;
-    size = src.size;
-    wiresize = src.wiresize;
-    stream = src.stream;
-    pNext = nullptr;
-
-    if (src.size > 0 && src.data != nullptr) {
-      data = new unsigned char[src.size];
-      std::memcpy(data, src.data, src.size);
-    }
+    CopyFrom(src);
 
     return *this;
   }
@@ -93,10 +132,11 @@ struct _netpacket_s
       size(other.size),
       wiresize(other.wiresize),
       stream(other.stream),
-      pNext(other.pNext)
+      pNext(nullptr)
   {
     other.data = nullptr;
-    other.pNext = nullptr;
+    other.ResetRuntimeLinks();
+    SyncMessageBuffer();
   }
 
   _netpacket_s& operator=(_netpacket_s&& other) noexcept
@@ -115,10 +155,11 @@ struct _netpacket_s
     size = other.size;
     wiresize = other.wiresize;
     stream = other.stream;
-    pNext = other.pNext;
+    ResetRuntimeLinks();
 
     other.data = nullptr;
-    other.pNext = nullptr;
+    other.ResetRuntimeLinks();
+    SyncMessageBuffer();
     return *this;
   }
 

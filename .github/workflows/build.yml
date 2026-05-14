@@ -58,6 +58,8 @@ jobs:
   build-linux:
     runs-on: ubuntu-22.04
     needs: prepare-deps
+    env:
+      RELEASE_CHANNEL: ${{ github.ref_name == 'develop' && 'develop' || 'latest' }}
 
     steps:
       - name: Checkout repository
@@ -87,19 +89,21 @@ jobs:
           mkdir -p dist/release
           (
             cd ".build/linux-l4d2/package"
-            zip -r "$GITHUB_WORKSPACE/dist/release/custom_fakelag-linux.zip" addons
+            zip -r "$GITHUB_WORKSPACE/dist/release/custom-fakelag-linux-${RELEASE_CHANNEL}.zip" addons
           )
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: custom_fakelag-linux
-          path: dist/release/custom_fakelag-linux.zip
+          name: custom-fakelag-linux-${{ env.RELEASE_CHANNEL }}
+          path: dist/release/custom-fakelag-linux-${{ env.RELEASE_CHANNEL }}.zip
           if-no-files-found: error
           retention-days: 14
 
   build-windows:
     runs-on: windows-2022
+    env:
+      RELEASE_CHANNEL: ${{ github.ref_name == 'develop' && 'develop' || 'latest' }}
 
     steps:
       - name: Checkout repository
@@ -127,12 +131,12 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist\release | Out-Null
-          Compress-Archive -Path ".build\windows-l4d2\package\addons" -DestinationPath "dist\release\custom_fakelag-windows.zip" -Force
+          Compress-Archive -Path ".build\windows-l4d2\package\addons" -DestinationPath "dist\release\custom-fakelag-windows-$env:RELEASE_CHANNEL.zip" -Force
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: custom_fakelag-windows
-          path: dist/release/custom_fakelag-windows.zip
+          name: custom-fakelag-windows-${{ env.RELEASE_CHANNEL }}
+          path: dist/release/custom-fakelag-windows-${{ env.RELEASE_CHANNEL }}.zip
           if-no-files-found: error
           retention-days: 14
