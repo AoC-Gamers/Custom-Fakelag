@@ -38,7 +38,8 @@ public void OnPluginStart()
 	g_FwdOnPlayerLatencyChanged = new GlobalForward("PlayerFakelag_OnPlayerLatencyChanged", ET_Ignore, Param_Cell, Param_Float, Param_Float, Param_Cell);
 	g_FwdOnPluginEnd = new GlobalForward("PlayerFakelag_OnPluginEnd", ET_Ignore);
 
-	LoadTranslations("custom_fakelag_player.phrases");
+	LoadTranslations("common.phrases");
+	LoadTranslations("player_fakelag.phrases");
 
 	RegAdminCmd("sm_fakelag", FakeLagCmd, ADMFLAG_CONFIG, "Set fake lag for a player; use 0 to clear");
 	RegAdminCmd("sm_fakelag_status", StatusLagCmd, ADMFLAG_CONFIG, "Show fake lag status for a player");

@@ -54,7 +54,7 @@ stock void FakelagNotifyVoteAudience(const char[] phrase, int initiator = 0)
 {
 	for (int client = 1; client <= MaxClients; client++)
 	{
-		if (!IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) < view_as<int>(L4DTeam_Survivor))
+		if (!IsClientInGame(client) || IsFakeClient(client) || L4D_GetClientTeam(client) < L4DTeam_Survivor)
 		{
 			continue;
 		}

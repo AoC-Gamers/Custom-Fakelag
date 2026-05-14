@@ -6,6 +6,12 @@
 		"es"        "[{olive}Fakelag{default}]"
 	}
 
+	"TagConsole"
+	{
+		"en"        "[Fakelag]"
+		"es"        "[Fakelag]"
+	}
+
 	"Use"
 	{
 		"en"        "{lightgreen}Usage:{default}"
@@ -98,50 +104,62 @@
 
 	"FakelagBalanceTarget"
 	{
-		"en"        "Balancing against {teamcolor}%N{default} with avg ping est. {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Balanceando contra {teamcolor}%N{default} con ping promedio est. de {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Balancing against {teamcolor}%N{default} with ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"es"        "Balanceando contra {teamcolor}%N{default} con ping x̅ de {green}%.1fms{default} (raw {green}%.1fms{default})."
 	}
 
 	"FakelagBalancePreviewTarget"
 	{
-		"en"        "Previewing balance against {teamcolor}%N{default} with avg ping est. {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Previsualizando balance contra {teamcolor}%N{default} con ping promedio est. de {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Previewing balance against {teamcolor}%N{default} with ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"es"        "Previsualizando balance contra {teamcolor}%N{default} con ping x̅ de {green}%.1fms{default} (raw {green}%.1fms{default})."
+	}
+
+	"FakelagBalancePreviewTargetConsole"
+	{
+		"en"        "Previewing balance against %N with ping x̅ %.1fms (raw %.1fms)."
+		"es"        "Previsualizando balance contra %N con ping x̅ de %.1fms (raw %.1fms)."
 	}
 
 	"FakelagBalancePlayerUnchanged"
 	{
-		"en"        "Player {teamcolor}%N{default}: ping est. {green}%.1fms{default} (raw {green}%.1fms{default}), already at or above target est. {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Jugador {teamcolor}%N{default}: ping est. {green}%.1fms{default} (raw {green}%.1fms{default}), ya esta en o por encima del objetivo est. de {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Player {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), already at or above target x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"es"        "Jugador {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), ya esta en o por encima del objetivo x̅ de {green}%.1fms{default} (raw {green}%.1fms{default})."
 	}
 
 	"FakelagBalancePlayerAdjusted"
 	{
-		"en"        "Player {teamcolor}%N{default}: ping est. {green}%.1fms{default} (raw {green}%.1fms{default}), added fake lag raw {green}%.1fms{default}, target est. {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Jugador {teamcolor}%N{default}: ping est. {green}%.1fms{default} (raw {green}%.1fms{default}), se agrego fakelag raw de {green}%.1fms{default}, objetivo est. {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Player {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), added fake lag raw {green}%.1fms{default}, target x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"es"        "Jugador {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), se agrego fakelag raw de {green}%.1fms{default}, objetivo x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
 	}
 
-	"FakelagBalancePreviewPlayerUnchanged"
+	"FakelagBalancePreviewPlayerUnchangedConsole"
 	{
-		"en"        "Preview {teamcolor}%N{default}: ping est. {green}%.1fms{default} (raw {green}%.1fms{default}), already at or above target est. {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Vista previa {teamcolor}%N{default}: ping est. {green}%.1fms{default} (raw {green}%.1fms{default}), ya esta en o por encima del objetivo est. de {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Preview %N: ping x̅ %.1fms (raw %.1fms), already at or above target x̅ %.1fms (raw %.1fms)."
+		"es"        "Vista previa %N: ping x̅ %.1fms (raw %.1fms), ya esta en o por encima del objetivo x̅ de %.1fms (raw %.1fms)."
 	}
 
-	"FakelagBalancePreviewPlayerAdjusted"
+	"FakelagBalancePreviewPlayerAdjustedConsole"
 	{
-		"en"        "Preview {teamcolor}%N{default}: ping est. {green}%.1fms{default} (raw {green}%.1fms{default}), would add fake lag raw {green}%.1fms{default}, target est. {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Vista previa {teamcolor}%N{default}: ping est. {green}%.1fms{default} (raw {green}%.1fms{default}), agregaria fakelag raw de {green}%.1fms{default}, objetivo est. {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Preview %N: ping x̅ %.1fms (raw %.1fms), fake lag raw %.1fms, target x̅ %.1fms (raw %.1fms)."
+		"es"        "Vista previa %N: ping x̅ %.1fms (raw %.1fms), fakelag raw %.1fms, objetivo x̅ %.1fms (raw %.1fms)."
 	}
 
 	"FakelagBalanceApplied"
 	{
-		"en"        "Balanced {green}%d{default} players, adjusted {green}%d{default}, cleared {green}%d{default}, target ping est. {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Balanceados {green}%d{default} jugadores, ajustados {green}%d{default}, limpiados {green}%d{default}, ping objetivo est. {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Balanced {green}%d{default} players, adjusted {green}%d{default}, cleared {green}%d{default}, target ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"es"        "Balanceados {green}%d{default} jugadores, ajustados {green}%d{default}, limpiados {green}%d{default}, ping objetivo x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
 	}
 
-	"FakelagBalancePreviewApplied"
+	"FakelagBalancePreviewAppliedConsole"
 	{
-		"en"        "Previewed {green}%d{default} players, would adjust {green}%d{default}, target ping est. {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Previsualizados {green}%d{default} jugadores, ajustaria {green}%d{default}, ping objetivo est. {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Previewed %d players, would adjust %d, target ping x̅ %.1fms (raw %.1fms)."
+		"es"        "Previsualizados %d jugadores, ajustaria %d, ping objetivo x̅ %.1fms (raw %.1fms)."
+	}
+
+	"FakelagPreviewSentToConsole"
+	{
+		"en"        "{lightgreen}Preview details{default} were sent to your console."
+		"es"        "La {lightgreen}informacion de la vista previa{default} fue enviada a tu consola."
 	}
 
 	"FakelagBalanceVoteUnavailable"

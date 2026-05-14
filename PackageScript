@@ -41,7 +41,7 @@ CopyFiles('gamedata', 'addons/sourcemod/gamedata',
 )
 
 CopyFiles('translations', 'addons/sourcemod/translations',
-  [ 'custom_fakelag_player.phrases.txt', ]
+  [ 'player_fakelag.phrases.txt', ]
 )
 
 CopyFiles('scripting', 'addons/sourcemod/scripting',
