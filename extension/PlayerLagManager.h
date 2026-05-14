@@ -5,17 +5,17 @@
 #include <amtl/am-hashmap.h>
 #include "net_structures.h"
 
-
-
 struct NetAdrHashPolicy_s {
 	static uint32_t hash(const dumb_netadr_t& value)
 	{
-		return *(uint32_t*)value.ip;
+		return *reinterpret_cast<const uint32_t*>(value.ip);
 	}
 
 	static bool matches(const dumb_netadr_t& value, const dumb_netadr_t& key)
 	{
-		return *(uint32_t*)(value.ip) == *(uint32_t*)(key.ip) && value.port == key.port && value.type == key.type;
+		return *reinterpret_cast<const uint32_t*>(value.ip) == *reinterpret_cast<const uint32_t*>(key.ip)
+			&& value.port == key.port
+			&& value.type == key.type;
 	}
 };
 
@@ -28,7 +28,7 @@ private:
 	const dumb_netadr_t& GetClientNetAdr(int client) const;
 
 public:
-	PlayerLagManager(IVEngineServer* engine) : m_pEngine(engine) {
+	explicit PlayerLagManager(IVEngineServer* engine) : m_pEngine(engine) {
 		m_LagTimes.init(32);
 	}
 
