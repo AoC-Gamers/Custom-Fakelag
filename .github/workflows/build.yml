@@ -13,6 +13,9 @@ concurrency:
   group: custom-fakelag-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   prepare-deps:
     runs-on: ubuntu-22.04
@@ -81,7 +84,7 @@ jobs:
 
       - name: Build extension
         shell: bash
-        run: make build-linux-l4d2
+        run: make build-linux
 
       - name: Prepare release archive
         shell: bash
@@ -125,7 +128,7 @@ jobs:
 
       - name: Build Windows extension
         shell: pwsh
-        run: make build-windows-l4d2
+        run: make build-windows
 
       - name: Prepare Windows archive
         shell: pwsh
