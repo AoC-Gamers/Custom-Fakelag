@@ -72,6 +72,114 @@
 		"es"        "No hay {lightgreen}entradas activas de fakelag{default} para limpiar."
 	}
 
+	"FakelagBalanceNoPlayers"
+	{
+		"en"        "No valid {lightgreen}survivor or infected players{default} with ping data were found."
+		"es"        "No se encontraron {lightgreen}supervivientes o infectados validos{default} con datos de ping."
+	}
+
+	"FakelagBalanceTarget"
+	{
+		"en"        "Balancing against {teamcolor}%N{default} with {green}%.1fms{default} average ping."
+		"es"        "Balanceando contra {teamcolor}%N{default} con {green}%.1fms{default} de ping promedio."
+	}
+
+	"FakelagBalancePreviewTarget"
+	{
+		"en"        "Previewing balance against {teamcolor}%N{default} with {green}%.1fms{default} average ping."
+		"es"        "Previsualizando balance contra {teamcolor}%N{default} con {green}%.1fms{default} de ping promedio."
+	}
+
+	"FakelagBalancePlayerUnchanged"
+	{
+		"en"        "Player {teamcolor}%N{default}: ping {green}%.1fms{default}, no extra fake lag needed."
+		"es"        "Jugador {teamcolor}%N{default}: ping {green}%.1fms{default}, no necesita fakelag extra."
+	}
+
+	"FakelagBalancePlayerAdjusted"
+	{
+		"en"        "Player {teamcolor}%N{default}: ping {green}%.1fms{default}, added fakelag {green}%.1fms{default}."
+		"es"        "Jugador {teamcolor}%N{default}: ping {green}%.1fms{default}, se agrego fakelag de {green}%.1fms{default}."
+	}
+
+	"FakelagBalancePreviewPlayerUnchanged"
+	{
+		"en"        "Preview {teamcolor}%N{default}: ping {green}%.1fms{default}, no extra fake lag needed."
+		"es"        "Vista previa {teamcolor}%N{default}: ping {green}%.1fms{default}, no necesita fakelag extra."
+	}
+
+	"FakelagBalancePreviewPlayerAdjusted"
+	{
+		"en"        "Preview {teamcolor}%N{default}: ping {green}%.1fms{default}, would add fakelag {green}%.1fms{default}."
+		"es"        "Vista previa {teamcolor}%N{default}: ping {green}%.1fms{default}, agregaria fakelag de {green}%.1fms{default}."
+	}
+
+	"FakelagBalanceApplied"
+	{
+		"en"        "Balanced {green}%d{default} players, adjusted {green}%d{default}, cleared {green}%d{default}, target ping {green}%.1fms{default}."
+		"es"        "Balanceados {green}%d{default} jugadores, ajustados {green}%d{default}, limpiados {green}%d{default}, ping objetivo {green}%.1fms{default}."
+	}
+
+	"FakelagBalancePreviewApplied"
+	{
+		"en"        "Previewed {green}%d{default} players, would adjust {green}%d{default}, target ping {green}%.1fms{default}."
+		"es"        "Previsualizados {green}%d{default} jugadores, ajustaria {green}%d{default}, ping objetivo {green}%.1fms{default}."
+	}
+
+	"FakelagBalanceVoteUnavailable"
+	{
+		"en"        "{lightgreen}BuiltinVotes{default} is not available right now."
+		"es"        "{lightgreen}BuiltinVotes{default} no esta disponible en este momento."
+	}
+
+	"FakelagBalanceVoteInProgress"
+	{
+		"en"        "A {lightgreen}vote{default} is already in progress."
+		"es"        "Ya hay una {lightgreen}votacion{default} en curso."
+	}
+
+	"FakelagBalanceVoteDelay"
+	{
+		"en"        "You must wait {green}%d{default} seconds before starting another vote."
+		"es"        "Debes esperar {green}%d{default} segundos antes de iniciar otra votacion."
+	}
+
+	"FakelagBalanceVoteStarted"
+	{
+		"en"        "Started a {lightgreen}vote{default} to balance fake lag across teams."
+		"es"        "Se inicio una {lightgreen}votacion{default} para balancear el fakelag entre equipos."
+	}
+
+	"FakelagBalanceVoteStartedServer"
+	{
+		"en"        "The {lightgreen}server{default} started a vote to balance fake lag across teams."
+		"es"        "El {lightgreen}servidor{default} inicio una votacion para balancear el fakelag entre equipos."
+	}
+
+	"FakelagBalanceVoteAnnounce"
+	{
+		"en"        "{teamcolor}%N{default} started a {lightgreen}vote{default} to balance fake lag across teams."
+		"es"        "{teamcolor}%N{default} inicio una {lightgreen}votacion{default} para balancear el fakelag entre equipos."
+	}
+
+	"FakelagBalanceVoteQuestion"
+	{
+		"en"        "Balance fake lag across teams?"
+		"es"        "Balancear el fakelag entre equipos?"
+	}
+
+	"FakelagBalanceVotePassed"
+	{
+		"en"        "The {lightgreen}vote{default} to balance fake lag across teams {green}passed{default}."
+		"es"        "La {lightgreen}votacion{default} para balancear el fakelag entre equipos {green}fue aprobada{default}."
+	}
+
+	"FakelagBalanceVoteFailed"
+	{
+		"en"        "The {lightgreen}vote{default} to balance fake lag across teams {lightgreen}failed{default}."
+		"es"        "La {lightgreen}votacion{default} para balancear el fakelag entre equipos {lightgreen}fallo{default}."
+	}
+
 	"FakelagClearedAll"
 	{
 		"en"        "{lightgreen}Cleared all fake lag entries{default} ({green}%d{default} active)"

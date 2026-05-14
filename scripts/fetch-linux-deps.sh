@@ -36,8 +36,10 @@ load_dotenv "$ENV_FILE"
 DEPS_DIR="${DEPS_DIR:-$ROOT_DIR/.deps}"
 HL2SDK_DIR="${HL2SDK_DIR:-$DEPS_DIR/hl2sdk-l4d2}"
 SOURCEMOD_DIR="${SOURCEMOD_DIR:-$DEPS_DIR/sourcemod-1.12}"
+SOURCEMOD_PACKAGE_DIR="${SOURCEMOD_PACKAGE_DIR:-$DEPS_DIR/sourcemod-package}"
 MMSOURCE_DIR="${MMSOURCE_DIR:-$DEPS_DIR/mmsource-1.12}"
 AMBUILD_DIR="${AMBUILD_DIR:-$DEPS_DIR/ambuild}"
+SOURCEMOD_LATEST_LINUX_URL="${SOURCEMOD_LATEST_LINUX_URL:-https://sm.alliedmods.net/smdrop/1.12/sourcemod-latest-linux}"
 
 case "$(uname -s)" in
   Linux)
@@ -99,6 +101,12 @@ clone_or_update "https://github.com/alliedmodders/ambuild.git" "$AMBUILD_DIR" "m
 sync_submodules_if_present "$SOURCEMOD_DIR"
 sync_submodules_if_present "$MMSOURCE_DIR"
 
+rm -rf "$SOURCEMOD_PACKAGE_DIR"
+mkdir -p "$SOURCEMOD_PACKAGE_DIR"
+SOURCEMOD_PACKAGE_NAME="$(curl -fsSL "$SOURCEMOD_LATEST_LINUX_URL")"
+SOURCEMOD_PACKAGE_URL="https://sm.alliedmods.net/smdrop/1.12/$SOURCEMOD_PACKAGE_NAME"
+curl -fsSL "$SOURCEMOD_PACKAGE_URL" | tar -xz -C "$SOURCEMOD_PACKAGE_DIR"
+
 if [[ ! -d "$VENV_DIR" ]]; then
   python3 -m venv "$VENV_DIR"
 fi
@@ -113,6 +121,7 @@ ROOT_DIR=$ROOT_DIR
 DEPS_DIR=$DEPS_DIR
 HL2SDK_DIR=$HL2SDK_DIR
 SOURCEMOD_DIR=$SOURCEMOD_DIR
+SOURCEMOD_PACKAGE_DIR=$SOURCEMOD_PACKAGE_DIR
 MMSOURCE_DIR=$MMSOURCE_DIR
 AMBUILD_DIR=$AMBUILD_DIR
 VENV_DIR=$VENV_DIR

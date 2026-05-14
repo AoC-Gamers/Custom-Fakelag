@@ -35,9 +35,11 @@ $depsDir = if ($env:DEPS_DIR) { $env:DEPS_DIR } else { Join-Path $root ".deps" }
 $buildDir = if ($env:BUILD_DIR) { $env:BUILD_DIR } else { Join-Path $root ".build\windows-l4d2" }
 $hl2sdkDir = if ($env:HL2SDK_DIR) { $env:HL2SDK_DIR } else { Join-Path $depsDir "hl2sdk-l4d2" }
 $sourcemodDir = if ($env:SOURCEMOD_DIR) { $env:SOURCEMOD_DIR } else { Join-Path $depsDir "sourcemod-1.12" }
+$sourcemodPackageDir = if ($env:SOURCEMOD_PACKAGE_DIR) { $env:SOURCEMOD_PACKAGE_DIR } else { Join-Path $depsDir "sourcemod-package" }
 $mmsourceDir = if ($env:MMSOURCE_DIR) { $env:MMSOURCE_DIR } else { Join-Path $depsDir "mmsource-1.12" }
 $venvDir = if ($env:VENV_DIR) { $env:VENV_DIR } else { Join-Path $depsDir ".venv-windows" }
 $configureScript = if ($env:CONFIGURE_SCRIPT) { $env:CONFIGURE_SCRIPT } else { Join-Path $root "configure.py" }
+$playerFakelagSource = if ($env:PLAYER_FAKELAG_SOURCE) { $env:PLAYER_FAKELAG_SOURCE } else { Join-Path $root "scripting\player_fakelag.sp" }
 
 $venvPython = Join-Path $venvDir "Scripts\python.exe"
 $venvAmbuild = Join-Path $venvDir "Scripts\ambuild.exe"
@@ -107,7 +109,7 @@ function Import-VcVarsEnvironment {
   }
 }
 
-foreach ($requiredDir in @($hl2sdkDir, $sourcemodDir, $mmsourceDir)) {
+foreach ($requiredDir in @($hl2sdkDir, $sourcemodDir, $sourcemodPackageDir, $mmsourceDir)) {
   if (-not (Test-Path $requiredDir)) {
     throw "Missing required directory: $requiredDir"
   }
@@ -169,6 +171,23 @@ if ($extBin -ne $canonicalExtBin) {
   $extBin = $canonicalExtBin
 }
 
+$spcomp = Join-Path $sourcemodPackageDir "addons\sourcemod\scripting\spcomp.exe"
+$spIncludeDir = Join-Path $sourcemodPackageDir "addons\sourcemod\scripting\include"
+$pluginIncludeDir = Join-Path $root "scripting\include"
+$pluginOutputDir = Join-Path $buildDir "package\addons\sourcemod\plugins"
+$playerFakelagBinary = Join-Path $pluginOutputDir "player_fakelag.smx"
+
+if (-not (Test-Path $spcomp)) {
+  throw "Missing spcomp compiler at $spcomp"
+}
+
+New-Item -ItemType Directory -Force $pluginOutputDir | Out-Null
+& $spcomp $playerFakelagSource "-o$playerFakelagBinary" "-i$pluginIncludeDir" "-i$spIncludeDir"
+if ($LASTEXITCODE -ne 0) {
+  throw "spcomp failed while compiling $playerFakelagSource"
+}
+
 Write-Host "Build complete."
 Write-Host "BUILD_DIR=$buildDir"
 Write-Host "EXTENSION=$extBin"
+Write-Host "PLUGIN=$playerFakelagBinary"

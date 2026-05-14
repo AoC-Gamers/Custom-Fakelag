@@ -8,6 +8,7 @@ builder.SetBuildFolder('package')
 # Add any folders you need to this list
 folder_list = [
   'addons/sourcemod/extensions',
+  'addons/sourcemod/plugins',
   'addons/sourcemod/scripting',
   'addons/sourcemod/scripting/include',
   'addons/sourcemod/translations',
@@ -30,7 +31,8 @@ def CopyFiles(src, dest, files):
     builder.AddCopy(source_path, dest_entry)
 
 CopyFiles('scripting/include', 'addons/sourcemod/scripting/include',
-  [ 'custom_fakelag.inc', ]
+  [ 'custom_fakelag.inc',
+    'player_fakelag.inc', ]
 )
 
 CopyFiles('gamedata', 'addons/sourcemod/gamedata',
@@ -42,10 +44,13 @@ CopyFiles('translations', 'addons/sourcemod/translations',
 )
 
 CopyFiles('scripting', 'addons/sourcemod/scripting',
-  [ 'player_fakelag.sp',
-    'custom_fakelag_forward.sp', ]
+  [ 'player_fakelag.sp', ]
 )
 
 # Copy binaries.
 for cxx_task in Extension.extensions:
   builder.AddCopy(cxx_task.binary, folder_map['addons/sourcemod/extensions'])
+
+player_fakelag_binary = os.path.join(builder.buildPath, 'player_fakelag.smx')
+if os.path.exists(player_fakelag_binary):
+  builder.AddCopy(player_fakelag_binary, folder_map['addons/sourcemod/plugins'])
