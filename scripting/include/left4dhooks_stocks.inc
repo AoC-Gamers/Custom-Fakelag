@@ -479,7 +479,7 @@ stock int L4D_GetBotOfIdlePlayer(int client)
 	{
 		if (!IsClientInGame(bot) ||
 			!IsFakeClient(bot) ||
-			view_as<L4DTeam>(GetClientTeam(bot)) != L4DTeam_Survivor ||
+			L4D_GetClientTeam(bot) != L4DTeam_Survivor ||
 			!IsPlayerAlive(bot) ||
 			GetClientHealth(bot) < 1)
 		{
@@ -964,7 +964,7 @@ stock float L4D_GetAvgSurvivorIntensity()
 	for (int client = 1; client <= MaxClients; client++)
 	{
 		if (!IsClientInGame(client) ||
-			view_as<L4DTeam>(GetClientTeam(client)) != L4DTeam_Survivor ||
+			L4D_GetClientTeam(client) != L4DTeam_Survivor ||
 			!IsPlayerAlive(client) ||
 			GetClientHealth(client) < 1)
 		{

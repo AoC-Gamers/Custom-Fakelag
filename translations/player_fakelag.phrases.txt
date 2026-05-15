@@ -1,0 +1,380 @@
+"Phrases"
+{
+	"Tag"
+	{
+		"en"        "[{olive}Fakelag{default}]"
+		"es"        "[{olive}Fakelag{default}]"
+	}
+
+	"TagConsole"
+	{
+		"en"        "[Fakelag]"
+		"es"        "[Fakelag]"
+	}
+
+	"Use"
+	{
+		"en"        "{lightgreen}Usage:{default}"
+		"es"        "{lightgreen}Uso:{default}"
+	}
+
+	"ClientOnlyCommand"
+	{
+		"en"        "{lightgreen}This command{default} can only be used by an in-game client."
+		"es"        "{lightgreen}Este comando{default} solo puede usarse desde un cliente dentro del juego."
+	}
+
+	"PlayerNotInGame"
+	{
+		"en"        "Player {teamcolor}%N{default} is {lightgreen}not in game{default} yet."
+		"es"        "El jugador {teamcolor}%N{default} {lightgreen}todavia no esta en juego{default}."
+	}
+
+	"PlayerIsBot"
+	{
+		"en"        "Player {teamcolor}%N{default} is a fake client and {lightgreen}can't be lagged{default}."
+		"es"        "El jugador {teamcolor}%N{default} es un cliente falso y {lightgreen}no puede recibir fakelag{default}."
+	}
+
+	"LagNonNegative"
+	{
+		"en"        "{lightgreen}Lag{default} must be greater than or equal to {green}0{default}."
+		"es"        "El {lightgreen}lag{default} debe ser mayor o igual a {green}0{default}."
+	}
+
+	"BalanceModeInvalid"
+	{
+		"en"        "Unknown balance mode {green}%s{default}. Valid modes: {lightgreen}global{default}, {lightgreen}pairs{default}."
+		"es"        "Modo de balance {green}%s{default} desconocido. Modos validos: {lightgreen}global{default}, {lightgreen}pairs{default}."
+	}
+
+	"PlayerNotLagged"
+	{
+		"en"        "Player {teamcolor}%N{default} does not currently have {lightgreen}fake lag{default}."
+		"es"        "El jugador {teamcolor}%N{default} no tiene {lightgreen}fakelag{default} aplicado actualmente."
+	}
+
+	"PlayerUnsupported"
+	{
+		"en"        "Player {teamcolor}%N{default} {lightgreen}cannot be lagged{default} right now."
+		"es"        "No se puede {lightgreen}aplicar fakelag{default} al jugador {teamcolor}%N{default} en este momento."
+	}
+
+	"PlayerInvalidHumanTarget"
+	{
+		"en"        "Player {teamcolor}%N{default} is not a valid human target."
+		"es"        "El jugador {teamcolor}%N{default} no es un objetivo humano valido."
+	}
+
+	"PlayerNoPingData"
+	{
+		"en"        "Player {teamcolor}%N{default} does not have valid {lightgreen}ping data{default} right now."
+		"es"        "El jugador {teamcolor}%N{default} no tiene {lightgreen}datos de ping validos{default} en este momento."
+	}
+
+	"StatusDisabled"
+	{
+		"en"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fake lag raw: {lightgreen}disabled{default}"
+		"es"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fakelag raw: {lightgreen}desactivado{default}"
+	}
+
+	"StatusEnabled"
+	{
+		"en"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fake lag raw: {green}%.1fms{default}"
+		"es"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fakelag raw: {green}%.1fms{default}"
+	}
+
+	"CompareResult"
+	{
+		"en"        "{teamcolor}%N{default}: {green}%.1fms{default} | {teamcolor}%N{default}: {green}%.1fms{default} | diff: {lightgreen}%.1fms{default}"
+		"es"        "{teamcolor}%N{default}: {green}%.1fms{default} | {teamcolor}%N{default}: {green}%.1fms{default} | dif: {lightgreen}%.1fms{default}"
+	}
+
+	"CompareHigher"
+	{
+		"en"        "{teamcolor}%N{default} is higher by {lightgreen}%.1fms{default}."
+		"es"        "{teamcolor}%N{default} esta mas alto por {lightgreen}%.1fms{default}."
+	}
+
+	"ClearedOnPlayer"
+	{
+		"en"        "{lightgreen}Cleared fake lag{default} on player {teamcolor}%N{default}"
+		"es"        "Se {lightgreen}quito el fakelag{default} al jugador {teamcolor}%N{default}"
+	}
+
+	"SelfClearedAnnounce"
+	{
+		"en"        "Player {teamcolor}%N{default} removed their fake lag."
+		"es"        "El jugador {teamcolor}%N{default} se quito el fakelag."
+	}
+
+	"RestoredOnSelf"
+	{
+		"en"        "Your fake lag was restored: {green}%.1fms{default} raw."
+		"es"        "Se restauro tu fakelag: {green}%.1fms{default} raw."
+	}
+
+	"SetOnPlayer"
+	{
+		"en"        "{lightgreen}Set fake lag{default} of {green}%dms{default} on player {teamcolor}%N{default}"
+		"es"        "Se {lightgreen}aplico un fakelag{default} de {green}%dms{default} al jugador {teamcolor}%N{default}"
+	}
+
+	"NoEntriesToClear"
+	{
+		"en"        "There are no {lightgreen}active fake lag entries{default} to clear."
+		"es"        "No hay {lightgreen}entradas activas de fakelag{default} para limpiar."
+	}
+
+	"BalanceNoPlayers"
+	{
+		"en"        "No valid {lightgreen}survivor or infected players{default} with ping data were found."
+		"es"        "No se encontraron {lightgreen}supervivientes o infectados validos{default} con datos de ping."
+	}
+
+	"BalanceStarted"
+	{
+		"en"        "Balancing globally."
+		"es"        "Balanceando globalmente."
+	}
+
+	"BalanceConsoleTitle"
+	{
+		"en"        "Balance against %N with ping x̅ %.1fms (raw %.1fms)."
+		"es"        "Balance contra %N con ping x̅ de %.1fms (raw %.1fms)."
+	}
+
+	"BalanceTableColumns"
+	{
+		"en"        "Player             |     Avg |     Raw | Result"
+		"es"        "Jugador            |     Avg |     Raw | Resultado"
+	}
+
+	"PairBalanceTableColumns"
+	{
+		"en"        "Survivor       |     Avg |     Raw | Infected       |     Avg |     Raw | Result"
+		"es"        "Survivor       |     Avg |     Raw | Infected       |     Avg |     Raw | Resultado"
+	}
+
+	"BalanceTableLegend"
+	{
+		"en"        "Avg = estimated net_graph ping | Raw = measured base ping before fakelag"
+		"es"        "Avg = ping estimado de net_graph | Raw = ping base medido antes del fakelag"
+	}
+
+	"BalanceTableActionSame"
+	{
+		"en"        "same"
+		"es"        "igual"
+	}
+
+	"BalanceTableActionClear"
+	{
+		"en"        "clear"
+		"es"        "limpiar"
+	}
+
+	"BalanceTableActionAdjust"
+	{
+		"en"        "+%.1f raw"
+		"es"        "+%.1f raw"
+	}
+
+	"PairBalanceTableActionAdjust"
+	{
+		"en"        "%s +%.1f raw"
+		"es"        "%s +%.1f raw"
+	}
+
+	"BalanceConsolePlayerUnchanged"
+	{
+		"en"        "Player %N: ping x̅ %.1fms (raw %.1fms), unchanged."
+		"es"        "Jugador %N: ping x̅ %.1fms (raw %.1fms), sin cambios."
+	}
+
+	"BalanceConsolePlayerAdjusted"
+	{
+		"en"        "Player %N: ping x̅ %.1fms (raw %.1fms), added raw %.1fms."
+		"es"        "Jugador %N: ping x̅ %.1fms (raw %.1fms), se agrego raw %.1fms."
+	}
+
+	"BalanceConsoleApplied"
+	{
+		"en"        "Balanced %d players, adjusted %d, cleared %d."
+		"es"        "Balanceados %d jugadores, ajustados %d, limpiados %d."
+	}
+
+	"PairBalanceStarted"
+	{
+		"en"        "Balancing by pairing."
+		"es"        "Balanceando por emparejamiento."
+	}
+
+	"DetailsSentToConsole"
+	{
+		"en"        "More information was sent to your console."
+		"es"        "Mas informacion en tu consola."
+	}
+
+	"PairBalanceConsoleTitle"
+	{
+		"en"        "Pair balance across %d survivor/infected pair(s)."
+		"es"        "Balance por pares en %d pareja(s) survivor/infected."
+	}
+
+	"PairBalanceConsolePair"
+	{
+		"en"        "Pair %N x̅ %.1fms (raw %.1fms) vs %N x̅ %.1fms (raw %.1fms), raw %.1fms on %N."
+		"es"        "Par %N ping x̅ %.1fms (raw %.1fms) vs %N ping x̅ %.1fms (raw %.1fms), raw %.1fms en %N."
+	}
+
+	"PairBalanceConsoleUnpaired"
+	{
+		"en"        "Unpaired %N: ping x̅ %.1fms (raw %.1fms), cleared."
+		"es"        "Sin pareja %N: ping x̅ %.1fms (raw %.1fms), se limpio."
+	}
+
+	"PairBalanceConsolePairUnchanged"
+	{
+		"en"        "Pair %N x̅ %.1fms (raw %.1fms) vs %N x̅ %.1fms (raw %.1fms), unchanged."
+		"es"        "Par %N ping x̅ %.1fms (raw %.1fms) vs %N ping x̅ %.1fms (raw %.1fms), sin cambios."
+	}
+
+	"BalancePreviewPlayerAdjustedConsole"
+	{
+		"en"        "Player %N: ping x̅ %.1fms (raw %.1fms), added raw %.1fms."
+		"es"        "Jugador %N: ping x̅ %.1fms (raw %.1fms), se agregaria raw %.1fms."
+	}
+
+	"BalancePreviewAppliedConsole"
+	{
+		"en"        "Previewed %d players, would adjust %d."
+		"es"        "Previsualizados %d jugadores, ajustaria %d."
+	}
+
+	"PreviewSentToConsole"
+	{
+		"en"        "{lightgreen}Preview details{default} were sent to your console."
+		"es"        "La {lightgreen}informacion de la vista previa{default} fue enviada a tu consola."
+	}
+
+	"BalanceVoteUnavailable"
+	{
+		"en"        "{lightgreen}BuiltinVotes{default} is not available right now."
+		"es"        "{lightgreen}BuiltinVotes{default} no esta disponible en este momento."
+	}
+
+	"BalanceVoteInProgress"
+	{
+		"en"        "A {lightgreen}vote{default} is already in progress."
+		"es"        "Ya hay una {lightgreen}votacion{default} en curso."
+	}
+
+	"BalanceVoteDelay"
+	{
+		"en"        "You must wait {green}%d{default} seconds before starting another vote."
+		"es"        "Debes esperar {green}%d{default} segundos antes de iniciar otra votacion."
+	}
+
+	"BalanceVoteStarted"
+	{
+		"en"        "Started a {lightgreen}vote{default} to balance fake lag across teams."
+		"es"        "Se inicio una {lightgreen}votacion{default} para balancear el fakelag entre equipos."
+	}
+
+	"BalanceVoteStartedServer"
+	{
+		"en"        "The {lightgreen}server{default} started a vote to balance fake lag across teams."
+		"es"        "El {lightgreen}servidor{default} inicio una votacion para balancear el fakelag entre equipos."
+	}
+
+	"BalanceVoteAnnounce"
+	{
+		"en"        "{teamcolor}%N{default} started a {lightgreen}vote{default} to balance fake lag across teams."
+		"es"        "{teamcolor}%N{default} inicio una {lightgreen}votacion{default} para balancear el fakelag entre equipos."
+	}
+
+	"BalanceVoteQuestion"
+	{
+		"en"        "Balance fake lag across teams?"
+		"es"        "Balancear el fakelag entre equipos?"
+	}
+
+	"PairBalanceVoteQuestion"
+	{
+		"en"        "Balance fake lag by survivor/infected pairs?"
+		"es"        "Balancear el fakelag por pares survivor/infected?"
+	}
+
+	"BalanceVotePassed"
+	{
+		"en"        "The {lightgreen}vote{default} to balance fake lag across teams {green}passed{default}."
+		"es"        "La {lightgreen}votacion{default} para balancear el fakelag entre equipos {green}fue aprobada{default}."
+	}
+
+	"PairBalanceVotePassed"
+	{
+		"en"        "The {lightgreen}vote{default} to balance fake lag by survivor/infected pairs {green}passed{default}."
+		"es"        "La {lightgreen}votacion{default} para balancear el fakelag por pares survivor/infected {green}fue aprobada{default}."
+	}
+
+	"BalanceVotePassedTitle"
+	{
+		"en"        "The vote to balance fake lag across teams passed."
+		"es"        "La votacion para balancear el fakelag entre equipos fue aprobada."
+	}
+
+	"PairBalanceVotePassedTitle"
+	{
+		"en"        "The vote to balance fake lag by survivor/infected pairs passed."
+		"es"        "La votacion para balancear el fakelag por pares survivor/infected fue aprobada."
+	}
+
+	"BalanceVoteFailed"
+	{
+		"en"        "The {lightgreen}vote{default} to balance fake lag across teams {lightgreen}failed{default}."
+		"es"        "La {lightgreen}votacion{default} para balancear el fakelag entre equipos {lightgreen}fallo{default}."
+	}
+
+	"PairBalanceVoteFailed"
+	{
+		"en"        "The {lightgreen}vote{default} to balance fake lag by survivor/infected pairs {lightgreen}failed{default}."
+		"es"        "La {lightgreen}votacion{default} para balancear el fakelag por pares survivor/infected {lightgreen}fallo{default}."
+	}
+
+	"PairBalanceVoteStarted"
+	{
+		"en"        "Started a {lightgreen}vote{default} to balance fake lag by survivor/infected pairs."
+		"es"        "Se inicio una {lightgreen}votacion{default} para balancear el fakelag por pares survivor/infected."
+	}
+
+	"PairBalanceVoteAnnounce"
+	{
+		"en"        "{teamcolor}%N{default} started a {lightgreen}vote{default} to balance fake lag by survivor/infected pairs."
+		"es"        "{teamcolor}%N{default} inicio una {lightgreen}votacion{default} para balancear el fakelag por pares survivor/infected."
+	}
+
+	"ClearedAll"
+	{
+		"en"        "{lightgreen}Cleared all fake lag entries{default} ({green}%d{default} active)"
+		"es"        "Se {lightgreen}limpiaron todas las entradas de fakelag{default} ({green}%d{default} activas)"
+	}
+
+	"NoPlayersLagged"
+	{
+		"en"        "No players currently have {lightgreen}fake lag{default} applied."
+		"es"        "Ningun jugador tiene {lightgreen}fakelag{default} aplicado actualmente."
+	}
+
+	"ActiveEntries"
+	{
+		"en"        "{lightgreen}Active fake lag entries:{default} {green}%d{default}"
+		"es"        "{lightgreen}Entradas activas de fakelag:{default} {green}%d{default}"
+	}
+
+	"PlayerEntry"
+	{
+		"en"        "{teamcolor}%N{default}: {green}%.1fms{default}"
+		"es"        "{teamcolor}%N{default}: {green}%.1fms{default}"
+	}
+}

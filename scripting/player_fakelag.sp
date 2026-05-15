@@ -7,9 +7,25 @@
 #include <custom_fakelag>
 #include <left4dhooks_stocks>
 
-Handle g_FakeLagBalanceVote = null;
-GlobalForward g_FwdOnSetPlayerLatency = null;
+Handle		  g_FakeLagBalanceVote			  = null;
+int			  g_BalanceVoteMode				  = 0;
+StringMap	  g_PlayerLatencyByAccountId	  = null;
+StringMap	  g_PlayerDisconnectedByAccountId = null;
+ConVar		  g_CvarDebug					  = null;
+ConVar		  g_CvarSampleWindow			  = null;
+ConVar		  g_CvarSampleInterval			  = null;
+bool		  g_ForgetLatencyOnNextClear[MAXPLAYERS + 1];
+Handle		  g_LatencySamplingTimer	  = null;
+GlobalForward g_FwdOnSetPlayerLatency	  = null;
 GlobalForward g_FwdOnPlayerLatencyChanged = null;
+GlobalForward g_FwdOnPluginEnd			  = null;
+
+#include "player_fakelag/latency.sp"
+#include "player_fakelag/helpers.sp"
+#include "player_fakelag/persistence.sp"
+#include "player_fakelag/balance.sp"
+#include "player_fakelag/vote.sp"
+#include "player_fakelag/natives.sp"
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int errMax)
 {
@@ -17,6 +33,11 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int errMax)
 	CreateNative("PlayerFakelag_PreviewBalance", Native_PreviewBalance);
 	CreateNative("PlayerFakelag_StartBalanceVote", Native_StartBalanceVote);
 	CreateNative("PlayerFakelag_IsBalanceVoteInProgress", Native_IsBalanceVoteInProgress);
+
+	g_FwdOnSetPlayerLatency		= new GlobalForward("PlayerFakelag_OnSetPlayerLatency", ET_Hook, Param_Cell, Param_Float, Param_FloatByRef, Param_Cell);
+	g_FwdOnPlayerLatencyChanged = new GlobalForward("PlayerFakelag_OnPlayerLatencyChanged", ET_Ignore, Param_Cell, Param_Float, Param_Float, Param_Cell);
+	g_FwdOnPluginEnd			= new GlobalForward("PlayerFakelag_OnPluginEnd", ET_Ignore);
+
 	RegPluginLibrary("player_fakelag");
 
 	return APLRes_Success;
@@ -24,455 +45,318 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int errMax)
 
 public Plugin myinfo =
 {
-	name = "Per-Player Fakelag",
-	author = "ProdigySim, lechuga",
+	name		= "Per-Player Fakelag",
+	author		= "ProdigySim, lechuga",
 	description = "Admin commands for the Custom Fakelag extension",
-	version = "1.1",
-	url = "https://github.com/AoC-Gamers/L4D2_Custom_Fakelag"
+	version		= "1.1",
+	url			= "https://github.com/AoC-Gamers/L4D2_Custom_Fakelag"
 };
+
+stock bool FakelagIsDebugEnabled()
+{
+	return g_CvarDebug != null && g_CvarDebug.BoolValue;
+}
 
 public void OnPluginStart()
 {
-	g_FwdOnSetPlayerLatency = new GlobalForward("PlayerFakelag_OnSetPlayerLatency", ET_Hook, Param_Cell, Param_Float, Param_FloatByRef, Param_Cell);
-	g_FwdOnPlayerLatencyChanged = new GlobalForward("PlayerFakelag_OnPlayerLatencyChanged", ET_Ignore, Param_Cell, Param_Float, Param_Float, Param_Cell);
+	LoadTranslations("common.phrases");
+	LoadTranslations("player_fakelag.phrases");
+	HookEvent("player_team", Event_PlayerTeam);
 
-	LoadTranslations("custom_fakelag_player.phrases");
+	g_PlayerLatencyByAccountId		= new StringMap();
+	g_PlayerDisconnectedByAccountId = new StringMap();
+	g_CvarDebug						= CreateConVar("sm_fakelag_debug", "0", "Log player_fakelag persistence and restore activity to the SourceMod logs.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_CvarSampleWindow				= CreateConVar("sm_fakelag_sample_window", "5", "Number of rolling ping samples used for latency averaging.", FCVAR_NOTIFY, true, 1.0, true, 5.0);
+	g_CvarSampleInterval			= CreateConVar("sm_fakelag_sample_interval", "1.0", "Seconds between rolling ping samples.", FCVAR_NOTIFY, true, 0.1, true, 5.0);
+	g_CvarSampleWindow.AddChangeHook(FakelagOnSamplingSettingsChanged);
+	g_CvarSampleInterval.AddChangeHook(FakelagOnSamplingSettingsChanged);
 
-	RegAdminCmd("sm_fakelag", FakeLagCmd, ADMFLAG_CONFIG, "Set fake lag for a player; use 0 to clear");
-	RegAdminCmd("sm_fakelag_status", StatusLagCmd, ADMFLAG_CONFIG, "Show fake lag status for a player");
-	RegAdminCmd("sm_fakelag_balance", BalanceLagCmd, ADMFLAG_CONFIG, "Balance fake lag across survivors and infected using average ping");
-	RegAdminCmd("sm_fakelag_balance_preview", PreviewBalanceLagCmd, ADMFLAG_CONFIG, "Preview fake lag balance across survivors and infected using average ping");
-	RegAdminCmd("sm_fakelag_clear", ClearLagCmd, ADMFLAG_CONFIG, "Clear fake lag for a player");
-	RegAdminCmd("sm_fakelag_clearall", ClearAllLagCmd, ADMFLAG_CONFIG, "Clear all fake lag entries");
-	RegAdminCmd("sm_fakelag_list", PrintLagCmd, ADMFLAG_CONFIG, "Print active fake lag entries");
+	FakelagStartLatencySampling();
 	
-	RegConsoleCmd("sm_fakelag_balance_vote", BalanceLagVoteCmd, "Start a fake lag balance vote");
+	RegAdminCmd("sm_fakelag", FakeLagCmd, ADMFLAG_CONFIG, "Set fake lag for a player; use 0 to clear");
+	RegAdminCmd("sm_fakelag_balance", BalanceLagCmd, ADMFLAG_CONFIG, "Balance fake lag using a required mode: global or pairs");
+	RegAdminCmd("sm_fakelag_preview", PreviewBalanceLagCmd, ADMFLAG_CONFIG, "Preview fake lag balance using a required mode: global or pairs");
+	RegAdminCmd("sm_fakelag_clear_all", ClearAllLagCmd, ADMFLAG_CONFIG, "Clear all fake lag entries");
+	RegAdminCmd("sm_fakelag_list", PrintLagCmd, ADMFLAG_CONFIG, "Print active fake lag entries");
+
+	RegConsoleCmd("sm_fakelag_clear", ClearLagCmd, "Clear fake lag for yourself or, with admin access, for another player");
+	RegConsoleCmd("sm_fakelag_status", StatusLagCmd, "Show your fake lag status or, with admin access, another player's status");
+	RegConsoleCmd("sm_fakelag_compare", CompareLagCmd, "Compare your measured latency with another player, or compare two players");
+	RegConsoleCmd("sm_fakelag_vote", BalanceLagVoteCmd, "Start a fake lag balance vote using a required mode: global or pairs");
 }
 
-stock void FakelagReplyPlayerStatus(int client, int target)
+public void OnPluginEnd()
 {
-	if (!CFakeLag_IsClientSupported(target)) {
-		CReplyToCommandEx(client, target, "{olive}[Fakelag]{default} %N is not a valid human target.", target);
+	Call_StartForward(g_FwdOnPluginEnd);
+	Call_Finish();
+
+	if (g_FakeLagBalanceVote != null
+		&& GetFeatureStatus(FeatureType_Native, "CancelBuiltinVote") == FeatureStatus_Available
+		&& GetFeatureStatus(FeatureType_Native, "IsBuiltinVoteInProgress") == FeatureStatus_Available
+		&& IsBuiltinVoteInProgress())
+	{
+		CancelBuiltinVote();
+	}
+
+	g_FakeLagBalanceVote = null;
+	g_BalanceVoteMode	 = 0;
+	FakelagStopLatencySampling();
+	CFakeLag_ClearAllPlayerLatencies();
+	delete g_PlayerLatencyByAccountId;
+	g_PlayerLatencyByAccountId = null;
+	delete g_PlayerDisconnectedByAccountId;
+	g_PlayerDisconnectedByAccountId = null;
+	g_CvarDebug						= null;
+	g_CvarSampleWindow				= null;
+	g_CvarSampleInterval			= null;
+
+	delete g_FwdOnSetPlayerLatency;
+	g_FwdOnSetPlayerLatency = null;
+
+	delete g_FwdOnPlayerLatencyChanged;
+	g_FwdOnPlayerLatencyChanged = null;
+
+	delete g_FwdOnPluginEnd;
+	g_FwdOnPluginEnd = null;
+}
+
+public void OnClientPostAdminCheck(int client)
+{
+	FakelagResetClientLatencySamples(client);
+	FakelagQueueRestoreClientLatency(client);
+}
+
+public void OnClientDisconnect(int client)
+{
+	FakelagResetClientLatencySamples(client);
+	g_ForgetLatencyOnNextClear[client] = false;
+}
+
+public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+{
+	if (event.GetBool("isbot"))
+	{
 		return;
 	}
 
-	float averagePing = FakelagGetClientAveragePingMs(target);
-	float fakeLag = CFakeLag_GetPlayerLatency(target);
-	bool isLagged = CFakeLag_HasPlayerLatency(target);
-
-	if (!isLagged) {
-		CReplyToCommandEx(
-			client,
-			target,
-			"{olive}[Fakelag]{default} %N avg ping: %.1fms | fake lag: disabled",
-			target,
-			averagePing);
+	if (event.GetBool("disconnect"))
+	{
+		int disconnectingClient = GetClientOfUserId(event.GetInt("userid"));
+		if (disconnectingClient > 0)
+		{
+			FakelagSetDisconnectedState(disconnectingClient, true);
+		}
 		return;
 	}
 
-	CReplyToCommandEx(
-		client,
-		target,
-		"{olive}[Fakelag]{default} %N avg ping: %.1fms | fake lag: %.1fms",
-		target,
-		averagePing,
-		fakeLag);
-}
-
-stock bool FakelagIsSupportedBalanceTeam(L4DTeam team)
-{
-	return team == L4DTeam_Survivor || team == L4DTeam_Infected;
-}
-
-stock bool FakelagIsBalanceCandidate(int client, L4DTeam team)
-{
-	if (!IsClientInGame(client) || IsFakeClient(client)) {
-		return false;
-	}
-
-	return L4D_GetClientTeam(client) == team;
-}
-
-stock float FakelagGetClientAveragePingMs(int client)
-{
-	float latency = GetClientAvgLatency(client, NetFlow_Outgoing);
-	if (latency < 0.0) {
-		return -1.0;
-	}
-
-	return latency * 1000.0;
-}
-
-stock int FakelagCollectBalanceCandidates(int clients[MAXPLAYERS + 1], float pings[MAXPLAYERS + 1], float &highestPing, int &highestClient)
-{
-	int count = 0;
-	highestPing = -1.0;
-	highestClient = 0;
-
-	for (int client = 1; client <= MaxClients; client++) {
-		L4DTeam team = L4D_GetClientTeam(client);
-		if (!FakelagIsSupportedBalanceTeam(team) || !FakelagIsBalanceCandidate(client, team)) {
-			continue;
-		}
-
-		float averagePing = FakelagGetClientAveragePingMs(client);
-		if (averagePing < 0.0) {
-			continue;
-		}
-
-		clients[count] = client;
-		pings[count] = averagePing;
-		count++;
-
-		if (averagePing > highestPing) {
-			highestPing = averagePing;
-			highestClient = client;
-		}
-	}
-
-	return count;
-}
-
-stock void FakelagApplyBalance(int admin, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing)
-{
-	int adjusted = 0;
-	int cleared = 0;
-
-	for (int index = 0; index < count; index++) {
-		int target = clients[index];
-		float ping = pings[index];
-		float compensation = targetPing - ping;
-
-		if (compensation <= 0.0) {
-			if (CFakeLag_HasPlayerLatency(target)) {
-				CFakeLag_ClearPlayerLatency(target);
-				cleared++;
-			}
-
-			CReplyToCommandEx(admin, target, "%T %t", "Tag", admin, "FakelagBalancePlayerUnchanged", target, ping);
-			continue;
-		}
-
-		CFakeLag_SetPlayerLatency(target, compensation);
-		adjusted++;
-		CReplyToCommandEx(admin, target, "%T %t", "Tag", admin, "FakelagBalancePlayerAdjusted", target, ping, compensation);
-	}
-
-	CReplyToCommand(admin, "%t %t", "Tag", admin, "FakelagBalanceApplied", count, adjusted, cleared, targetPing);
-}
-
-stock void FakelagPreviewBalance(int admin, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing)
-{
-	int adjusted = 0;
-
-	for (int index = 0; index < count; index++) {
-		int target = clients[index];
-		float ping = pings[index];
-		float compensation = targetPing - ping;
-
-		if (compensation <= 0.0) {
-			CReplyToCommandEx(admin, target, "%T %t", "Tag", admin, "FakelagBalancePreviewPlayerUnchanged", target, ping);
-			continue;
-		}
-
-		adjusted++;
-		CReplyToCommandEx(admin, target, "%T %t", "Tag", admin, "FakelagBalancePreviewPlayerAdjusted", target, ping, compensation);
-	}
-
-	CReplyToCommand(admin, "%t %t", "Tag", admin, "FakelagBalancePreviewApplied", count, adjusted, targetPing);
-}
-
-stock bool FakelagCanUseBuiltinVotes()
-{
-	return GetFeatureStatus(FeatureType_Native, "CreateBuiltinVote") == FeatureStatus_Available
-		&& GetFeatureStatus(FeatureType_Native, "DisplayBuiltinVote") == FeatureStatus_Available;
-}
-
-stock bool FakelagTryCollectBalance(int client, int targets[MAXPLAYERS + 1], float pings[MAXPLAYERS + 1], float &highestPing, int &highestClient, int &count)
-{
-	count = FakelagCollectBalanceCandidates(targets, pings, highestPing, highestClient);
-	if (count <= 0 || highestClient <= 0 || highestPing < 0.0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceNoPlayers");
-		return false;
-	}
-
-	return true;
-}
-
-stock void FakelagRunBalanceCommand(int client)
-{
-	int targets[MAXPLAYERS + 1];
-	float pings[MAXPLAYERS + 1];
-	float highestPing;
-	int highestClient;
-	int count;
-
-	if (!FakelagTryCollectBalance(client, targets, pings, highestPing, highestClient, count)) {
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if (client <= 0 || !IsClientInGame(client))
+	{
 		return;
 	}
 
-	CReplyToCommandEx(client, highestClient, "%T %t", "Tag", client, "FakelagBalanceTarget", highestClient, highestPing);
-	FakelagApplyBalance(client, targets, pings, count, highestPing);
-}
+	L4DTeam oldTeam = view_as<L4DTeam>(event.GetInt("oldteam"));
+	L4DTeam newTeam = view_as<L4DTeam>(event.GetInt("team"));
 
-stock bool FakelagApplyBalanceSilent(float &targetPing, int &highestClient, int &playerCount, int &adjustedCount, int &clearedCount)
-{
-	int targets[MAXPLAYERS + 1];
-	float pings[MAXPLAYERS + 1];
-
-	playerCount = FakelagCollectBalanceCandidates(targets, pings, targetPing, highestClient);
-	adjustedCount = 0;
-	clearedCount = 0;
-
-	if (playerCount <= 0 || highestClient <= 0 || targetPing < 0.0) {
-		return false;
-	}
-
-	for (int index = 0; index < playerCount; index++) {
-		int target = targets[index];
-		float compensation = targetPing - pings[index];
-
-		if (compensation <= 0.0) {
-			if (CFakeLag_HasPlayerLatency(target)) {
-				CFakeLag_ClearPlayerLatency(target);
-				clearedCount++;
-			}
-			continue;
+	if (FakelagIsSupportedBalanceTeam(oldTeam) && !FakelagIsSupportedBalanceTeam(newTeam))
+	{
+		if (CFakeLag_HasPlayerLatency(client))
+		{
+			CFakeLag_ClearPlayerLatency(client);
 		}
-
-		CFakeLag_SetPlayerLatency(target, compensation);
-		adjustedCount++;
-	}
-
-	return true;
-}
-
-stock bool FakelagPreviewBalanceSilent(float &targetPing, int &highestClient, int &playerCount)
-{
-	int targets[MAXPLAYERS + 1];
-	float pings[MAXPLAYERS + 1];
-
-	playerCount = FakelagCollectBalanceCandidates(targets, pings, targetPing, highestClient);
-	return playerCount > 0 && highestClient > 0 && targetPing >= 0.0;
-}
-
-stock void FakelagRunBalancePreviewCommand(int client)
-{
-	int targets[MAXPLAYERS + 1];
-	float pings[MAXPLAYERS + 1];
-	float highestPing;
-	int highestClient;
-	int count;
-
-	if (!FakelagTryCollectBalance(client, targets, pings, highestPing, highestClient, count)) {
 		return;
 	}
 
-	CReplyToCommandEx(client, highestClient, "%T %t", "Tag", client, "FakelagBalancePreviewTarget", highestClient, highestPing);
-	FakelagPreviewBalance(client, targets, pings, count, highestPing);
-}
-
-stock bool FakelagCanStartBalanceVote(int client)
-{
-	if (!FakelagCanUseBuiltinVotes()) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteUnavailable");
-		return false;
+	if (FakelagIsSupportedBalanceTeam(newTeam))
+	{
+		FakelagQueueRestoreClientLatency(client);
 	}
-
-	if (!IsNewBuiltinVoteAllowed() || g_FakeLagBalanceVote != null) {
-		int delay = CheckBuiltinVoteDelay();
-		if (delay > 0) {
-			CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteDelay", delay);
-		} else {
-			CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteInProgress");
-		}
-		return false;
-	}
-
-	return true;
-}
-
-stock void FakelagGetBalanceVoteQuestion(char[] buffer, int maxlen)
-{
-	Format(buffer, maxlen, "%T", "FakelagBalanceVoteQuestion", LANG_SERVER);
-}
-
-stock void FakelagNotifyVoteAudience(const char[] phrase, int initiator = 0)
-{
-	for (int client = 1; client <= MaxClients; client++) {
-		if (!IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) < view_as<int>(L4DTeam_Survivor)) {
-			continue;
-		}
-
-		if (initiator > 0) {
-			CReplyToCommandEx(client, initiator, "%T %t", "Tag", client, phrase, initiator);
-		} else {
-			CReplyToCommand(client, "%t %t", "Tag", client, phrase);
-		}
-	}
-}
-
-public void FakeLagBalanceVoteHandler(Handle vote, BuiltinVoteAction action, int param1, int param2)
-{
-	if (action == BuiltinVoteAction_End) {
-		if (g_FakeLagBalanceVote == vote) {
-			g_FakeLagBalanceVote = null;
-		}
-
-		delete vote;
-	}
-}
-
-public void FakeLagBalanceVoteResultHandler(Handle vote, int numVotes, int numClients, const int[][] clientInfo, int numItems, const int[][] itemInfo)
-{
-	if (numItems < 1 || itemInfo[0][BUILTINVOTEINFO_ITEM_INDEX] != BUILTINVOTES_VOTE_YES) {
-		FakelagNotifyVoteAudience("FakelagBalanceVoteFailed");
-		DisplayBuiltinVoteFail(vote, BuiltinVoteFail_Loses);
-		return;
-	}
-
-	FakelagNotifyVoteAudience("FakelagBalanceVotePassed");
-	DisplayBuiltinVotePass(vote);
-	FakelagRunBalanceCommand(0);
-}
-
-stock bool FakelagCommandRequiresClient(int client)
-{
-	if (client != 0) {
-		return true;
-	}
-
-	CReplyToCommand(client, "%t %t", "Tag", LANG_SERVER, "FakelagClientOnlyCommand");
-	return false;
 }
 
 public Action BalanceLagCmd(int client, int args)
 {
-	FakelagRunBalanceCommand(client);
+	if (args < 1)
+	{
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "Tag", "Use");
+		return Plugin_Handled;
+	}
+
+	char mode[32];
+	GetCmdArg(1, mode, sizeof(mode));
+	if (StrEqual(mode, "global", false))
+	{
+		FakelagRunBalanceCommand(client);
+		return Plugin_Handled;
+	}
+
+	if (StrEqual(mode, "pairs", false))
+	{
+		FakelagRunPairBalanceCommand(client);
+		return Plugin_Handled;
+	}
+
+	CReplyToCommand(client, "%t %t", "Tag", "BalanceModeInvalid", mode);
+	CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "Tag", "Use");
 	return Plugin_Handled;
 }
 
 public Action PreviewBalanceLagCmd(int client, int args)
 {
-	FakelagRunBalancePreviewCommand(client);
+	if (args < 1)
+	{
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_preview <global|pairs>{default}", "Tag", "Use");
+		return Plugin_Handled;
+	}
+
+	char mode[32];
+	GetCmdArg(1, mode, sizeof(mode));
+	if (StrEqual(mode, "global", false))
+	{
+		FakelagRunBalancePreviewCommand(client);
+		return Plugin_Handled;
+	}
+
+	if (StrEqual(mode, "pairs", false))
+	{
+		FakelagRunPairBalancePreviewCommand(client);
+		return Plugin_Handled;
+	}
+
+	CReplyToCommand(client, "%t %t", "Tag", "BalanceModeInvalid", mode);
+	CReplyToCommand(client, "%t %t {green}sm_fakelag_preview <global|pairs>{default}", "Tag", "Use");
 	return Plugin_Handled;
 }
 
 public Action BalanceLagVoteCmd(int client, int args)
 {
-	if (!FakelagCommandRequiresClient(client)) {
+	if (!FakelagCommandRequiresClient(client))
+	{
 		return Plugin_Handled;
 	}
 
-	int targets[MAXPLAYERS + 1];
-	float pings[MAXPLAYERS + 1];
-	float highestPing;
-	int highestClient;
-	int count;
-	if (!FakelagTryCollectBalance(client, targets, pings, highestPing, highestClient, count)) {
+	if (args < 1)
+	{
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_vote <global|pairs>{default}", "Tag", "Use");
 		return Plugin_Handled;
 	}
 
-	if (!FakelagCanStartBalanceVote(client)) {
+	char mode[32];
+	GetCmdArg(1, mode, sizeof(mode));
+	if (StrEqual(mode, "global", false))
+	{
+		if (!FakelagCanStartGlobalBalanceVote(client))
+		{
+			return Plugin_Handled;
+		}
+
+		FakelagStartBalanceVote(client, 0, "BalanceVoteQuestion", "BalanceVoteAnnounce", "BalanceVoteStarted");
 		return Plugin_Handled;
 	}
 
-	Handle vote = CreateBuiltinVote(FakeLagBalanceVoteHandler, BuiltinVoteType_Custom_YesNo, BUILTINVOTE_ACTIONS_DEFAULT);
-	if (vote == null) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteUnavailable");
+	if (StrEqual(mode, "pairs", false))
+	{
+		if (!FakelagCanStartPairBalanceVote(client))
+		{
+			return Plugin_Handled;
+		}
+
+		FakelagStartBalanceVote(client, 1, "PairBalanceVoteQuestion", "PairBalanceVoteAnnounce", "PairBalanceVoteStarted");
 		return Plugin_Handled;
 	}
 
-	char voteQuestion[128];
-	FakelagGetBalanceVoteQuestion(voteQuestion, sizeof(voteQuestion));
-
-	g_FakeLagBalanceVote = vote;
-	SetBuiltinVoteArgument(vote, voteQuestion);
-	SetBuiltinVoteInitiator(vote, client);
-	SetBuiltinVoteResultCallback(vote, FakeLagBalanceVoteResultHandler);
-
-	if (!DisplayBuiltinVoteToAllNonSpectators(vote, 20)) {
-		g_FakeLagBalanceVote = null;
-		delete vote;
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteInProgress");
-		return Plugin_Handled;
-	}
-
-	FakelagNotifyVoteAudience("FakelagBalanceVoteAnnounce", client);
-	CReplyToCommand(client, "%t %t", "Tag", client, "FakelagBalanceVoteStarted");
+	CReplyToCommand(client, "%t %t", "Tag", "BalanceModeInvalid", mode);
+	CReplyToCommand(client, "%t %t {green}sm_fakelag_vote <global|pairs>{default}", "Tag", "Use");
 	return Plugin_Handled;
 }
 
 public Action FakeLagCmd(int client, int args)
 {
-	if (!FakelagCommandRequiresClient(client)) {
+	if (!FakelagCommandRequiresClient(client))
+	{
 		return Plugin_Handled;
 	}
 
-	if (args < 2) {
-		CReplyToCommand(client, "%t %t {green}sm_fakelag <target> <milliseconds|0>{default}", "Tag", "Use");
+	if (args < 2)
+	{
+		CReplyToCommand(client, "%t %t {green}sm_fakelag <#userid|name> <milliseconds|0>{default}", "Tag", "Use");
 		return Plugin_Handled;
 	}
 
 	char targetStr[256];
-	GetCmdArg(1, targetStr, sizeof(targetStr));
+	FakelagBuildArgRangeString(1, args - 1, targetStr, sizeof(targetStr));
 
 	int target = FindTarget(client, targetStr, true);
-	if (target < 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagTargetNotFound", targetStr);
+	if (target < 0)
+	{
 		return Plugin_Handled;
 	}
 
-	if (!IsClientInGame(target)) {
-		CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagPlayerNotInGame", target);
+	if (!IsClientInGame(target))
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerNotInGame", target);
 		return Plugin_Handled;
 	}
 
-	if (IsFakeClient(target)) {
-		CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagPlayerIsBot", target);
+	if (IsFakeClient(target))
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerIsBot", target);
 		return Plugin_Handled;
 	}
 
-	int lagAmount = GetCmdArgInt(2);
-	if (lagAmount < 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagLagNonNegative");
+	if (!FakelagCanApplyLatencyToClient(target))
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerUnsupported", target);
 		return Plugin_Handled;
 	}
 
-	if (lagAmount == 0) {
-		if (!CFakeLag_HasPlayerLatency(target)) {
-			CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagPlayerNotLagged", target);
+	char lagArg[32];
+	GetCmdArg(args, lagArg, sizeof(lagArg));
+	int lagAmount = StringToInt(lagArg);
+	if (lagAmount < 0)
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "LagNonNegative");
+		return Plugin_Handled;
+	}
+
+	if (lagAmount == 0)
+	{
+		if (!CFakeLag_HasPlayerLatency(target))
+		{
+			CReplyToCommand(client, "%t %t", "Tag", "PlayerNotLagged", target);
 			return Plugin_Handled;
 		}
 
+		g_ForgetLatencyOnNextClear[target] = true;
 		CFakeLag_ClearPlayerLatency(target);
-		CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagClearedOnPlayer", target);
+		CReplyToCommand(client, "%t %t", "Tag", "ClearedOnPlayer", target);
 		return Plugin_Handled;
 	}
 
 	CFakeLag_SetPlayerLatency(target, float(lagAmount));
-	CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagSetOnPlayer", lagAmount, target);
+	CReplyToCommand(client, "%t %t", "Tag", "SetOnPlayer", lagAmount, target);
 	return Plugin_Handled;
 }
 
 public Action StatusLagCmd(int client, int args)
 {
-	if (!FakelagCommandRequiresClient(client)) {
+	if (!FakelagCommandRequiresClient(client))
+	{
 		return Plugin_Handled;
 	}
 
-	if (args < 1) {
-		CReplyToCommand(client, "{olive}[Fakelag]{default} Usage: sm_fakelag_status <target>");
-		return Plugin_Handled;
-	}
+	bool canTargetOthers = CheckCommandAccess(client, "sm_fakelag_status_others", ADMFLAG_CONFIG, true);
+	int	 target			 = client;
 
-	char targetStr[256];
-	GetCmdArg(1, targetStr, sizeof(targetStr));
+	if (args >= 1 && canTargetOthers)
+	{
+		char targetStr[256];
+		FakelagBuildArgRangeString(1, args, targetStr, sizeof(targetStr));
 
-	int target = FindTarget(client, targetStr, true);
-	if (target < 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagTargetNotFound", targetStr);
-		return Plugin_Handled;
+		target = FindTarget(client, targetStr, true);
+		if (target < 0)
+		{
+			return Plugin_Handled;
+		}
 	}
 
 	FakelagReplyPlayerStatus(client, target);
@@ -481,159 +365,143 @@ public Action StatusLagCmd(int client, int args)
 
 public Action ClearLagCmd(int client, int args)
 {
-	if (!FakelagCommandRequiresClient(client)) {
+	if (!FakelagCommandRequiresClient(client))
+	{
 		return Plugin_Handled;
 	}
 
-	if (args < 1) {
-		CReplyToCommand(client, "%t %t {green}sm_fakelag_clear <target>{default}", "Tag", "Use");
+	bool canTargetOthers = CheckCommandAccess(client, "sm_fakelag_clear_others", ADMFLAG_CONFIG, true);
+	int	 target			 = client;
+
+	if (args >= 1 && canTargetOthers)
+	{
+		char targetStr[256];
+		FakelagBuildArgRangeString(1, args, targetStr, sizeof(targetStr));
+
+		target = FindTarget(client, targetStr, true);
+		if (target < 0)
+		{
+			return Plugin_Handled;
+		}
+	}
+
+	if (!CFakeLag_IsClientSupported(target))
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerUnsupported", target);
 		return Plugin_Handled;
 	}
 
-	char targetStr[256];
-	GetCmdArg(1, targetStr, sizeof(targetStr));
-
-	int target = FindTarget(client, targetStr, true);
-	if (target < 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagTargetNotFound", targetStr);
+	if (!CFakeLag_HasPlayerLatency(target))
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerNotLagged", target);
 		return Plugin_Handled;
 	}
 
-	if (!CFakeLag_IsClientSupported(target)) {
-		CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagPlayerUnsupported", target);
-		return Plugin_Handled;
-	}
-
-	if (!CFakeLag_HasPlayerLatency(target)) {
-		CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagPlayerNotLagged", target);
-		return Plugin_Handled;
-	}
-
+	g_ForgetLatencyOnNextClear[target] = true;
 	CFakeLag_ClearPlayerLatency(target);
-	CReplyToCommandEx(client, target, "%T %t", "Tag", client, "FakelagClearedOnPlayer", target);
+	if (target == client && !canTargetOthers)
+	{
+		CPrintToChatAll("%t %t", "Tag", "SelfClearedAnnounce", client);
+		return Plugin_Handled;
+	}
+
+	CReplyToCommand(client, "%t %t", "Tag", "ClearedOnPlayer", target);
+	return Plugin_Handled;
+}
+
+public Action CompareLagCmd(int client, int args)
+{
+	if (!FakelagCommandRequiresClient(client))
+	{
+		return Plugin_Handled;
+	}
+
+	if (args < 1)
+	{
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_compare <#userid|name> [#userid|name]{default}", "Tag", "Use");
+		return Plugin_Handled;
+	}
+
+	int	 firstTarget = client;
+	int	 secondTarget;
+
+	char targetArg[256];
+	GetCmdArg(1, targetArg, sizeof(targetArg));
+	secondTarget = FakelagFindComparisonTarget(client, targetArg);
+	if (secondTarget < 0)
+	{
+		return Plugin_Handled;
+	}
+
+	if (args >= 2)
+	{
+		char firstTargetArg[256];
+		strcopy(firstTargetArg, sizeof(firstTargetArg), targetArg);
+		GetCmdArg(2, targetArg, sizeof(targetArg));
+
+		firstTarget = FakelagFindComparisonTarget(client, firstTargetArg);
+		if (firstTarget < 0)
+		{
+			return Plugin_Handled;
+		}
+
+		secondTarget = FakelagFindComparisonTarget(client, targetArg);
+		if (secondTarget < 0)
+		{
+			return Plugin_Handled;
+		}
+	}
+
+	FakelagReplyPlayerComparison(client, firstTarget, secondTarget);
 	return Plugin_Handled;
 }
 
 public Action ClearAllLagCmd(int client, int args)
 {
-	if (!FakelagCommandRequiresClient(client)) {
+	if (!FakelagCommandRequiresClient(client))
+	{
 		return Plugin_Handled;
 	}
 
 	int laggedClients = CFakeLag_GetLaggedClientCount();
-	if (laggedClients <= 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagNoEntriesToClear");
+	if (laggedClients <= 0)
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "NoEntriesToClear");
 		return Plugin_Handled;
 	}
 
 	CFakeLag_ClearAllPlayerLatencies();
-	CReplyToCommand(client, "%t %t", "Tag", client, "FakelagClearedAll", laggedClients);
+	g_PlayerLatencyByAccountId.Clear();
+	g_PlayerDisconnectedByAccountId.Clear();
+	CReplyToCommand(client, "%t %t", "Tag", "ClearedAll", laggedClients);
 	return Plugin_Handled;
 }
 
 public Action PrintLagCmd(int client, int args)
 {
-	if (!FakelagCommandRequiresClient(client)) {
+	if (!FakelagCommandRequiresClient(client))
+	{
 		return Plugin_Handled;
 	}
 
 	int laggedClients = CFakeLag_GetLaggedClientCount();
-	if (laggedClients <= 0) {
-		CReplyToCommand(client, "%t %t", "Tag", client, "FakelagNoPlayersLagged");
+	if (laggedClients <= 0)
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "NoPlayersLagged");
 		return Plugin_Handled;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", client, "FakelagActiveEntries", laggedClients);
+	CReplyToCommand(client, "%t %t", "Tag", "ActiveEntries", laggedClients);
 
-	for (int i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i) && !IsFakeClient(i) && CFakeLag_HasPlayerLatency(i)) {
-			CReplyToCommandEx(client, i, "%T %t", "Tag", client, "FakelagPlayerEntry", i, CFakeLag_GetPlayerLatency(i));
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsClientInGame(i) && !IsFakeClient(i) && CFakeLag_HasPlayerLatency(i))
+		{
+			CReplyToCommand(client, "%t %t", "Tag", "PlayerEntry", i, CFakeLag_GetPlayerLatency(i));
 		}
 	}
 
 	return Plugin_Handled;
-}
-
-public int Native_ApplyBalance(Handle plugin, int numParams)
-{
-	float targetPing;
-	int highestClient;
-	int playerCount;
-	int adjustedCount;
-	int clearedCount;
-
-	bool result = FakelagApplyBalanceSilent(targetPing, highestClient, playerCount, adjustedCount, clearedCount);
-	SetNativeCellRef(1, view_as<int>(targetPing));
-	SetNativeCellRef(2, highestClient);
-	SetNativeCellRef(3, playerCount);
-	SetNativeCellRef(4, adjustedCount);
-	SetNativeCellRef(5, clearedCount);
-	return result;
-}
-
-public int Native_PreviewBalance(Handle plugin, int numParams)
-{
-	float targetPing;
-	int highestClient;
-	int playerCount;
-
-	bool result = FakelagPreviewBalanceSilent(targetPing, highestClient, playerCount);
-	SetNativeCellRef(1, view_as<int>(targetPing));
-	SetNativeCellRef(2, highestClient);
-	SetNativeCellRef(3, playerCount);
-	return result;
-}
-
-public int Native_StartBalanceVote(Handle plugin, int numParams)
-{
-	int initiator = numParams >= 1 ? GetNativeCell(1) : 0;
-
-	if (initiator != 0 && (!IsClientInGame(initiator) || IsFakeClient(initiator))) {
-		return ThrowNativeError(SP_ERROR_NATIVE, "Client %d is not a valid human initiator", initiator);
-	}
-
-	if (!FakelagCanStartBalanceVote(initiator)) {
-		return false;
-	}
-
-	float highestPing;
-	int highestClient;
-	int playerCount;
-	if (!FakelagPreviewBalanceSilent(highestPing, highestClient, playerCount)) {
-		return false;
-	}
-
-	Handle vote = CreateBuiltinVote(FakeLagBalanceVoteHandler, BuiltinVoteType_Custom_YesNo, BUILTINVOTE_ACTIONS_DEFAULT);
-	if (vote == null) {
-		return false;
-	}
-
-	char voteQuestion[128];
-	FakelagGetBalanceVoteQuestion(voteQuestion, sizeof(voteQuestion));
-
-	g_FakeLagBalanceVote = vote;
-	SetBuiltinVoteArgument(vote, voteQuestion);
-	SetBuiltinVoteInitiator(vote, initiator == 0 ? BUILTINVOTES_SERVER_INDEX : initiator);
-	SetBuiltinVoteResultCallback(vote, FakeLagBalanceVoteResultHandler);
-
-	if (!DisplayBuiltinVoteToAllNonSpectators(vote, 20)) {
-		g_FakeLagBalanceVote = null;
-		delete vote;
-		return false;
-	}
-
-	if (initiator > 0) {
-		FakelagNotifyVoteAudience("FakelagBalanceVoteAnnounce", initiator);
-	} else {
-		FakelagNotifyVoteAudience("FakelagBalanceVoteStartedServer");
-	}
-
-	return true;
-}
-
-public int Native_IsBalanceVoteInProgress(Handle plugin, int numParams)
-{
-	return g_FakeLagBalanceVote != null;
 }
 
 public Action CFakeLag_OnSetPlayerLatency(int client, float oldLag, float &newLag, CFakeLagChangeReason reason)
