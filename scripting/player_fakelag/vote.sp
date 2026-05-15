@@ -30,31 +30,21 @@ stock bool FakelagCanStartBalanceVote(int client)
 		if (delay > 0)
 		{
 			CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteDelay", delay);
+			return false;
 		}
-		else {
-			CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteInProgress");
-		}
+
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteInProgress");
 		return false;
 	}
 
 	return true;
 }
 
-stock void FakelagGetBalanceVoteQuestion(char[] buffer, int maxlen)
-{
-	Format(buffer, maxlen, "%T", "FakelagBalanceVoteQuestion", LANG_SERVER);
-}
-
-stock void FakelagGetBalanceVotePassText(char[] buffer, int maxlen)
-{
-	Format(buffer, maxlen, "%T", "FakelagBalanceVotePassedTitle", LANG_SERVER);
-}
-
 stock void FakelagNotifyVoteAudience(const char[] phrase, int initiator = 0)
 {
 	for (int client = 1; client <= MaxClients; client++)
 	{
-		if (!IsClientInGame(client) || IsFakeClient(client) || L4D_GetClientTeam(client) < L4DTeam_Survivor)
+		if (!FakelagIsBalanceAudienceClient(client))
 		{
 			continue;
 		}
@@ -67,24 +57,26 @@ stock void FakelagNotifyVoteAudience(const char[] phrase, int initiator = 0)
 		if (initiator > 0)
 		{
 			CReplyToCommand(client, "%t %t", "Tag", phrase, initiator);
+			continue;
 		}
-		else {
-			CReplyToCommand(client, "%t %t", "Tag", phrase);
-		}
+
+		CReplyToCommand(client, "%t %t", "Tag", phrase);
 	}
 }
 
 public void FakeLagBalanceVoteHandler(Handle vote, BuiltinVoteAction action, int param1, int param2)
 {
-	if (action == BuiltinVoteAction_End)
+	if (action != BuiltinVoteAction_End)
 	{
-		if (g_FakeLagBalanceVote == vote)
-		{
-			g_FakeLagBalanceVote = null;
-		}
-
-		delete vote;
+		return;
 	}
+
+	if (g_FakeLagBalanceVote == vote)
+	{
+		g_FakeLagBalanceVote = null;
+	}
+
+	delete vote;
 }
 
 public void FakeLagBalanceVoteResultHandler(Handle vote, int numVotes, int numClients, const int[][] clientInfo, int numItems, const int[][] itemInfo)
@@ -98,7 +90,8 @@ public void FakeLagBalanceVoteResultHandler(Handle vote, int numVotes, int numCl
 
 	FakelagNotifyVoteAudience("FakelagBalanceVotePassed");
 	char votePassed[128];
-	FakelagGetBalanceVotePassText(votePassed, sizeof(votePassed));
+	// DisplayBuiltinVotePass also needs pre-rendered text instead of a translation key.
+	Format(votePassed, sizeof(votePassed), "%T", "FakelagBalanceVotePassedTitle", LANG_SERVER);
 	DisplayBuiltinVotePass(vote, votePassed);
 	FakelagRunBalanceCommand(0);
 }

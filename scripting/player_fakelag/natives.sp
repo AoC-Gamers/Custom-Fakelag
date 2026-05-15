@@ -32,7 +32,7 @@ public int Native_StartBalanceVote(Handle plugin, int numParams)
 {
 	int initiator = numParams >= 1 ? GetNativeCell(1) : 0;
 
-	if (initiator != 0 && (!IsClientInGame(initiator) || IsFakeClient(initiator)))
+	if (initiator != 0 && !IsHumanInGame(initiator))
 	{
 		return ThrowNativeError(SP_ERROR_NATIVE, "Client %d is not a valid human initiator", initiator);
 	}
@@ -57,7 +57,8 @@ public int Native_StartBalanceVote(Handle plugin, int numParams)
 	}
 
 	char voteQuestion[128];
-	FakelagGetBalanceVoteQuestion(voteQuestion, sizeof(voteQuestion));
+	// BuiltinVotes expects the final text here; phrase keys are not localized at render time.
+	Format(voteQuestion, sizeof(voteQuestion), "%T", "FakelagBalanceVoteQuestion", LANG_SERVER);
 
 	g_FakeLagBalanceVote = vote;
 	SetBuiltinVoteArgument(vote, voteQuestion);
@@ -79,10 +80,10 @@ public int Native_StartBalanceVote(Handle plugin, int numParams)
 	if (initiator > 0)
 	{
 		FakelagNotifyVoteAudience("FakelagBalanceVoteAnnounce", initiator);
+		return true;
 	}
-	else {
-		FakelagNotifyVoteAudience("FakelagBalanceVoteStartedServer");
-	}
+
+	FakelagNotifyVoteAudience("FakelagBalanceVoteStartedServer");
 
 	return true;
 }
@@ -108,6 +109,33 @@ public Action CFakeLag_OnSetPlayerLatency(int client, float oldLag, float &newLa
 
 public void CFakeLag_OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason)
 {
+	if (oldLag != newLag)
+	{
+		FakelagResetClientLatencySamples(client);
+	}
+
+	if (newLag > 0.0)
+	{
+		FakelagStoreLatencyForClient(client, newLag);
+		if (reason != CFakeLagChange_Disconnect)
+		{
+			FakelagSetDisconnectedState(client, false);
+		}
+	}
+	else if (g_ForgetLatencyOnNextClear[client])
+	{
+		g_ForgetLatencyOnNextClear[client] = false;
+		FakelagForgetStoredLatency(client);
+		if (FakelagIsDebugEnabled())
+		{
+			LogMessage("[player_fakelag] Cleared persisted fakelag for %L due to explicit clear command", client);
+		}
+	}
+	else if (FakelagIsDebugEnabled())
+	{
+		LogMessage("[player_fakelag] Preserved persisted fakelag for %L while active latency was cleared implicitly (reason=%d)", client, reason);
+	}
+
 	Call_StartForward(g_FwdOnPlayerLatencyChanged);
 	Call_PushCell(client);
 	Call_PushFloat(oldLag);

@@ -24,12 +24,6 @@
 		"es"        "{lightgreen}Este comando{default} solo puede usarse desde un cliente dentro del juego."
 	}
 
-	"FakelagTargetNotFound"
-	{
-		"en"        "{lightgreen}Unable to find target{default} \"{green}%s{default}\""
-		"es"        "{lightgreen}No se pudo encontrar el objetivo{default} \"{green}%s{default}\""
-	}
-
 	"FakelagPlayerNotInGame"
 	{
 		"en"        "Player {teamcolor}%N{default} is {lightgreen}not in game{default} yet."
@@ -66,6 +60,12 @@
 		"es"        "El jugador {teamcolor}%N{default} no es un objetivo humano valido."
 	}
 
+	"FakelagPlayerNoPingData"
+	{
+		"en"        "Player {teamcolor}%N{default} does not have valid {lightgreen}ping data{default} right now."
+		"es"        "El jugador {teamcolor}%N{default} no tiene {lightgreen}datos de ping validos{default} en este momento."
+	}
+
 	"FakelagStatusDisabled"
 	{
 		"en"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fake lag raw: {lightgreen}disabled{default}"
@@ -78,10 +78,34 @@
 		"es"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fakelag raw: {green}%.1fms{default}"
 	}
 
+	"FakelagCompareResult"
+	{
+		"en"        "{teamcolor}%N{default}: {green}%.1fms{default} | {teamcolor}%N{default}: {green}%.1fms{default} | diff: {lightgreen}%.1fms{default}"
+		"es"        "{teamcolor}%N{default}: {green}%.1fms{default} | {teamcolor}%N{default}: {green}%.1fms{default} | dif: {lightgreen}%.1fms{default}"
+	}
+
+	"FakelagCompareHigher"
+	{
+		"en"        "{teamcolor}%N{default} is higher by {lightgreen}%.1fms{default}."
+		"es"        "{teamcolor}%N{default} esta mas alto por {lightgreen}%.1fms{default}."
+	}
+
 	"FakelagClearedOnPlayer"
 	{
 		"en"        "{lightgreen}Cleared fake lag{default} on player {teamcolor}%N{default}"
 		"es"        "Se {lightgreen}quito el fakelag{default} al jugador {teamcolor}%N{default}"
+	}
+
+	"FakelagSelfClearedAnnounce"
+	{
+		"en"        "Player {teamcolor}%N{default} removed their fake lag."
+		"es"        "El jugador {teamcolor}%N{default} se quito el fakelag."
+	}
+
+	"FakelagRestoredOnSelf"
+	{
+		"en"        "Your fake lag was restored: {green}%.1fms{default} raw."
+		"es"        "Se restauro tu fakelag: {green}%.1fms{default} raw."
 	}
 
 	"FakelagSetOnPlayer"
@@ -108,12 +132,6 @@
 		"es"        "Balanceando contra {teamcolor}%N{default} con ping x̅ de {green}%.1fms{default} (raw {green}%.1fms{default})."
 	}
 
-	"FakelagBalancePreviewTarget"
-	{
-		"en"        "Previewing balance against {teamcolor}%N{default} with ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Previsualizando balance contra {teamcolor}%N{default} con ping x̅ de {green}%.1fms{default} (raw {green}%.1fms{default})."
-	}
-
 	"FakelagBalancePreviewTargetConsole"
 	{
 		"en"        "Previewing balance against %N with ping x̅ %.1fms (raw %.1fms)."
@@ -122,38 +140,38 @@
 
 	"FakelagBalancePlayerUnchanged"
 	{
-		"en"        "Player {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), already at or above target x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Jugador {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), ya esta en o por encima del objetivo x̅ de {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Player {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), unchanged."
+		"es"        "Jugador {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), sin cambios."
 	}
 
 	"FakelagBalancePlayerAdjusted"
 	{
-		"en"        "Player {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), added fake lag raw {green}%.1fms{default}, target x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Jugador {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), se agrego fakelag raw de {green}%.1fms{default}, objetivo x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Player {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), added raw {green}%.1fms{default}."
+		"es"        "Jugador {teamcolor}%N{default}: ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default}), se agrego raw {green}%.1fms{default}."
 	}
 
 	"FakelagBalancePreviewPlayerUnchangedConsole"
 	{
-		"en"        "Preview %N: ping x̅ %.1fms (raw %.1fms), already at or above target x̅ %.1fms (raw %.1fms)."
-		"es"        "Vista previa %N: ping x̅ %.1fms (raw %.1fms), ya esta en o por encima del objetivo x̅ de %.1fms (raw %.1fms)."
+		"en"        "Preview %N: ping x̅ %.1fms (raw %.1fms), unchanged."
+		"es"        "Vista previa %N: ping x̅ %.1fms (raw %.1fms), sin cambios."
 	}
 
 	"FakelagBalancePreviewPlayerAdjustedConsole"
 	{
-		"en"        "Preview %N: ping x̅ %.1fms (raw %.1fms), fake lag raw %.1fms, target x̅ %.1fms (raw %.1fms)."
-		"es"        "Vista previa %N: ping x̅ %.1fms (raw %.1fms), fakelag raw %.1fms, objetivo x̅ %.1fms (raw %.1fms)."
+		"en"        "Preview %N: ping x̅ %.1fms (raw %.1fms), added raw %.1fms."
+		"es"        "Vista previa %N: ping x̅ %.1fms (raw %.1fms), se agregaria raw %.1fms."
 	}
 
 	"FakelagBalanceApplied"
 	{
-		"en"        "Balanced {green}%d{default} players, adjusted {green}%d{default}, cleared {green}%d{default}, target ping x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
-		"es"        "Balanceados {green}%d{default} jugadores, ajustados {green}%d{default}, limpiados {green}%d{default}, ping objetivo x̅ {green}%.1fms{default} (raw {green}%.1fms{default})."
+		"en"        "Balanced {green}%d{default} players, adjusted {green}%d{default}, cleared {green}%d{default}."
+		"es"        "Balanceados {green}%d{default} jugadores, ajustados {green}%d{default}, limpiados {green}%d{default}."
 	}
 
 	"FakelagBalancePreviewAppliedConsole"
 	{
-		"en"        "Previewed %d players, would adjust %d, target ping x̅ %.1fms (raw %.1fms)."
-		"es"        "Previsualizados %d jugadores, ajustaria %d, ping objetivo x̅ %.1fms (raw %.1fms)."
+		"en"        "Previewed %d players, would adjust %d."
+		"es"        "Previsualizados %d jugadores, ajustaria %d."
 	}
 
 	"FakelagPreviewSentToConsole"

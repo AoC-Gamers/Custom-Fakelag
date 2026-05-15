@@ -6,7 +6,7 @@ stock int FakelagCollectBalanceCandidates(int clients[MAXPLAYERS + 1], float pin
 
 	for (int client = 1; client <= MaxClients; client++)
 	{
-		if (!IsClientInGame(client) || IsFakeClient(client))
+		if (!IsHumanInGame(client))
 		{
 			continue;
 		}
@@ -37,60 +37,7 @@ stock int FakelagCollectBalanceCandidates(int clients[MAXPLAYERS + 1], float pin
 	return count;
 }
 
-stock void FakelagPrintPreviewToConsole(int client, const char[] message, any ...)
-{
-	char formatted[512];
-	SetGlobalTransTarget(client);
-	VFormat(formatted, sizeof(formatted), message, 3);
-
-	if (client == 0)
-	{
-		PrintToServer("%s", formatted);
-		return;
-	}
-
-	PrintToConsole(client, "%s", formatted);
-}
-
-stock void FakelagReplyBalanceTarget(int admin, int highestClient, float displayHighestPing, float highestPing)
-{
-	if (admin != 0)
-	{
-		CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalanceTarget", highestClient, displayHighestPing, highestPing);
-		return;
-	}
-
-	for (int client = 1; client <= MaxClients; client++)
-	{
-		if (!IsClientInGame(client) || IsFakeClient(client) || L4D_GetClientTeam(client) < L4DTeam_Survivor)
-		{
-			continue;
-		}
-
-		CPrintToChat(client, "%t %t", "Tag", "FakelagBalanceTarget", highestClient, displayHighestPing, highestPing);
-	}
-}
-
-stock void FakelagReplyBalanceApplied(int admin, int count, int adjusted, int cleared, float displayTargetPing, float targetPing)
-{
-	if (admin != 0)
-	{
-		CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalanceApplied", count, adjusted, cleared, displayTargetPing, targetPing);
-		return;
-	}
-
-	for (int client = 1; client <= MaxClients; client++)
-	{
-		if (!IsClientInGame(client) || IsFakeClient(client) || L4D_GetClientTeam(client) < L4DTeam_Survivor)
-		{
-			continue;
-		}
-
-		CPrintToChat(client, "%t %t", "Tag", "FakelagBalanceApplied", count, adjusted, cleared, displayTargetPing, targetPing);
-	}
-}
-
-stock void FakelagApplyBalance(int admin, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing, float displayTargetPing)
+stock void FakelagApplyBalance(int admin, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing)
 {
 	int adjusted = 0;
 	int cleared = 0;
@@ -101,23 +48,23 @@ stock void FakelagApplyBalance(int admin, const int clients[MAXPLAYERS + 1], con
 		float rawPing = pings[index];
 		float compensation = targetPing - rawPing;
 		float displayPing = FakelagEstimateNetGraphPingForClientMs(target, rawPing);
-		float displayTargetPingForClient = FakelagEstimateNetGraphPingForClientMs(target, targetPing);
 
 		if (compensation <= 0.0)
 		{
 			if (CFakeLag_HasPlayerLatency(target))
 			{
+				g_ForgetLatencyOnNextClear[target] = true;
 				CFakeLag_ClearPlayerLatency(target);
 				cleared++;
 			}
 
 			if (admin != 0)
 			{
-				CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalancePlayerUnchanged", target, displayPing, rawPing, displayTargetPingForClient, targetPing);
+				CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalancePlayerUnchanged", target, displayPing, rawPing);
+				continue;
 			}
-			else {
-				CPrintToChat(target, "%t %t", "Tag", "FakelagBalancePlayerUnchanged", target, displayPing, rawPing, displayTargetPingForClient, targetPing);
-			}
+
+			CPrintToChat(target, "%t %t", "Tag", "FakelagBalancePlayerUnchanged", target, displayPing, rawPing);
 			continue;
 		}
 
@@ -125,19 +72,34 @@ stock void FakelagApplyBalance(int admin, const int clients[MAXPLAYERS + 1], con
 		adjusted++;
 		if (admin != 0)
 		{
-			CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalancePlayerAdjusted", target, displayPing, rawPing, compensation, displayTargetPingForClient, targetPing);
+			CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalancePlayerAdjusted", target, displayPing, rawPing, compensation);
+			continue;
 		}
-		else {
-			CPrintToChat(target, "%t %t", "Tag", "FakelagBalancePlayerAdjusted", target, displayPing, rawPing, compensation, displayTargetPingForClient, targetPing);
-		}
+
+		CPrintToChat(target, "%t %t", "Tag", "FakelagBalancePlayerAdjusted", target, displayPing, rawPing, compensation);
 	}
 
-	FakelagReplyBalanceApplied(admin, count, adjusted, cleared, displayTargetPing, targetPing);
+	if (admin != 0)
+	{
+		CReplyToCommand(admin, "%t %t", "Tag", "FakelagBalanceApplied", count, adjusted, cleared);
+		return;
+	}
+
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		if (!FakelagIsBalanceAudienceClient(client))
+		{
+			continue;
+		}
+
+		CPrintToChat(client, "%t %t", "Tag", "FakelagBalanceApplied", count, adjusted, cleared);
+	}
 }
 
-stock void FakelagPreviewBalance(int admin, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing, float displayTargetPing)
+stock void FakelagPreviewBalance(int admin, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing)
 {
 	int adjusted = 0;
+	char formatted[512];
 
 	for (int index = 0; index < count; index++)
 	{
@@ -145,19 +107,42 @@ stock void FakelagPreviewBalance(int admin, const int clients[MAXPLAYERS + 1], c
 		float rawPing = pings[index];
 		float compensation = targetPing - rawPing;
 		float displayPing = FakelagEstimateNetGraphPingForClientMs(target, rawPing);
-		float displayTargetPingForClient = FakelagEstimateNetGraphPingForClientMs(target, targetPing);
 
 		if (compensation <= 0.0)
 		{
-			FakelagPrintPreviewToConsole(admin, "%t %t", "TagConsole", "FakelagBalancePreviewPlayerUnchangedConsole", target, displayPing, rawPing, displayTargetPingForClient, targetPing);
+			SetGlobalTransTarget(admin);
+			Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "FakelagBalancePreviewPlayerUnchangedConsole", target, displayPing, rawPing);
+			if (admin == 0)
+			{
+				PrintToServer("%s", formatted);
+				continue;
+			}
+
+			PrintToConsole(admin, "%s", formatted);
 			continue;
 		}
 
 		adjusted++;
-		FakelagPrintPreviewToConsole(admin, "%t %t", "TagConsole", "FakelagBalancePreviewPlayerAdjustedConsole", target, displayPing, rawPing, compensation, displayTargetPingForClient, targetPing);
+		SetGlobalTransTarget(admin);
+		Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "FakelagBalancePreviewPlayerAdjustedConsole", target, displayPing, rawPing, compensation);
+		if (admin == 0)
+		{
+			PrintToServer("%s", formatted);
+			continue;
+		}
+
+		PrintToConsole(admin, "%s", formatted);
 	}
 
-	FakelagPrintPreviewToConsole(admin, "%t %t", "TagConsole", "FakelagBalancePreviewAppliedConsole", count, adjusted, displayTargetPing, targetPing);
+	SetGlobalTransTarget(admin);
+	Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "FakelagBalancePreviewAppliedConsole", count, adjusted);
+	if (admin == 0)
+	{
+		PrintToServer("%s", formatted);
+		return;
+	}
+
+	PrintToConsole(admin, "%s", formatted);
 }
 
 stock bool FakelagApplyBalanceSilent(float &targetPing, int &highestClient, int &playerCount, int &adjustedCount, int &clearedCount)
@@ -183,6 +168,7 @@ stock bool FakelagApplyBalanceSilent(float &targetPing, int &highestClient, int 
 		{
 			if (CFakeLag_HasPlayerLatency(target))
 			{
+				g_ForgetLatencyOnNextClear[target] = true;
 				CFakeLag_ClearPlayerLatency(target);
 				clearedCount++;
 			}
@@ -219,8 +205,23 @@ stock void FakelagRunBalanceCommand(int client)
 	}
 
 	float displayHighestPing = FakelagGetClientAveragePingMs(highestClient);
-	FakelagReplyBalanceTarget(client, highestClient, displayHighestPing, highestPing);
-	FakelagApplyBalance(client, targets, pings, count, highestPing, displayHighestPing);
+	if (client != 0)
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceTarget", highestClient, displayHighestPing, highestPing);
+	}
+	else {
+		for (int audience = 1; audience <= MaxClients; audience++)
+		{
+			if (!FakelagIsBalanceAudienceClient(audience))
+			{
+				continue;
+			}
+
+			CPrintToChat(audience, "%t %t", "Tag", "FakelagBalanceTarget", highestClient, displayHighestPing, highestPing);
+		}
+	}
+
+	FakelagApplyBalance(client, targets, pings, count, highestPing);
 }
 
 stock void FakelagRunBalancePreviewCommand(int client)
@@ -237,11 +238,22 @@ stock void FakelagRunBalancePreviewCommand(int client)
 	}
 
 	float displayHighestPing = FakelagGetClientAveragePingMs(highestClient);
-	FakelagPrintPreviewToConsole(client, "%t %t", "TagConsole", "FakelagBalancePreviewTargetConsole", highestClient, displayHighestPing, highestPing);
-	FakelagPreviewBalance(client, targets, pings, count, highestPing, displayHighestPing);
-
-	if (client != 0)
+	char formatted[512];
+	SetGlobalTransTarget(client);
+	Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "FakelagBalancePreviewTargetConsole", highestClient, displayHighestPing, highestPing);
+	if (client == 0)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "FakelagPreviewSentToConsole");
+		PrintToServer("%s", formatted);
 	}
+	else {
+		PrintToConsole(client, "%s", formatted);
+	}
+	FakelagPreviewBalance(client, targets, pings, count, highestPing);
+
+	if (client == 0)
+	{
+		return;
+	}
+
+	CReplyToCommand(client, "%t %t", "Tag", "FakelagPreviewSentToConsole");
 }
