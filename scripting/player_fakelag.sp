@@ -503,27 +503,3 @@ public Action PrintLagCmd(int client, int args)
 
 	return Plugin_Handled;
 }
-
-public Action CFakeLag_OnSetPlayerLatency(int client, float oldLag, float &newLag, CFakeLagChangeReason reason)
-{
-	Action result = Plugin_Continue;
-
-	Call_StartForward(g_FwdOnSetPlayerLatency);
-	Call_PushCell(client);
-	Call_PushFloat(oldLag);
-	Call_PushFloatRef(newLag);
-	Call_PushCell(reason);
-	Call_Finish(result);
-
-	return result;
-}
-
-public void CFakeLag_OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason)
-{
-	Call_StartForward(g_FwdOnPlayerLatencyChanged);
-	Call_PushCell(client);
-	Call_PushFloat(oldLag);
-	Call_PushFloat(newLag);
-	Call_PushCell(reason);
-	Call_Finish();
-}
