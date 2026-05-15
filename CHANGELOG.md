@@ -17,12 +17,12 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
   - `sm_fakelag`
   - `sm_fakelag_status`
   - `sm_fakelag_clear`
-  - `sm_fakelag_clearall`
+  - `sm_fakelag_clear_all`
   - `sm_fakelag_list`
-- Se agrego el balanceador de fake lag por ping con:
-  - `sm_fakelag_balance`
-  - `sm_fakelag_balance_preview`
-  - `sm_fakelag_balance_vote`
+- Se agrego el balanceador de fake lag por ping con modos explicitos:
+  - `sm_fakelag_balance <global|pairs>`
+  - `sm_fakelag_preview <global|pairs>`
+  - `sm_fakelag_vote <global|pairs>`
 - Se agrego una API high-level en `player_fakelag.inc` con natives para aplicar, previsualizar y votar el balanceo.
 - Se agregaron forwards high-level en `player_fakelag.inc` para que otros plugins puedan interceptar y observar cambios de fake lag desde `player_fakelag`:
   - `PlayerFakelag_OnSetPlayerLatency`

@@ -2,57 +2,57 @@ stock void FakelagReplyPlayerStatus(int client, int target)
 {
 	if (!CFakeLag_IsClientSupported(target))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerInvalidHumanTarget", target);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerInvalidHumanTarget", target);
 		return;
 	}
 
-	float averagePingRaw = FakelagGetClientAveragePingRawMs(target);
+	float averagePingRaw	 = FakelagGetClientAveragePingRawMs(target);
 	float averagePingDisplay = FakelagEstimateNetGraphPingForClientMs(target, averagePingRaw);
-	float fakeLag = CFakeLag_GetPlayerLatency(target);
-	bool isLagged = CFakeLag_HasPlayerLatency(target);
+	float fakeLag			 = CFakeLag_GetPlayerLatency(target);
+	bool  isLagged			 = CFakeLag_HasPlayerLatency(target);
 
 	if (!isLagged)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "FakelagStatusDisabled", target, averagePingDisplay, averagePingRaw);
+		CReplyToCommand(client, "%t %t", "Tag", "StatusDisabled", target, averagePingDisplay, averagePingRaw);
 		return;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", "FakelagStatusEnabled", target, averagePingDisplay, averagePingRaw, fakeLag);
+	CReplyToCommand(client, "%t %t", "Tag", "StatusEnabled", target, averagePingDisplay, averagePingRaw, fakeLag);
 }
 
 stock void FakelagReplyPlayerComparison(int client, int firstTarget, int secondTarget)
 {
 	if (!IsHumanInGame(firstTarget))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerInvalidHumanTarget", firstTarget);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerInvalidHumanTarget", firstTarget);
 		return;
 	}
 
 	if (!IsHumanInGame(secondTarget))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerInvalidHumanTarget", secondTarget);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerInvalidHumanTarget", secondTarget);
 		return;
 	}
 
-	float firstRaw = FakelagGetClientAveragePingRawMs(firstTarget);
+	float firstRaw	= FakelagGetClientAveragePingRawMs(firstTarget);
 	float secondRaw = FakelagGetClientAveragePingRawMs(secondTarget);
 	if (firstRaw < 0.0)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerNoPingData", firstTarget);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerNoPingData", firstTarget);
 		return;
 	}
 
 	if (secondRaw < 0.0)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "FakelagPlayerNoPingData", secondTarget);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerNoPingData", secondTarget);
 		return;
 	}
 
-	float firstDisplay = FakelagEstimateNetGraphPingForClientMs(firstTarget, firstRaw);
+	float firstDisplay	= FakelagEstimateNetGraphPingForClientMs(firstTarget, firstRaw);
 	float secondDisplay = FakelagEstimateNetGraphPingForClientMs(secondTarget, secondRaw);
-	float difference = FloatAbs(firstRaw - secondRaw);
+	float difference	= FloatAbs(firstRaw - secondRaw);
 
-	CReplyToCommand(client, "%t %t", "Tag", "FakelagCompareResult", firstTarget, firstDisplay, secondTarget, secondDisplay, difference);
+	CReplyToCommand(client, "%t %t", "Tag", "CompareResult", firstTarget, firstDisplay, secondTarget, secondDisplay, difference);
 
 	if (difference <= 0.0)
 	{
@@ -60,24 +60,23 @@ stock void FakelagReplyPlayerComparison(int client, int firstTarget, int secondT
 	}
 
 	int higherTarget = firstRaw >= secondRaw ? firstTarget : secondTarget;
-	CReplyToCommand(client, "%t %t", "Tag", "FakelagCompareHigher", higherTarget, difference);
+	CReplyToCommand(client, "%t %t", "Tag", "CompareHigher", higherTarget, difference);
 }
 
 stock int FakelagFindComparisonTarget(int client, const char[] pattern)
 {
-	int targets[MAXPLAYERS];
+	int	 targets[MAXPLAYERS];
 	char targetName[MAX_TARGET_LENGTH];
 	bool targetNameIsMl;
-	int targetCount = ProcessTargetString(
-		pattern,
-		client,
-		targets,
-		sizeof(targets),
-		COMMAND_FILTER_CONNECTED | COMMAND_FILTER_NO_BOTS | COMMAND_FILTER_NO_MULTI | COMMAND_FILTER_NO_IMMUNITY,
-		targetName,
-		sizeof(targetName),
-		targetNameIsMl
-	);
+	int	 targetCount = ProcessTargetString(
+		 pattern,
+		 client,
+		 targets,
+		 sizeof(targets),
+		 COMMAND_FILTER_CONNECTED | COMMAND_FILTER_NO_BOTS | COMMAND_FILTER_NO_MULTI | COMMAND_FILTER_NO_IMMUNITY,
+		 targetName,
+		 sizeof(targetName),
+		 targetNameIsMl);
 
 	if (targetCount != 1)
 	{
@@ -148,6 +147,6 @@ stock bool FakelagCommandRequiresClient(int client)
 		return true;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", "FakelagClientOnlyCommand");
+	CReplyToCommand(client, "%t %t", "Tag", "ClientOnlyCommand");
 	return false;
 }

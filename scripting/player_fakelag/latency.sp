@@ -1,8 +1,8 @@
 #define FAKELAG_PING_SAMPLE_COUNT 5
 
-float g_ClientLatencySamples[MAXPLAYERS + 1][FAKELAG_PING_SAMPLE_COUNT];
-int g_ClientLatencySampleCount[MAXPLAYERS + 1];
-int g_ClientLatencySampleIndex[MAXPLAYERS + 1];
+float	   g_ClientLatencySamples[MAXPLAYERS + 1][FAKELAG_PING_SAMPLE_COUNT];
+int		   g_ClientLatencySampleCount[MAXPLAYERS + 1];
+int		   g_ClientLatencySampleIndex[MAXPLAYERS + 1];
 
 stock void FakelagCopyRecentLatencySamples(int client, float samples[FAKELAG_PING_SAMPLE_COUNT], int sampleCount)
 {
@@ -23,7 +23,7 @@ stock void FakelagSortLatencySamples(float samples[FAKELAG_PING_SAMPLE_COUNT], i
 	for (int i = 1; i < sampleCount; i++)
 	{
 		float value = samples[i];
-		int j = i - 1;
+		int	  j		= i - 1;
 
 		while (j >= 0 && samples[j] > value)
 		{
@@ -71,7 +71,7 @@ stock float FakelagGetStableLatencyFromSamples(float samples[FAKELAG_PING_SAMPLE
 	}
 
 	float trimmed[FAKELAG_PING_SAMPLE_COUNT];
-	int trimmedCount = 0;
+	int	  trimmedCount = 0;
 	for (int i = 1; i < sampleCount - 1; i++)
 	{
 		trimmed[trimmedCount++] = samples[i];
@@ -132,7 +132,7 @@ stock float FakelagGetClientBasePingRawMs(int client)
 	}
 
 	float appliedFakeLag = CFakeLag_HasPlayerLatency(client) ? CFakeLag_GetPlayerLatency(client) : 0.0;
-	float basePingMs = rawPingMs - appliedFakeLag;
+	float basePingMs	 = rawPingMs - appliedFakeLag;
 	return basePingMs < 0.0 ? 0.0 : basePingMs;
 }
 
@@ -150,7 +150,7 @@ stock float FakelagGetClientAveragePingRawMs(int client)
 	}
 
 	int samplesToUse = sampleCount;
-	int windowSize = FakelagGetEffectiveSampleWindow();
+	int windowSize	 = FakelagGetEffectiveSampleWindow();
 	if (samplesToUse > windowSize)
 	{
 		samplesToUse = windowSize;
@@ -235,9 +235,9 @@ stock void FakelagSampleClientLatency(int client)
 		return;
 	}
 
-	int sampleIndex = g_ClientLatencySampleIndex[client];
+	int sampleIndex								= g_ClientLatencySampleIndex[client];
 	g_ClientLatencySamples[client][sampleIndex] = rawPingMs;
-	g_ClientLatencySampleIndex[client] = (sampleIndex + 1) % FAKELAG_PING_SAMPLE_COUNT;
+	g_ClientLatencySampleIndex[client]			= (sampleIndex + 1) % FAKELAG_PING_SAMPLE_COUNT;
 
 	if (g_ClientLatencySampleCount[client] < FAKELAG_PING_SAMPLE_COUNT)
 	{

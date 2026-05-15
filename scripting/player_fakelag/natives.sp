@@ -1,12 +1,14 @@
+
+
 public int Native_ApplyBalance(Handle plugin, int numParams)
 {
 	float targetPing;
-	int highestClient;
-	int playerCount;
-	int adjustedCount;
-	int clearedCount;
+	int	  highestClient;
+	int	  playerCount;
+	int	  adjustedCount;
+	int	  clearedCount;
 
-	bool result = FakelagApplyBalanceSilent(targetPing, highestClient, playerCount, adjustedCount, clearedCount);
+	bool  result = FakelagApplyBalanceSilent(targetPing, highestClient, playerCount, adjustedCount, clearedCount);
 	SetNativeCellRef(1, view_as<int>(targetPing));
 	SetNativeCellRef(2, highestClient);
 	SetNativeCellRef(3, playerCount);
@@ -18,10 +20,10 @@ public int Native_ApplyBalance(Handle plugin, int numParams)
 public int Native_PreviewBalance(Handle plugin, int numParams)
 {
 	float targetPing;
-	int highestClient;
-	int playerCount;
+	int	  highestClient;
+	int	  playerCount;
 
-	bool result = FakelagPreviewBalanceSilent(targetPing, highestClient, playerCount);
+	bool  result = FakelagPreviewBalanceSilent(targetPing, highestClient, playerCount);
 	SetNativeCellRef(1, view_as<int>(targetPing));
 	SetNativeCellRef(2, highestClient);
 	SetNativeCellRef(3, playerCount);
@@ -43,8 +45,8 @@ public int Native_StartBalanceVote(Handle plugin, int numParams)
 	}
 
 	float highestPing;
-	int highestClient;
-	int playerCount;
+	int	  highestClient;
+	int	  playerCount;
 	if (!FakelagPreviewBalanceSilent(highestPing, highestClient, playerCount))
 	{
 		return false;
@@ -58,7 +60,7 @@ public int Native_StartBalanceVote(Handle plugin, int numParams)
 
 	char voteQuestion[128];
 	// BuiltinVotes expects the final text here; phrase keys are not localized at render time.
-	Format(voteQuestion, sizeof(voteQuestion), "%T", "FakelagBalanceVoteQuestion", LANG_SERVER);
+	Format(voteQuestion, sizeof(voteQuestion), "%T", "BalanceVoteQuestion", LANG_SERVER);
 
 	g_FakeLagBalanceVote = vote;
 	SetBuiltinVoteArgument(vote, voteQuestion);
@@ -79,11 +81,11 @@ public int Native_StartBalanceVote(Handle plugin, int numParams)
 
 	if (initiator > 0)
 	{
-		FakelagNotifyVoteAudience("FakelagBalanceVoteAnnounce", initiator);
+		FakelagNotifyVoteAudience("BalanceVoteAnnounce", initiator);
 		return true;
 	}
 
-	FakelagNotifyVoteAudience("FakelagBalanceVoteStartedServer");
+	FakelagNotifyVoteAudience("BalanceVoteStartedServer");
 
 	return true;
 }

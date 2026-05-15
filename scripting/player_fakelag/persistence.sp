@@ -188,6 +188,6 @@ stock void FakelagRestoreClientLatencyIfEligible(int client)
 	}
 	if (restoredAfterDisconnect)
 	{
-		CPrintToChat(client, "%t %t", "Tag", "FakelagRestoredOnSelf", storedLag);
+		CPrintToChat(client, "%t %t", "Tag", "RestoredOnSelf", storedLag);
 	}
 }

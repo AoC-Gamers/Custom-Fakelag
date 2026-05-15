@@ -9,7 +9,7 @@ stock bool FakelagTryCollectBalance(int client, int targets[MAXPLAYERS + 1], flo
 	count = FakelagCollectBalanceCandidates(targets, pings, highestPing, highestClient);
 	if (count <= 0 || highestClient <= 0 || highestPing < 0.0)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceNoPlayers");
+		CReplyToCommand(client, "%t %t", "Tag", "BalanceNoPlayers");
 		return false;
 	}
 
@@ -20,7 +20,7 @@ stock bool FakelagCanStartBalanceVote(int client)
 {
 	if (!FakelagCanUseBuiltinVotes())
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteUnavailable");
+		CReplyToCommand(client, "%t %t", "Tag", "BalanceVoteUnavailable");
 		return false;
 	}
 
@@ -29,15 +29,80 @@ stock bool FakelagCanStartBalanceVote(int client)
 		int delay = CheckBuiltinVoteDelay();
 		if (delay > 0)
 		{
-			CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteDelay", delay);
+			CReplyToCommand(client, "%t %t", "Tag", "BalanceVoteDelay", delay);
 			return false;
 		}
 
-		CReplyToCommand(client, "%t %t", "Tag", "FakelagBalanceVoteInProgress");
+		CReplyToCommand(client, "%t %t", "Tag", "BalanceVoteInProgress");
 		return false;
 	}
 
 	return true;
+}
+
+stock bool FakelagCanStartGlobalBalanceVote(int client)
+{
+	int	  targets[MAXPLAYERS + 1];
+	float pings[MAXPLAYERS + 1];
+	float highestPing;
+	int	  highestClient;
+	int	  count;
+	if (!FakelagTryCollectBalance(client, targets, pings, highestPing, highestClient, count))
+	{
+		return false;
+	}
+
+	return FakelagCanStartBalanceVote(client);
+}
+
+stock bool FakelagCanStartPairBalanceVote(int client)
+{
+	int	  survivorClients[MAXPLAYERS + 1];
+	float survivorPings[MAXPLAYERS + 1];
+	int	  infectedClients[MAXPLAYERS + 1];
+	float infectedPings[MAXPLAYERS + 1];
+	int	  survivorCount;
+	int	  infectedCount;
+	int	  pairCount;
+	if (!FakelagPreparePairBalance(survivorClients, survivorPings, survivorCount, infectedClients, infectedPings, infectedCount, pairCount))
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "BalanceNoPlayers");
+		return false;
+	}
+
+	return FakelagCanStartBalanceVote(client);
+}
+
+stock void FakelagStartBalanceVote(int initiator, int mode, const char[] questionPhrase, const char[] announcePhrase, const char[] startedPhrase)
+{
+	Handle vote = CreateBuiltinVote(FakeLagBalanceVoteHandler, BuiltinVoteType_Custom_YesNo, BUILTINVOTE_ACTIONS_DEFAULT);
+	if (vote == null)
+	{
+		CReplyToCommand(initiator, "%t %t", "Tag", "BalanceVoteUnavailable");
+		return;
+	}
+
+	char voteQuestion[128];
+	Format(voteQuestion, sizeof(voteQuestion), "%T", questionPhrase, LANG_SERVER);
+
+	g_BalanceVoteMode	 = mode;
+	g_FakeLagBalanceVote = vote;
+	SetBuiltinVoteArgument(vote, voteQuestion);
+	SetBuiltinVoteInitiator(vote, initiator);
+	SetBuiltinVoteResultCallback(vote, FakeLagBalanceVoteResultHandler);
+
+	if (!DisplayBuiltinVoteToAllNonSpectators(vote, 20))
+	{
+		g_BalanceVoteMode	 = 0;
+		g_FakeLagBalanceVote = null;
+		delete vote;
+		CReplyToCommand(initiator, "%t %t", "Tag", "BalanceVoteInProgress");
+		return;
+	}
+
+	FakeClientCommand(initiator, "Vote Yes");
+	FakelagNotifyVoteAudience(announcePhrase, initiator);
+	CReplyToCommand(initiator, "%t %t", "Tag", startedPhrase);
 }
 
 stock void FakelagNotifyVoteAudience(const char[] phrase, int initiator = 0)
@@ -74,6 +139,7 @@ public void FakeLagBalanceVoteHandler(Handle vote, BuiltinVoteAction action, int
 	if (g_FakeLagBalanceVote == vote)
 	{
 		g_FakeLagBalanceVote = null;
+		g_BalanceVoteMode	 = 0;
 	}
 
 	delete vote;
@@ -83,15 +149,38 @@ public void FakeLagBalanceVoteResultHandler(Handle vote, int numVotes, int numCl
 {
 	if (numItems < 1 || itemInfo[0][BUILTINVOTEINFO_ITEM_INDEX] != BUILTINVOTES_VOTE_YES)
 	{
-		FakelagNotifyVoteAudience("FakelagBalanceVoteFailed");
+		if (g_BalanceVoteMode == 1)
+		{
+			FakelagNotifyVoteAudience("PairBalanceVoteFailed");
+		}
+		else
+		{
+			FakelagNotifyVoteAudience("BalanceVoteFailed");
+		}
+
 		DisplayBuiltinVoteFail(vote, BuiltinVoteFail_Loses);
 		return;
 	}
 
-	FakelagNotifyVoteAudience("FakelagBalanceVotePassed");
 	char votePassed[128];
 	// DisplayBuiltinVotePass also needs pre-rendered text instead of a translation key.
-	Format(votePassed, sizeof(votePassed), "%T", "FakelagBalanceVotePassedTitle", LANG_SERVER);
+	if (g_BalanceVoteMode == 1)
+	{
+		FakelagNotifyVoteAudience("PairBalanceVotePassed");
+		Format(votePassed, sizeof(votePassed), "%T", "PairBalanceVotePassedTitle", LANG_SERVER);
+	}
+	else
+	{
+		FakelagNotifyVoteAudience("BalanceVotePassed");
+		Format(votePassed, sizeof(votePassed), "%T", "BalanceVotePassedTitle", LANG_SERVER);
+	}
+
 	DisplayBuiltinVotePass(vote, votePassed);
+	if (g_BalanceVoteMode == 1)
+	{
+		FakelagRunPairBalanceCommand(0);
+		return;
+	}
+
 	FakelagRunBalanceCommand(0);
 }
