@@ -655,3 +655,26 @@ Ver:
 ```text
 docs/DEVELOPMENT.md
 ```
+
+## Consideraciones importantes
+
+Esta extensión depende de internals del motor Source. Si cambian las firmas de
+`NET_LagPacket` o `net_time`, puede fallar al cargar.
+
+El fake lag se aplica a jugadores humanos soportados. Los fake clients/bots no
+son targets válidos.
+
+El sistema trabaja retrasando paquetes por dirección de red. Si no se puede
+resolver la dirección de red de un cliente, no se aplica fake lag para ese
+cliente.
+
+El plugin `player_fakelag` está pensado para L4D2 y usa lógica de equipos
+Survivor/Infected mediante Left 4 DHooks.
+
+## Documentación adicional
+
+Ver:
+
+```text
+docs/DEVELOPMENT.md
+```
