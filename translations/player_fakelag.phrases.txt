@@ -162,6 +162,18 @@
 		"es"        "Balanceando globalmente."
 	}
 
+	"BalancePreviewTargetAdjusted"
+	{
+		"en"        "Your ms would be adjusted by {green}+%.1f ms{default}."
+		"es"        "Tus ms se ajustarian en {green}+%.1f ms{default}."
+	}
+
+	"BalancePreviewTargetAdjustedByAdmin"
+	{
+		"en"        "{teamcolor}%N{default} would adjust your ms by {green}+%.1f ms{default}."
+		"es"        "{teamcolor}%N{default} ajustaria tus ms en {green}+%.1f ms{default}."
+	}
+
 	"BalanceTargetAdjusted"
 	{
 		"en"        "Your ms were adjusted to {green}+%.1f ms{default}."
@@ -172,6 +184,12 @@
 	{
 		"en"        "Balance against %N with ping x̅ %.1fms (raw %.1fms)."
 		"es"        "Balance contra %N con ping x̅ de %.1fms (raw %.1fms)."
+	}
+
+	"BalanceConsoleTitleByAdmin"
+	{
+		"en"        "%N started a global balance against %N with ping x̅ %.1fms (raw %.1fms)."
+		"es"        "%N inicio un balance global contra %N con ping x̅ de %.1fms (raw %.1fms)."
 	}
 
 	"BalanceTableColumns"
@@ -240,6 +258,18 @@
 		"es"        "Balanceando por emparejamiento."
 	}
 
+	"PairBalancePreviewTargetAdjusted"
+	{
+		"en"        "Your ms would be balanced with {teamcolor}%N{default} and adjusted by {green}+%.1f ms{default}."
+		"es"        "Tus ms se balancearian con {teamcolor}%N{default} y se ajustarian en {green}+%.1f ms{default}."
+	}
+
+	"PairBalancePreviewTargetAdjustedByAdmin"
+	{
+		"en"        "{teamcolor}%N{default} would balance your ms with {teamcolor}%N{default} and adjust them by {green}+%.1f ms{default}."
+		"es"        "{teamcolor}%N{default} balancearia tus ms con {teamcolor}%N{default} y los ajustaria en {green}+%.1f ms{default}."
+	}
+
 	"PairBalanceTargetAdjusted"
 	{
 		"en"        "Your ms were balanced with {teamcolor}%N{default} and adjusted to {green}+%.1f ms{default}."
@@ -262,6 +292,12 @@
 	{
 		"en"        "Pair balance across %d survivor/infected pair(s)."
 		"es"        "Balance por pares en %d pareja(s) survivor/infected."
+	}
+
+	"PairBalanceConsoleTitleByAdmin"
+	{
+		"en"        "%N started a pair balance across %d survivor/infected pair(s)."
+		"es"        "%N inicio un balance por pares en %d pareja(s) survivor/infected."
 	}
 
 	"PairBalanceConsolePair"
@@ -297,7 +333,7 @@
 	"PreviewSentToConsole"
 	{
 		"en"        "{lightgreen}Preview details{default} were sent to your console."
-		"es"        "La {lightgreen}informacion de la vista previa{default} fue enviada a tu consola."
+		"es"        "Mas informacion de la vista previa en tu consola."
 	}
 
 	"BalanceVoteUnavailable"

@@ -7,5 +7,6 @@
 // pNetTime: Pointer to the engine "net_time" variable
 bool LagDetour_Init(const PlayerLagManager* lagManager, const double* pNetTime);
 void LagDetour_Shutdown();
+void LagDetour_ClearPacketLossState();
 
 #endif // _INCLUDE_CUSTOM_FAKELAG_LAGPACKET_DETOUR_H_

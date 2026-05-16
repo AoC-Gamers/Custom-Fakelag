@@ -17,7 +17,7 @@ stock bool FakelagGetClientAccountKey(int client, char[] buffer, int maxlen)
 	return true;
 }
 
-stock void FakelagStoreLatencyForClient(int client, float lag)
+stock void FakelagStoreProfileForClient(int client, float lag, int packetLossPercent)
 {
 	char accountKey[16];
 	if (!FakelagGetClientAccountKey(client, accountKey, sizeof(accountKey)))
@@ -26,9 +26,10 @@ stock void FakelagStoreLatencyForClient(int client, float lag)
 	}
 
 	g_PlayerLatencyByAccountId.SetValue(accountKey, view_as<int>(lag));
+	g_PlayerPacketLossByAccountId.SetValue(accountKey, packetLossPercent);
 	if (FakelagIsDebugEnabled())
 	{
-		LogMessage("[player_fakelag] Stored %.1fms for %L (account %s)", lag, client, accountKey);
+		LogMessage("[player_fakelag] Stored profile for %L (account %s): lag=%.1fms loss=%d%%", client, accountKey, lag, packetLossPercent);
 	}
 }
 
@@ -69,14 +70,15 @@ stock void FakelagForgetStoredLatency(int client)
 	}
 
 	g_PlayerLatencyByAccountId.Remove(accountKey);
+	g_PlayerPacketLossByAccountId.Remove(accountKey);
 	g_PlayerDisconnectedByAccountId.Remove(accountKey);
 	if (FakelagIsDebugEnabled())
 	{
-		LogMessage("[player_fakelag] Forgot persisted fakelag for %L (account %s)", client, accountKey);
+		LogMessage("[player_fakelag] Forgot persisted fakelag profile for %L (account %s)", client, accountKey);
 	}
 }
 
-stock bool FakelagTryGetStoredLatency(int client, float &lag)
+stock bool FakelagTryGetStoredProfile(int client, float &lag, int &packetLossPercent)
 {
 	char accountKey[16];
 	if (!FakelagGetClientAccountKey(client, accountKey, sizeof(accountKey)))
@@ -90,6 +92,8 @@ stock bool FakelagTryGetStoredLatency(int client, float &lag)
 		return false;
 	}
 
+	packetLossPercent = 0;
+	g_PlayerPacketLossByAccountId.GetValue(accountKey, packetLossPercent);
 	lag = view_as<float>(storedLag);
 	return true;
 }
@@ -154,11 +158,12 @@ stock void FakelagRestoreClientLatencyIfEligible(int client)
 	}
 
 	float storedLag;
-	if (!FakelagTryGetStoredLatency(client, storedLag))
+	int storedPacketLossPercent;
+	if (!FakelagTryGetStoredProfile(client, storedLag, storedPacketLossPercent))
 	{
 		if (FakelagIsDebugEnabled())
 		{
-			LogMessage("[player_fakelag] Restore skipped for %L: no persisted fakelag found", client);
+			LogMessage("[player_fakelag] Restore skipped for %L: no persisted fakelag profile found", client);
 		}
 		return;
 	}
@@ -173,17 +178,17 @@ stock void FakelagRestoreClientLatencyIfEligible(int client)
 	}
 
 	bool restoredAfterDisconnect = FakelagConsumeDisconnectedState(client);
-	FakelagApplyNetworkProfile(client, FakelagBuildNetworkProfile(storedLag, 0));
+	FakelagApplyNetworkProfile(client, FakelagBuildNetworkProfile(storedLag, storedPacketLossPercent));
 	if (FakelagIsDebugEnabled())
 	{
 		char accountKey[16];
 		if (FakelagGetClientAccountKey(client, accountKey, sizeof(accountKey)))
 		{
-			LogMessage("[player_fakelag] Restored %.1fms for %L (account %s, after_disconnect=%d)", storedLag, client, accountKey, restoredAfterDisconnect);
+			LogMessage("[player_fakelag] Restored profile for %L (account %s): lag=%.1fms loss=%d%% after_disconnect=%d", client, accountKey, storedLag, storedPacketLossPercent, restoredAfterDisconnect);
 		}
 		else
 		{
-			LogMessage("[player_fakelag] Restored %.1fms for client index %d (after_disconnect=%d)", storedLag, client, restoredAfterDisconnect);
+			LogMessage("[player_fakelag] Restored profile for client index %d: lag=%.1fms loss=%d%% after_disconnect=%d", client, storedLag, storedPacketLossPercent, restoredAfterDisconnect);
 		}
 	}
 	if (restoredAfterDisconnect)

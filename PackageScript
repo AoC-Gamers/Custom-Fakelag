@@ -60,37 +60,6 @@ CopyFiles('scripting/player_fakelag', 'addons/sourcemod/scripting/player_fakelag
 for cxx_task in Extension.extensions:
   builder.AddCopy(cxx_task.binary, folder_map['addons/sourcemod/extensions'])
 
-runtime_libs = [
-  'libtier0_srv.so',
-  'libvstdlib_srv.so',
-  'libtier0.so',
-  'libvstdlib.so',
-  'tier0_i486.so',
-  'vstdlib_i486.so',
-  'libtier0.dylib',
-  'libvstdlib.dylib',
-]
-
-for sdk_name in Extension.sdks:
-  sdk = Extension.sdks[sdk_name]
-
-  candidate_lib_dirs = [
-    os.path.join(sdk.path, 'lib', 'linux'),
-    os.path.join(sdk.path, 'lib', 'mac'),
-    os.path.join(sdk.path, 'linux_sdk'),
-    os.path.join(sdk.path, 'lib', 'public', 'linux32'),
-    os.path.join(sdk.path, 'lib', 'public', 'osx32'),
-  ]
-
-  for lib_dir in candidate_lib_dirs:
-    if not os.path.isdir(lib_dir):
-      continue
-
-    for runtime_lib in runtime_libs:
-      runtime_lib_path = os.path.join(lib_dir, runtime_lib)
-      if os.path.exists(runtime_lib_path):
-        builder.AddCopy(runtime_lib_path, folder_map['addons/sourcemod/extensions'])
-
 player_fakelag_binary = os.path.join(builder.buildPath, 'player_fakelag.smx')
 if os.path.exists(player_fakelag_binary):
   builder.AddCopy(player_fakelag_binary, folder_map['addons/sourcemod/plugins'])

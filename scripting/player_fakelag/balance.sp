@@ -168,6 +168,25 @@ stock void FakelagNotifyGlobalBalanceTarget(int target, float compensation)
 	CPrintToChat(target, "%t %t", "Tag", "DetailsSentToTargetConsole");
 }
 
+stock void FakelagNotifyGlobalBalancePreviewTarget(int target, int initiator, float compensation)
+{
+	if (!IsHumanInGame(target) || compensation <= 0.0)
+	{
+		return;
+	}
+
+	if (initiator > 0 && initiator != target)
+	{
+		CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjustedByAdmin", initiator, compensation);
+	}
+	else
+	{
+		CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjusted", compensation);
+	}
+
+	CPrintToChat(target, "%t %t", "Tag", "DetailsSentToTargetConsole");
+}
+
 stock void FakelagNotifyPairBalanceTarget(int target, int partner, float compensation)
 {
 	if (!IsHumanInGame(target) || !IsHumanInGame(partner) || compensation <= 0.0)
@@ -176,6 +195,25 @@ stock void FakelagNotifyPairBalanceTarget(int target, int partner, float compens
 	}
 
 	CPrintToChat(target, "%t %t", "Tag", "PairBalanceTargetAdjusted", partner, compensation);
+	CPrintToChat(target, "%t %t", "Tag", "DetailsSentToTargetConsole");
+}
+
+stock void FakelagNotifyPairBalancePreviewTarget(int target, int partner, int initiator, float compensation)
+{
+	if (!IsHumanInGame(target) || !IsHumanInGame(partner) || compensation <= 0.0)
+	{
+		return;
+	}
+
+	if (initiator > 0 && initiator != target)
+	{
+		CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjustedByAdmin", initiator, partner, compensation);
+	}
+	else
+	{
+		CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjusted", partner, compensation);
+	}
+
 	CPrintToChat(target, "%t %t", "Tag", "DetailsSentToTargetConsole");
 }
 
@@ -501,6 +539,30 @@ stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &
 	return true;
 }
 
+stock void FakelagFormatGlobalBalanceConsoleTitle(int client, int initiator, int highestClient, float displayHighestPing, float highestPing, char[] buffer, int maxlen)
+{
+	SetGlobalTransTarget(client);
+	if (initiator > 0)
+	{
+		Format(buffer, maxlen, "%t %t", "TagConsole", "BalanceConsoleTitleByAdmin", initiator, highestClient, displayHighestPing, highestPing);
+		return;
+	}
+
+	Format(buffer, maxlen, "%t %t", "TagConsole", "BalanceConsoleTitle", highestClient, displayHighestPing, highestPing);
+}
+
+stock void FakelagFormatPairBalanceConsoleTitle(int client, int initiator, int pairCount, char[] buffer, int maxlen)
+{
+	SetGlobalTransTarget(client);
+	if (initiator > 0)
+	{
+		Format(buffer, maxlen, "%t %t", "TagConsole", "PairBalanceConsoleTitleByAdmin", initiator, pairCount);
+		return;
+	}
+
+	Format(buffer, maxlen, "%t %t", "TagConsole", "PairBalanceConsoleTitle", pairCount);
+}
+
 stock void FakelagApplyBalance(int admin, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing)
 {
 	int	 adjusted = 0;
@@ -636,56 +698,21 @@ stock void FakelagRunBalanceCommand(int client)
 	}
 
 	float displayHighestPing = FakelagGetClientAveragePingMs(highestClient);
-	if (client != 0)
-	{
-		char formatted[512];
-		char columns[256];
-		SetGlobalTransTarget(client);
-		Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "BalanceConsoleTitle", highestClient, displayHighestPing, highestPing);
-		FakelagPrintConsoleTableStart(client, formatted);
-		Format(columns, sizeof(columns), "%t", "BalanceTableColumns");
-		FakelagPrintConsoleTableColumns(client, columns);
-		FakelagPrintConsoleTableStartToAudience(formatted, client);
-		FakelagPrintConsoleTableColumnsToAudience(columns, client);
-
-		for (int audience = 1; audience <= MaxClients; audience++)
-		{
-			if (!FakelagIsBalanceAudienceClient(audience))
-			{
-				continue;
-			}
-
-			CPrintToChat(audience, "%t %t", "Tag", "BalanceStarted");
-		}
-	}
-	else {
-		char formatted[512];
-		char columns[256];
-		SetGlobalTransTarget(client);
-		Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "BalanceConsoleTitle", highestClient, displayHighestPing, highestPing);
-		FakelagPrintConsoleTableStart(client, formatted);
-		Format(columns, sizeof(columns), "%t", "BalanceTableColumns");
-		FakelagPrintConsoleTableColumns(client, columns);
-		FakelagPrintConsoleTableStartToAudience(formatted);
-		FakelagPrintConsoleTableColumnsToAudience(columns);
-
-		for (int audience = 1; audience <= MaxClients; audience++)
-		{
-			if (!FakelagIsBalanceAudienceClient(audience))
-			{
-				continue;
-			}
-
-			CPrintToChat(audience, "%t %t", "Tag", "BalanceStarted");
-		}
-	}
+	char formatted[512];
+	char columns[256];
+	FakelagFormatGlobalBalanceConsoleTitle(client, client, highestClient, displayHighestPing, highestPing, formatted, sizeof(formatted));
+	FakelagPrintConsoleTableStart(client, formatted);
+	SetGlobalTransTarget(client);
+	Format(columns, sizeof(columns), "%t", "BalanceTableColumns");
+	FakelagPrintConsoleTableColumns(client, columns);
+	FakelagPrintConsoleTableStartToAudience(formatted, client);
+	FakelagPrintConsoleTableColumnsToAudience(columns, client);
 
 	FakelagApplyBalance(client, targets, pings, count, highestPing);
 
 	if (client != 0)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "BalanceStarted");
-		CReplyToCommand(client, "%t %t", "Tag", "DetailsSentToConsole");
+		CPrintToChat(client, "%t %t", "Tag", "DetailsSentToConsole");
 	}
 }
 
@@ -705,19 +732,52 @@ stock void FakelagRunBalancePreviewCommand(int client)
 	float displayHighestPing = FakelagGetClientAveragePingMs(highestClient);
 	char  formatted[512];
 	char  columns[256];
-	SetGlobalTransTarget(client);
-	Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "BalanceConsoleTitle", highestClient, displayHighestPing, highestPing);
+	FakelagFormatGlobalBalanceConsoleTitle(client, client, highestClient, displayHighestPing, highestPing, formatted, sizeof(formatted));
 	FakelagPrintConsoleTableStart(client, formatted);
+	FakelagPrintConsoleTableStartToAudience(formatted, client);
+	SetGlobalTransTarget(client);
 	Format(columns, sizeof(columns), "%t", "BalanceTableColumns");
 	FakelagPrintConsoleTableColumns(client, columns);
-	FakelagPreviewBalance(client, targets, pings, count, highestPing);
+	FakelagPrintConsoleTableColumnsToAudience(columns, client);
+
+	for (int index = 0; index < count; index++)
+	{
+		int	  target	   = targets[index];
+		float rawPing	   = pings[index];
+		float compensation = highestPing - rawPing;
+		float displayPing  = FakelagEstimateNetGraphPingForClientMs(target, rawPing);
+		char  row[256];
+
+		if (compensation > 0.0)
+		{
+			FakelagNotifyGlobalBalancePreviewTarget(target, client, compensation);
+		}
+
+		FakelagFormatGlobalBalanceRow(client, target, displayPing, rawPing, compensation, CFakeLag_HasPlayerLatency(target), row, sizeof(row));
+		FakelagPrintConsoleTableLine(client, row);
+		FakelagPrintConsoleTableLineToAudience(row, client);
+	}
+
+	int adjusted = 0;
+	for (int index = 0; index < count; index++)
+	{
+		if (highestPing - pings[index] > 0.0)
+		{
+			adjusted++;
+		}
+	}
+
+	SetGlobalTransTarget(client);
+	Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "BalancePreviewAppliedConsole", count, adjusted);
+	FakelagPrintConsoleTableFinish(client, formatted);
+	FakelagPrintConsoleTableFinishToAudience(formatted, client);
 
 	if (client == 0)
 	{
 		return;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", "PreviewSentToConsole");
+	CPrintToChat(client, "%t %t", "Tag", "PreviewSentToConsole");
 }
 
 stock void FakelagRunPairBalanceCommand(int client)
@@ -732,33 +792,20 @@ stock void FakelagRunPairBalanceCommand(int client)
 
 	if (!FakelagPreparePairBalance(survivorClients, survivorPings, survivorCount, infectedClients, infectedPings, infectedCount, pairCount))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "BalanceNoPlayers");
+		CReplyToCommand(client, "%t %t", "TagConsole", "BalanceNoPlayers");
 		return;
 	}
 
 	char formatted[512];
 	char columns[256];
 	char row[256];
-	SetGlobalTransTarget(client);
-	Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "PairBalanceConsoleTitle", pairCount);
+	FakelagFormatPairBalanceConsoleTitle(client, client, pairCount, formatted, sizeof(formatted));
 	FakelagPrintConsoleTableStart(client, formatted);
+	SetGlobalTransTarget(client);
 	Format(columns, sizeof(columns), "%t", "PairBalanceTableColumns");
 	FakelagPrintConsoleTableColumns(client, columns);
 	FakelagPrintConsoleTableStartToAudience(formatted, client);
 	FakelagPrintConsoleTableColumnsToAudience(columns, client);
-
-	if (client != 0)
-	{
-		for (int audience = 1; audience <= MaxClients; audience++)
-		{
-			if (!FakelagIsBalanceAudienceClient(audience))
-			{
-				continue;
-			}
-
-			CPrintToChat(audience, "%t %t", "Tag", "PairBalanceStarted");
-		}
-	}
 
 	for (int index = 0; index < pairCount; index++)
 	{
@@ -810,7 +857,7 @@ stock void FakelagRunPairBalanceCommand(int client)
 
 	if (!FakelagApplyPairBalanceSilent(playerCount, pairCount, adjustedCount, clearedCount))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "BalanceNoPlayers");
+		CReplyToCommand(client, "%t %t", "TagConsole", "BalanceNoPlayers");
 		return;
 	}
 
@@ -826,13 +873,17 @@ stock void FakelagRunPairBalanceCommand(int client)
 			continue;
 		}
 
+		if (audience == client)
+		{
+			continue;
+		}
+
 		CPrintToChat(audience, "%t %t", "Tag", "DetailsSentToTargetConsole");
 	}
 
 	if (client != 0)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "PairBalanceStarted");
-		CReplyToCommand(client, "%t %t", "Tag", "DetailsSentToConsole");
+		CPrintToChat(client, "%t %t", "Tag", "DetailsSentToConsole");
 		return;
 	}
 }
@@ -849,18 +900,20 @@ stock void FakelagRunPairBalancePreviewCommand(int client)
 
 	if (!FakelagPreparePairBalance(survivorClients, survivorPings, survivorCount, infectedClients, infectedPings, infectedCount, pairCount))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "BalanceNoPlayers");
+		CReplyToCommand(client, "%t %t", "TagConsole", "BalanceNoPlayers");
 		return;
 	}
 
 	char formatted[512];
 	char columns[256];
 	char row[256];
-	SetGlobalTransTarget(client);
-	Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "PairBalanceConsoleTitle", pairCount);
+	FakelagFormatPairBalanceConsoleTitle(client, client, pairCount, formatted, sizeof(formatted));
 	FakelagPrintConsoleTableStart(client, formatted);
+	FakelagPrintConsoleTableStartToAudience(formatted, client);
+	SetGlobalTransTarget(client);
 	Format(columns, sizeof(columns), "%t", "PairBalanceTableColumns");
 	FakelagPrintConsoleTableColumns(client, columns);
+	FakelagPrintConsoleTableColumnsToAudience(columns, client);
 
 	int adjustedCount = 0;
 	for (int index = 0; index < pairCount; index++)
@@ -874,8 +927,15 @@ stock void FakelagRunPairBalancePreviewCommand(int client)
 		float compensation	  = FloatAbs(survivorRaw - infectedRaw);
 		int	  adjustedClient  = survivorRaw < infectedRaw ? survivor : infected;
 
+		if (compensation > 0.0)
+		{
+			int partner = adjustedClient == survivor ? infected : survivor;
+			FakelagNotifyPairBalancePreviewTarget(adjustedClient, partner, client, compensation);
+		}
+
 		FakelagFormatPairBalanceRow(client, survivor, survivorDisplay, survivorRaw, infected, infectedDisplay, infectedRaw, compensation, adjustedClient, compensation <= 0.0, row, sizeof(row));
 		FakelagPrintConsoleTableLine(client, row);
+		FakelagPrintConsoleTableLineToAudience(row, client);
 
 		if (compensation > 0.0)
 		{
@@ -889,6 +949,7 @@ stock void FakelagRunPairBalancePreviewCommand(int client)
 		float displayPing = FakelagEstimateNetGraphPingForClientMs(survivorClients[index], rawPing);
 		FakelagFormatUnpairedBalanceRow(client, survivorClients[index], displayPing, rawPing, true, row, sizeof(row));
 		FakelagPrintConsoleTableLine(client, row);
+		FakelagPrintConsoleTableLineToAudience(row, client);
 	}
 
 	for (int index = pairCount; index < infectedCount; index++)
@@ -897,15 +958,17 @@ stock void FakelagRunPairBalancePreviewCommand(int client)
 		float displayPing = FakelagEstimateNetGraphPingForClientMs(infectedClients[index], rawPing);
 		FakelagFormatUnpairedBalanceRow(client, infectedClients[index], displayPing, rawPing, false, row, sizeof(row));
 		FakelagPrintConsoleTableLine(client, row);
+		FakelagPrintConsoleTableLineToAudience(row, client);
 	}
 
 	SetGlobalTransTarget(client);
 	Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "BalancePreviewAppliedConsole", survivorCount + infectedCount, adjustedCount);
 	FakelagPrintConsoleTableFinish(client, formatted);
+	FakelagPrintConsoleTableFinishToAudience(formatted, client);
 	if (client == 0)
 	{
 		return;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", "PreviewSentToConsole");
+	CPrintToChat(client, "%t %t", "Tag", "PreviewSentToConsole");
 }

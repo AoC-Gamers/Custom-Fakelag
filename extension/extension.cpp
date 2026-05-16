@@ -137,7 +137,9 @@ void CustomFakelag::SDK_OnAllLoaded()
 void CustomFakelag::SDK_OnUnload() {
 	playerhelpers->RemoveClientListener(this);
 
-	if (m_LagManager != nullptr) {
+	if (m_PlayerLatencyService != nullptr) {
+		m_PlayerLatencyService->ClearAllPlayerProfiles();
+	} else if (m_LagManager != nullptr) {
 		m_LagManager->ClearAll();
 	}
 	delete m_PlayerLatencyService;
@@ -190,6 +192,13 @@ void CustomFakelag::ClearPlayerLatency(int client)
 {
 	if (m_PlayerLatencyService != nullptr) {
 		m_PlayerLatencyService->ClearPlayerLatency(client);
+	}
+}
+
+void CustomFakelag::SetPlayerProfile(int client, float lagTime, int packetLossPercent)
+{
+	if (m_PlayerLatencyService != nullptr) {
+		m_PlayerLatencyService->SetPlayerProfile(client, lagTime, packetLossPercent);
 	}
 }
 
@@ -248,6 +257,11 @@ void CustomFakelag::ClearAllPlayerProfiles()
 	if (m_PlayerLatencyService != nullptr) {
 		m_PlayerLatencyService->ClearAllPlayerProfiles();
 	}
+}
+
+void CustomFakelag::ResetState()
+{
+	ClearAllPlayerProfiles();
 }
 
 bool CustomFakelag::IsClientSupported(int client) const
@@ -337,6 +351,27 @@ cell_t CFakeLag_SetPlayerPacketLoss(IPluginContext* pContext, const cell_t* para
 	return 1;
 }
 
+cell_t CFakeLag_SetPlayerProfile(IPluginContext* pContext, const cell_t* params)
+{
+	int client = params[1];
+	float lagTime = sp_ctof(params[2]);
+	int packetLossPercent = params[3];
+	if (!g_Sample.ThrowIfUnsupportedClient(pContext, client)) {
+		return 0;
+	}
+
+	if (lagTime < kNoLag) {
+		return pContext->ThrowNativeError("Lag time must be greater than or equal to 0.");
+	}
+
+	if (packetLossPercent < 0 || packetLossPercent > 100) {
+		return pContext->ThrowNativeError("Packet loss percent must be between 0 and 100.");
+	}
+
+	g_Sample.SetPlayerProfile(client, lagTime, packetLossPercent);
+	return 1;
+}
+
 cell_t CFakeLag_GetPlayerPacketLoss(IPluginContext* pContext, const cell_t* params)
 {
 	int client = params[1];
@@ -397,6 +432,12 @@ cell_t CFakeLag_ClearAllPlayerProfiles(IPluginContext* pContext, const cell_t* p
 	return 1;
 }
 
+cell_t CFakeLag_ResetState(IPluginContext* pContext, const cell_t* params)
+{
+	g_Sample.ResetState();
+	return 1;
+}
+
 cell_t CFakeLag_IsClientSupported(IPluginContext* pContext, const cell_t* params)
 {
 	return g_Sample.IsClientSupported(params[1]) ? 1 : 0;
@@ -415,6 +456,7 @@ cell_t CFakeLag_GetProfiledClientCount(IPluginContext* pContext, const cell_t* p
 sp_nativeinfo_t g_CFakeLagNatives[] =
 {
 	{"CFakeLag_SetPlayerLatency", CFakeLag_SetPlayerLatency},
+	{"CFakeLag_SetPlayerProfile", CFakeLag_SetPlayerProfile},
 	{"CFakeLag_GetPlayerLatency", CFakeLag_GetPlayerLatency},
 	{"CFakeLag_HasPlayerLatency", CFakeLag_HasPlayerLatency},
 	{"CFakeLag_ClearPlayerLatency", CFakeLag_ClearPlayerLatency},
@@ -425,6 +467,7 @@ sp_nativeinfo_t g_CFakeLagNatives[] =
 	{"CFakeLag_SetPacketLossMode", CFakeLag_SetPacketLossMode},
 	{"CFakeLag_GetPacketLossMode", CFakeLag_GetPacketLossMode},
 	{"CFakeLag_ClearAllPlayerProfiles", CFakeLag_ClearAllPlayerProfiles},
+	{"CFakeLag_ResetState", CFakeLag_ResetState},
 	{"CFakeLag_ClearAllPlayerLatencies", CFakeLag_ClearAllPlayerLatencies},
 	{"CFakeLag_IsClientSupported", CFakeLag_IsClientSupported},
 	{"CFakeLag_GetProfiledClientCount", CFakeLag_GetProfiledClientCount},

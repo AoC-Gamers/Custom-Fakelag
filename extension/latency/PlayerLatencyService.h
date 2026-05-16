@@ -39,6 +39,7 @@ private:
 	const IClientRegistry* m_ClientRegistry;
 
 	bool ApplyPlayerLatencyChange(ClientIndex client, LagMilliseconds lagTime, CFakeLagChangeReason reason, bool allowPreForward);
+	bool ApplyPlayerProfileChange(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent, CFakeLagChangeReason reason, bool allowPreForward);
 	void NotifyPlayerProfileChanged(ClientIndex client, LagMilliseconds oldLag, PacketLossPercent oldPacketLossPercent, LagMilliseconds newLag, PacketLossPercent newPacketLossPercent, CFakeLagChangeReason reason) const;
 
 public:
@@ -55,6 +56,7 @@ public:
 
 	bool SetPlayerLatency(ClientIndex client, LagMilliseconds lagTime);
 	void ClearPlayerLatency(ClientIndex client);
+	bool SetPlayerProfile(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent);
 	bool SetPlayerPacketLoss(ClientIndex client, PacketLossPercent packetLossPercent);
 	void ClearPlayerPacketLoss(ClientIndex client);
 	void ClearAllPlayerProfiles();

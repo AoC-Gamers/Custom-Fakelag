@@ -10,6 +10,7 @@
 Handle		  g_FakeLagBalanceVote			  = null;
 int			  g_BalanceVoteMode				  = 0;
 StringMap	  g_PlayerLatencyByAccountId	  = null;
+StringMap	  g_PlayerPacketLossByAccountId = null;
 StringMap	  g_PlayerDisconnectedByAccountId = null;
 ConVar		  g_CvarDebug					  = null;
 ConVar		  g_CvarSampleWindow			  = null;
@@ -71,6 +72,7 @@ public void OnPluginStart()
 	HookEvent("player_team", Event_PlayerTeam);
 
 	g_PlayerLatencyByAccountId		= new StringMap();
+	g_PlayerPacketLossByAccountId	= new StringMap();
 	g_PlayerDisconnectedByAccountId = new StringMap();
 	g_CvarDebug						= CreateConVar("sm_fakelag_debug", "0", "Log player_fakelag persistence and restore activity to the SourceMod logs.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_CvarSampleWindow				= CreateConVar("sm_fakelag_sample_window", "5", "Number of rolling ping samples used for latency averaging.", FCVAR_NOTIFY, true, 1.0, true, 5.0);
@@ -115,9 +117,11 @@ public void OnPluginEnd()
 	g_FakeLagBalanceVote = null;
 	g_BalanceVoteMode	 = 0;
 	FakelagStopLatencySampling();
-	CFakeLag_ClearAllPlayerProfiles();
+	CFakeLag_ResetState();
 	delete g_PlayerLatencyByAccountId;
 	g_PlayerLatencyByAccountId = null;
+	delete g_PlayerPacketLossByAccountId;
+	g_PlayerPacketLossByAccountId = null;
 	delete g_PlayerDisconnectedByAccountId;
 	g_PlayerDisconnectedByAccountId = null;
 	g_CvarDebug						= null;
@@ -198,7 +202,7 @@ public Action BalanceLagCmd(int client, int args)
 {
 	if (args < 1)
 	{
-		CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "Tag", "Use");
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "TagConsole", "Use");
 		return Plugin_Handled;
 	}
 
@@ -216,8 +220,8 @@ public Action BalanceLagCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", "BalanceModeInvalid", mode);
-	CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "Tag", "Use");
+	CReplyToCommand(client, "%t %t", "TagConsole", "BalanceModeInvalid", mode);
+	CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "TagConsole", "Use");
 	return Plugin_Handled;
 }
 
@@ -225,7 +229,7 @@ public Action PreviewBalanceLagCmd(int client, int args)
 {
 	if (args < 1)
 	{
-		CReplyToCommand(client, "%t %t {green}sm_fakelag_preview <global|pairs>{default}", "Tag", "Use");
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_preview <global|pairs>{default}", "TagConsole", "Use");
 		return Plugin_Handled;
 	}
 
@@ -243,8 +247,8 @@ public Action PreviewBalanceLagCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", "BalanceModeInvalid", mode);
-	CReplyToCommand(client, "%t %t {green}sm_fakelag_preview <global|pairs>{default}", "Tag", "Use");
+	CReplyToCommand(client, "%t %t", "TagConsole", "BalanceModeInvalid", mode);
+	CReplyToCommand(client, "%t %t {green}sm_fakelag_preview <global|pairs>{default}", "TagConsole", "Use");
 	return Plugin_Handled;
 }
 
@@ -257,7 +261,7 @@ public Action BalanceLagVoteCmd(int client, int args)
 
 	if (args < 1)
 	{
-		CReplyToCommand(client, "%t %t {green}sm_fakelag_vote <global|pairs>{default}", "Tag", "Use");
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_vote <global|pairs>{default}", "TagConsole", "Use");
 		return Plugin_Handled;
 	}
 
@@ -285,8 +289,8 @@ public Action BalanceLagVoteCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", "BalanceModeInvalid", mode);
-	CReplyToCommand(client, "%t %t {green}sm_fakelag_vote <global|pairs>{default}", "Tag", "Use");
+	CReplyToCommand(client, "%t %t", "TagConsole", "BalanceModeInvalid", mode);
+	CReplyToCommand(client, "%t %t {green}sm_fakelag_vote <global|pairs>{default}", "TagConsole", "Use");
 	return Plugin_Handled;
 }
 
@@ -299,7 +303,7 @@ public Action FakeLagCmd(int client, int args)
 
 	if (args < 2)
 	{
-		CReplyToCommand(client, "%t %t {green}sm_fakelag <#userid|name> <milliseconds|0>{default}", "Tag", "Use");
+		CReplyToCommand(client, "%t %t {green}sm_fakelag <#userid|name> <milliseconds|0>{default}", "TagConsole", "Use");
 		return Plugin_Handled;
 	}
 
@@ -314,19 +318,19 @@ public Action FakeLagCmd(int client, int args)
 
 	if (!IsClientInGame(target))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "PlayerNotInGame", target);
+		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerNotInGame", target);
 		return Plugin_Handled;
 	}
 
 	if (IsFakeClient(target))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "PlayerIsBot", target);
+		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerIsBot", target);
 		return Plugin_Handled;
 	}
 
 	if (!FakelagCanApplyLatencyToClient(target))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "PlayerUnsupported", target);
+		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerUnsupported", target);
 		return Plugin_Handled;
 	}
 
@@ -335,7 +339,7 @@ public Action FakeLagCmd(int client, int args)
 	int lagAmount = StringToInt(lagArg);
 	if (lagAmount < 0)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "LagNonNegative");
+		CReplyToCommand(client, "%t %t", "TagConsole", "LagNonNegative");
 		return Plugin_Handled;
 	}
 
@@ -343,13 +347,13 @@ public Action FakeLagCmd(int client, int args)
 	{
 		if (!CFakeLag_HasPlayerLatency(target))
 		{
-			CReplyToCommand(client, "%t %t", "Tag", "PlayerNotLagged", target);
+			CReplyToCommand(client, "%t %t", "TagConsole", "PlayerNotLagged", target);
 			return Plugin_Handled;
 		}
 
 		g_ForgetLatencyOnNextClear[target] = true;
 		FakelagClearNetworkProfile(target);
-		CReplyToCommand(client, "%t %t", "Tag", "ClearedOnPlayer", target);
+		CPrintToChat(client, "%t %t", "Tag", "ClearedOnPlayer", target);
 		if (target == client)
 		{
 			CPrintToChat(target, "%t %t", "Tag", "TargetSelfCleared");
@@ -372,7 +376,7 @@ public Action FakeLagCmd(int client, int args)
 	int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, addedLagMs, targetPingMs);
 
 	FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(addedLagMs, packetLossPercent));
-	CReplyToCommand(client, "%t %t", "Tag", "SetOnPlayer", lagAmount, target);
+	CPrintToChat(client, "%t %t", "Tag", "SetOnPlayer", lagAmount, target);
 	if (target == client)
 	{
 		CPrintToChat(target, "%t %t", "Tag", "TargetSelfAdjusted", lagAmount);
@@ -434,13 +438,13 @@ public Action ClearLagCmd(int client, int args)
 
 	if (!CFakeLag_IsClientSupported(target))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "PlayerUnsupported", target);
+		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerUnsupported", target);
 		return Plugin_Handled;
 	}
 
 	if (!CFakeLag_HasPlayerLatency(target))
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "PlayerNotLagged", target);
+		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerNotLagged", target);
 		return Plugin_Handled;
 	}
 
@@ -448,11 +452,13 @@ public Action ClearLagCmd(int client, int args)
 	FakelagClearNetworkProfile(target);
 	if (target == client && !canTargetOthers)
 	{
-		CPrintToChatAll("%t %t", "Tag", "SelfClearedAnnounce", client);
+		CPrintToChat(client, "%t %t", "Tag", "TargetSelfCleared");
+		CReplyToCommand(client, "%t %t", "TagConsole", "TargetSelfCleared");
 		return Plugin_Handled;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", "ClearedOnPlayer", target);
+	CPrintToChat(client, "%t %t", "Tag", "ClearedOnPlayer", target);
+	CPrintToChat(target, "%t %t", "Tag", "TargetClearedByAdmin", client);
 	return Plugin_Handled;
 }
 
@@ -465,7 +471,7 @@ public Action CompareLagCmd(int client, int args)
 
 	if (args < 1)
 	{
-		CReplyToCommand(client, "%t %t {green}sm_fakelag_compare <#userid|name> [#userid|name]{default}", "Tag", "Use");
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_compare <#userid|name> [#userid|name]{default}", "TagConsole", "Use");
 		return Plugin_Handled;
 	}
 
@@ -513,14 +519,15 @@ public Action ClearAllLagCmd(int client, int args)
 	int laggedClients = CFakeLag_GetLaggedClientCount();
 	if (laggedClients <= 0)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "NoEntriesToClear");
+		CReplyToCommand(client, "%t %t", "TagConsole", "NoEntriesToClear");
 		return Plugin_Handled;
 	}
 
 	CFakeLag_ClearAllPlayerLatencies();
 	g_PlayerLatencyByAccountId.Clear();
+	g_PlayerPacketLossByAccountId.Clear();
 	g_PlayerDisconnectedByAccountId.Clear();
-	CReplyToCommand(client, "%t %t", "Tag", "ClearedAll", laggedClients);
+	CPrintToChat(client, "%t %t", "Tag", "ClearedAll", laggedClients);
 	return Plugin_Handled;
 }
 
@@ -534,17 +541,18 @@ public Action PrintLagCmd(int client, int args)
 	int laggedClients = CFakeLag_GetLaggedClientCount();
 	if (laggedClients <= 0)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "NoPlayersLagged");
+		CReplyToCommand(client, "%t %t", "TagConsole", "NoPlayersLagged");
 		return Plugin_Handled;
 	}
 
-	CReplyToCommand(client, "%t %t", "Tag", "ActiveEntries", laggedClients);
+	CPrintToChat(client, "%t %t", "Tag", "DetailsSentToConsole");
+	CReplyToCommand(client, "%t %t", "TagConsole", "ActiveEntries", laggedClients);
 
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientInGame(i) && !IsFakeClient(i) && CFakeLag_HasPlayerLatency(i))
 		{
-			CReplyToCommand(client, "%t %t", "Tag", "PlayerEntry", i, CFakeLag_GetPlayerLatency(i));
+			CReplyToCommand(client, "%t %t", "TagConsole", "PlayerEntry", i, CFakeLag_GetPlayerLatency(i));
 		}
 	}
 

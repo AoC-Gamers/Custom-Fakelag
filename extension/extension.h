@@ -33,6 +33,7 @@ public:
 	float GetPlayerLatency(int client);
 	bool HasPlayerLatency(int client) const;
 	void ClearPlayerLatency(int client);
+	void SetPlayerProfile(int client, float lagTime, int packetLossPercent);
 	void SetPlayerPacketLoss(int client, int packetLossPercent);
 	int GetPlayerPacketLoss(int client) const;
 	bool HasPlayerPacketLoss(int client) const;
@@ -41,6 +42,7 @@ public:
 	CFakeLagPacketLossMode GetPacketLossMode() const;
 	void ClearAllPlayerProfiles();
 	void ClearAllPlayerLatencies();
+	void ResetState();
 	bool IsClientSupported(int client) const;
 	bool ThrowIfUnsupportedClient(IPluginContext* context, int client) const;
 	int GetProfiledClientCount() const;

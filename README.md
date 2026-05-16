@@ -39,6 +39,11 @@ make deps-linux
 make build-linux
 ```
 
+En Linux, el paquete final incluye solo `custom_fakelag.ext.so`. La extension
+depende de las bibliotecas del gameserver (`libtier0_srv.so`,
+`libvstdlib_srv.so`) normalmente presentes en `left4dead2/bin` o `linux/bin`,
+por lo que no se empaquetan dentro de `addons/sourcemod/extensions`.
+
 Flujo recomendado en Windows:
 
 ```powershell
@@ -110,6 +115,9 @@ Responsabilidades principales:
 - simular packet loss artificial por jugador;
 - limpiar estado al desconectar jugadores o descargar la extensión.
 
+La extensión no decide persistencia ni restauración de perfiles entre
+desconexiones. Su rol es ejecutar y limpiar estado activo del motor.
+
 ### Plugin SourcePawn
 
 El plugin SourcePawn vive en:
@@ -129,6 +137,13 @@ Este plugin entrega la capa administrativa y de uso práctico:
 - votaciones para aplicar balance;
 - persistencia temporal por Steam Account ID;
 - muestreo estable de ping para evitar decisiones basadas en picos aislados.
+
+El plugin es el dueño de la gobernanza del sistema:
+
+- decide cuándo aplicar un perfil;
+- decide cuándo olvidarlo;
+- decide si debe restaurarse tras reconexión;
+- y al descargarse ordena a la extensión eliminar todo el estado residual.
 
 ## Gamedata
 
@@ -183,6 +198,7 @@ native void CFakeLag_SetPacketLossMode(CFakeLagPacketLossMode mode);
 native CFakeLagPacketLossMode CFakeLag_GetPacketLossMode();
 
 native void CFakeLag_ClearAllPlayerProfiles();
+native void CFakeLag_ResetState();
 native int CFakeLag_GetProfiledClientCount();
 
 native void CFakeLag_ClearAllPlayerLatencies();
@@ -202,6 +218,7 @@ stock void CFakeLag_ClearPlayerProfile(int client);
 Notas:
 
 - `CFakeLag_ClearAllPlayerProfiles()` es la API preferida actual.
+- `CFakeLag_ResetState()` deja la extensión como si nunca hubiera aplicado fakelag.
 - `CFakeLag_ClearAllPlayerLatencies()` se mantiene como alias legacy.
 - `CFakeLag_GetProfiledClientCount()` es la API preferida actual.
 - `CFakeLag_GetLaggedClientCount()` se mantiene como alias legacy.
@@ -382,13 +399,41 @@ Los jugadores que quedan sin pareja tienen su fake lag limpiado.
 
 ## Persistencia temporal
 
-El plugin mantiene fake lag por Steam Account ID usando `StringMap`.
+El plugin mantiene perfiles de fakelag por Steam Account ID usando `StringMap`.
+
+Ese perfil incluye:
+
+- `lagMs`
+- `packetLossPercent`
 
 Esto permite restaurar el fake lag cuando un jugador vuelve a ser elegible, por
 ejemplo después de reconectar o cambiar de equipo.
 
-Esta persistencia es temporal y vive en memoria mientras el plugin está cargado.
-No usa base de datos.
+Esta persistencia:
+
+- es temporal;
+- vive solo en memoria mientras `player_fakelag` está cargado;
+- no usa base de datos;
+- no pertenece a la extensión.
+
+Cuando `player_fakelag` se descarga, el plugin llama `CFakeLag_ResetState()`.
+La regla operativa es simple:
+
+- si el plugin no está cargado, no debe quedar fakelag activo ni estado interno
+  residual en la extensión.
+
+## Gobernanza
+
+La separación de responsabilidades es intencional:
+
+- la extensión aplica `lag` y `packet loss` a clientes activos;
+- la extensión no decide si un jugador debe recuperar su perfil;
+- la extensión no conserva intención de restauración por su cuenta;
+- el plugin decide persistencia, restauración y olvido por `Steam Account ID`;
+- el plugin ordena el reset total al final de su ciclo de vida.
+
+Esto evita mover lógica competitiva o administrativa a la capa nativa y mantiene
+la extensión como un motor reutilizable.
 
 ## Requisitos
 

@@ -39,5 +39,6 @@ public:
 	}
 
 	bool IsReady() const { return m_LagManager != nullptr && m_LagSystem != nullptr; }
+	void ClearPacketLossState() { m_BadStateByAddress.clear(); }
 	PacketDispatchResult HandlePacket(bool newdata, _netpacket_t* packet) const;
 };

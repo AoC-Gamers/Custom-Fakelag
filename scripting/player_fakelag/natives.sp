@@ -116,9 +116,9 @@ public void CFakeLag_OnPlayerProfileChanged(int client, float oldLag, int oldPac
 		FakelagResetClientLatencySamples(client);
 	}
 
-	if (newLag > 0.0)
+	if (newLag > 0.0 || newPacketLossPercent > 0)
 	{
-		FakelagStoreLatencyForClient(client, newLag);
+		FakelagStoreProfileForClient(client, newLag, newPacketLossPercent);
 		if (reason != CFakeLagChange_Disconnect)
 		{
 			FakelagSetDisconnectedState(client, false);

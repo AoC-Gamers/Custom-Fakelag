@@ -31,7 +31,18 @@ enum struct CFakeLagNetworkProfile
  * @param lagTime Amount of time to lag the packet, in milliseconds.
  *                Values less than or equal to 0 clear any existing fakelag.
  */
- native void CFakeLag_SetPlayerLatency(int client, float lagTime);
+native void CFakeLag_SetPlayerLatency(int client, float lagTime);
+
+/**
+ * @brief Set the full fakelag profile for the given player.
+ *
+ * Applies artificial latency and artificial packet loss in a single operation.
+ *
+ * @param client			Client index of the player to affect.
+ * @param lagTime			Artificial latency in milliseconds.
+ * @param packetLossPercent	Artificial packet loss percentage to apply, from 0 to 100.
+ */
+native void CFakeLag_SetPlayerProfile(int client, float lagTime, int packetLossPercent);
 
 /**
  * @brief Get custom fake latency amount for the given player.
@@ -109,6 +120,14 @@ native CFakeLagPacketLossMode CFakeLag_GetPacketLossMode();
 native void CFakeLag_ClearAllPlayerProfiles();
 
 /**
+ * @brief Reset the full internal state of the extension.
+ *
+ * Clears all active fakelag profiles and any internal packet loss simulation
+ * state so the extension behaves as if no players had ever been modified.
+ */
+native void CFakeLag_ResetState();
+
+/**
  * @brief Clear all stored fake latency entries.
  *
  * Legacy alias for CFakeLag_ClearAllPlayerProfiles().
@@ -176,8 +195,7 @@ stock void CFakeLag_GetPlayerProfile(int client, CFakeLagNetworkProfile profile)
  */
 stock void CFakeLag_ApplyPlayerProfile(int client, const CFakeLagNetworkProfile profile)
 {
-	CFakeLag_SetPlayerLatency(client, profile.lagMs);
-	CFakeLag_SetPlayerPacketLoss(client, profile.packetLossPercent);
+	CFakeLag_SetPlayerProfile(client, profile.lagMs, profile.packetLossPercent);
 }
 
 /**
