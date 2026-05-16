@@ -176,15 +176,29 @@ stock void FakelagApplyDefaultPacketLossMode()
 			}
 
 			extensionLossModeCvar.IntValue = view_as<int>(mode);
+			g_DefaultPacketLossModeApplyRetries = 0;
 			return;
 		}
 
 		if (FakelagIsDebugEnabled())
 		{
-			LogMessage("[player_fakelag] sm_custom_fakelag_loss_mode cvar not found; falling back to native mode change");
+			LogMessage("[player_fakelag] sm_custom_fakelag_loss_mode cvar not found while no active profiles exist; retry=%d", g_DefaultPacketLossModeApplyRetries);
 		}
+
+		if (g_DefaultPacketLossModeApplyRetries < 10)
+		{
+			g_DefaultPacketLossModeApplyRetries++;
+			FakelagQueueApplyDefaultPacketLossMode();
+		}
+		else if (FakelagIsDebugEnabled())
+		{
+			LogMessage("[player_fakelag] Giving up default packet loss mode apply after %d retries because extension cvar is still unavailable", g_DefaultPacketLossModeApplyRetries);
+		}
+
+		return;
 	}
 
+	g_DefaultPacketLossModeApplyRetries = 0;
 	FakelagSnapshotProfilesForModeChange();
 	CFakeLag_SetPacketLossMode(mode);
 	FakelagQueueModeChangeRestore();

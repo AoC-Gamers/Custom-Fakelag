@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include "tier1/convar.h"
 
+extern ISmmAPI* g_SMAPI;
+
 ConVar sm_custom_fakelag_loss_mode(
 	"sm_custom_fakelag_loss_mode",
 	"0",
@@ -124,6 +126,19 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 
 	m_PlayerProfileService = new PlayerProfileService(m_LagManager, m_PlayerProfileApiBridge, this);
 
+#if SOURCE_ENGINE >= SE_ORANGEBOX
+	ICvar* cvarIface = nullptr;
+	cvarIface = static_cast<ICvar*>(g_SMAPI->VInterfaceMatch(g_SMAPI->GetEngineFactory(), CVAR_INTERFACE_VERSION));
+	if (cvarIface == nullptr) {
+		if (error != nullptr && maxlen > 0) {
+			ke::SafeSprintf(error, maxlen, "Could not find interface: %s", CVAR_INTERFACE_VERSION);
+		}
+		return false;
+	}
+	g_pCVar = cvarIface;
+#endif
+	ConVar_Register(0, this);
+
 	sharesys->AddNatives(myself, g_CFakeLagNatives);
 	sharesys->RegisterLibrary(myself, "custom_fakelag");
 	playerhelpers->AddClientListener(this);
@@ -132,6 +147,11 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 
 void CustomFakelag::SDK_OnAllLoaded()
 {
+}
+
+bool CustomFakelag::RegisterConCommandBase(ConCommandBase* pVar)
+{
+	return META_REGCVAR(pVar);
 }
 
 void CustomFakelag::SDK_OnUnload() {
@@ -155,6 +175,8 @@ void CustomFakelag::SDK_OnUnload() {
 	m_LagManager = nullptr;
 	delete m_NetAdrResolver;
 	m_NetAdrResolver = nullptr;
+
+	ConVar_Unregister();
 
 	if (g_pGameConf != nullptr) {
 		CloseGameConfig();

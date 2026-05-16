@@ -30,6 +30,7 @@ float		  g_ModeChangeRestoreLag[MAXPLAYERS + 1];
 int			  g_ModeChangeRestoreLoss[MAXPLAYERS + 1];
 int			  g_ModeChangeRestoreUserId[MAXPLAYERS + 1];
 bool		  g_DefaultPacketLossModeApplyQueued = false;
+int			  g_DefaultPacketLossModeApplyRetries = 0;
 Handle		  g_LatencySamplingTimer	   = null;
 GlobalForward g_FwdOnSetPlayerLatency	   = null;
 GlobalForward g_FwdOnPlayerProfileChanged  = null;

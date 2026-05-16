@@ -13,6 +13,7 @@ enum class CFakeLagPacketLossMode : int {
 };
 
 class CustomFakelag : public SDKExtension,
+					  public IConCommandBaseAccessor,
 					  public IClientListener,
 					  public IPlayerLagManagerEvents,
 					  public IClientRegistry
@@ -27,6 +28,7 @@ private:
 	void OnPlayerLagChanged(int client, const dumb_netadr_t& netadr, float lagTime) override;
 	ClientEligibility GetClientEligibility(int client, IGamePlayer** player = nullptr) const override;
 	int GetMaxClients() const override;
+	bool RegisterConCommandBase(ConCommandBase* pVar) override;
 
 public:
 	void SetPlayerProfile(int client, float lagTime, int packetLossPercent);
