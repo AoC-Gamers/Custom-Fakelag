@@ -165,6 +165,26 @@ stock void FakelagApplyDefaultPacketLossMode()
 		LogMessage("[player_fakelag] Applying default packet loss mode change: current=%d target=%d", view_as<int>(currentMode), view_as<int>(mode));
 	}
 
+	if (FakelagGetActiveProfileCount() <= 0)
+	{
+		ConVar extensionLossModeCvar = FindConVar("sm_custom_fakelag_loss_mode");
+		if (extensionLossModeCvar != null)
+		{
+			if (FakelagIsDebugEnabled())
+			{
+				LogMessage("[player_fakelag] No active profiles; setting sm_custom_fakelag_loss_mode directly to %d", view_as<int>(mode));
+			}
+
+			extensionLossModeCvar.IntValue = view_as<int>(mode);
+			return;
+		}
+
+		if (FakelagIsDebugEnabled())
+		{
+			LogMessage("[player_fakelag] sm_custom_fakelag_loss_mode cvar not found; falling back to native mode change");
+		}
+	}
+
 	FakelagSnapshotProfilesForModeChange();
 	CFakeLag_SetPacketLossMode(mode);
 	FakelagQueueModeChangeRestore();

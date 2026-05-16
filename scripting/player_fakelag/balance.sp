@@ -87,6 +87,17 @@ stock void FakelagPopulateConsolePanelFooter(ConsolePanel panel, int client, Fak
 
 stock void FakelagInitializeGlobalConsolePanel(ConsolePanel panel, FakelagConsoleReport report, int client, const char[] title)
 {
+	char columnPlayer[32];
+	char columnAvg[16];
+	char columnRaw[16];
+	char columnResult[32];
+	char columnLoss[16];
+	Format(columnPlayer, sizeof(columnPlayer), "%T", "ConsoleColumnPlayer", client);
+	Format(columnAvg, sizeof(columnAvg), "%T", "ConsoleColumnAvg", client);
+	Format(columnRaw, sizeof(columnRaw), "%T", "ConsoleColumnRaw", client);
+	Format(columnResult, sizeof(columnResult), "%T", "ConsoleColumnResult", client);
+	Format(columnLoss, sizeof(columnLoss), "%T", "ConsoleColumnLoss", client);
+
 	ConsolePanel_Reset(panel);
 	ConsolePanel_SetWidth(panel, FAKELAG_GLOBAL_TABLE_INNER_WIDTH);
 	ConsolePanel_AddHeaderLine(panel, title);
@@ -94,27 +105,27 @@ stock void FakelagInitializeGlobalConsolePanel(ConsolePanel panel, FakelagConsol
 	panel.table.rowCount = 0;
 	panel.table.buildingRow = false;
 
-	strcopy(panel.table.columns[0].title, sizeof(panel.table.columns[0].title), "Jugador");
+	strcopy(panel.table.columns[0].title, sizeof(panel.table.columns[0].title), columnPlayer);
 	panel.table.columns[0].width = 12;
 	panel.table.columns[0].alignment = ConsoleTableAlignment_Left;
 	panel.table.columns[0].typeHint = ConsoleTableCellType_String;
 
-	strcopy(panel.table.columns[1].title, sizeof(panel.table.columns[1].title), "Avg");
+	strcopy(panel.table.columns[1].title, sizeof(panel.table.columns[1].title), columnAvg);
 	panel.table.columns[1].width = 5;
 	panel.table.columns[1].alignment = ConsoleTableAlignment_Right;
 	panel.table.columns[1].typeHint = ConsoleTableCellType_Float;
 
-	strcopy(panel.table.columns[2].title, sizeof(panel.table.columns[2].title), "Raw");
+	strcopy(panel.table.columns[2].title, sizeof(panel.table.columns[2].title), columnRaw);
 	panel.table.columns[2].width = 5;
 	panel.table.columns[2].alignment = ConsoleTableAlignment_Right;
 	panel.table.columns[2].typeHint = ConsoleTableCellType_Float;
 
-	strcopy(panel.table.columns[3].title, sizeof(panel.table.columns[3].title), "Resultado");
+	strcopy(panel.table.columns[3].title, sizeof(panel.table.columns[3].title), columnResult);
 	panel.table.columns[3].width = 12;
 	panel.table.columns[3].alignment = ConsoleTableAlignment_Left;
 	panel.table.columns[3].typeHint = ConsoleTableCellType_String;
 
-	strcopy(panel.table.columns[4].title, sizeof(panel.table.columns[4].title), "Loss");
+	strcopy(panel.table.columns[4].title, sizeof(panel.table.columns[4].title), columnLoss);
 	panel.table.columns[4].width = 4;
 	panel.table.columns[4].alignment = ConsoleTableAlignment_Right;
 	panel.table.columns[4].typeHint = ConsoleTableCellType_Int;
@@ -172,6 +183,19 @@ stock void FakelagAddGlobalConsolePanelRow(ConsolePanel panel, FakelagConsoleRep
 
 stock void FakelagInitializePairConsolePanel(ConsolePanel panel, FakelagConsoleReport report, int client, const char[] title)
 {
+	char columnSurvivor[32];
+	char columnInfected[32];
+	char columnAvg[16];
+	char columnRaw[16];
+	char columnResult[32];
+	char columnLoss[16];
+	Format(columnSurvivor, sizeof(columnSurvivor), "%T", "ConsoleColumnSurvivor", client);
+	Format(columnInfected, sizeof(columnInfected), "%T", "ConsoleColumnInfected", client);
+	Format(columnAvg, sizeof(columnAvg), "%T", "ConsoleColumnAvg", client);
+	Format(columnRaw, sizeof(columnRaw), "%T", "ConsoleColumnRaw", client);
+	Format(columnResult, sizeof(columnResult), "%T", "ConsoleColumnResult", client);
+	Format(columnLoss, sizeof(columnLoss), "%T", "ConsoleColumnLoss", client);
+
 	ConsolePanel_Reset(panel);
 	ConsolePanel_SetWidth(panel, FAKELAG_PAIR_TABLE_INNER_WIDTH);
 	ConsolePanel_AddHeaderLine(panel, title);
@@ -179,42 +203,42 @@ stock void FakelagInitializePairConsolePanel(ConsolePanel panel, FakelagConsoleR
 	panel.table.rowCount = 0;
 	panel.table.buildingRow = false;
 
-	strcopy(panel.table.columns[0].title, sizeof(panel.table.columns[0].title), "Survivor");
+	strcopy(panel.table.columns[0].title, sizeof(panel.table.columns[0].title), columnSurvivor);
 	panel.table.columns[0].width = 12;
 	panel.table.columns[0].alignment = ConsoleTableAlignment_Left;
 	panel.table.columns[0].typeHint = ConsoleTableCellType_String;
 
-	strcopy(panel.table.columns[1].title, sizeof(panel.table.columns[1].title), "Avg");
+	strcopy(panel.table.columns[1].title, sizeof(panel.table.columns[1].title), columnAvg);
 	panel.table.columns[1].width = 5;
 	panel.table.columns[1].alignment = ConsoleTableAlignment_Right;
 	panel.table.columns[1].typeHint = ConsoleTableCellType_Float;
 
-	strcopy(panel.table.columns[2].title, sizeof(panel.table.columns[2].title), "Raw");
+	strcopy(panel.table.columns[2].title, sizeof(panel.table.columns[2].title), columnRaw);
 	panel.table.columns[2].width = 5;
 	panel.table.columns[2].alignment = ConsoleTableAlignment_Right;
 	panel.table.columns[2].typeHint = ConsoleTableCellType_Float;
 
-	strcopy(panel.table.columns[3].title, sizeof(panel.table.columns[3].title), "Infected");
+	strcopy(panel.table.columns[3].title, sizeof(panel.table.columns[3].title), columnInfected);
 	panel.table.columns[3].width = 12;
 	panel.table.columns[3].alignment = ConsoleTableAlignment_Left;
 	panel.table.columns[3].typeHint = ConsoleTableCellType_String;
 
-	strcopy(panel.table.columns[4].title, sizeof(panel.table.columns[4].title), "Avg");
+	strcopy(panel.table.columns[4].title, sizeof(panel.table.columns[4].title), columnAvg);
 	panel.table.columns[4].width = 5;
 	panel.table.columns[4].alignment = ConsoleTableAlignment_Right;
 	panel.table.columns[4].typeHint = ConsoleTableCellType_Float;
 
-	strcopy(panel.table.columns[5].title, sizeof(panel.table.columns[5].title), "Raw");
+	strcopy(panel.table.columns[5].title, sizeof(panel.table.columns[5].title), columnRaw);
 	panel.table.columns[5].width = 5;
 	panel.table.columns[5].alignment = ConsoleTableAlignment_Right;
 	panel.table.columns[5].typeHint = ConsoleTableCellType_Float;
 
-	strcopy(panel.table.columns[6].title, sizeof(panel.table.columns[6].title), "Resultado");
+	strcopy(panel.table.columns[6].title, sizeof(panel.table.columns[6].title), columnResult);
 	panel.table.columns[6].width = 18;
 	panel.table.columns[6].alignment = ConsoleTableAlignment_Left;
 	panel.table.columns[6].typeHint = ConsoleTableCellType_String;
 
-	strcopy(panel.table.columns[7].title, sizeof(panel.table.columns[7].title), "Loss");
+	strcopy(panel.table.columns[7].title, sizeof(panel.table.columns[7].title), columnLoss);
 	panel.table.columns[7].width = 4;
 	panel.table.columns[7].alignment = ConsoleTableAlignment_Right;
 	panel.table.columns[7].typeHint = ConsoleTableCellType_Int;

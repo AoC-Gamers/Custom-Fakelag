@@ -635,25 +635,33 @@ public Action PrintLagCmd(int client, int args)
 
 	CPrintToChat(client, "%t %t", "Tag", "DetailsSentToConsole");
 	ConsolePanel panel;
+	char listTitle[64];
+	char columnPlayer[32];
+	char columnRaw[16];
+	char columnLoss[16];
+	Format(listTitle, sizeof(listTitle), "%T", "ActiveEntriesTitle", client);
+	Format(columnPlayer, sizeof(columnPlayer), "%T", "ConsoleColumnPlayer", client);
+	Format(columnRaw, sizeof(columnRaw), "%T", "ConsoleColumnRaw", client);
+	Format(columnLoss, sizeof(columnLoss), "%T", "ConsoleColumnLoss", client);
 	ConsolePanel_Reset(panel);
 	ConsolePanel_SetWidth(panel, 52);
-	ConsolePanel_AddHeaderLine(panel, "Fakelag activos");
+	ConsolePanel_AddHeaderLine(panel, listTitle);
 
 	panel.table.columnCount = 0;
 	panel.table.rowCount = 0;
 	panel.table.buildingRow = false;
 
-	strcopy(panel.table.columns[0].title, sizeof(panel.table.columns[0].title), "Jugador");
+	strcopy(panel.table.columns[0].title, sizeof(panel.table.columns[0].title), columnPlayer);
 	panel.table.columns[0].width = 20;
 	panel.table.columns[0].alignment = ConsoleTableAlignment_Left;
 	panel.table.columns[0].typeHint = ConsoleTableCellType_String;
 
-	strcopy(panel.table.columns[1].title, sizeof(panel.table.columns[1].title), "Raw");
+	strcopy(panel.table.columns[1].title, sizeof(panel.table.columns[1].title), columnRaw);
 	panel.table.columns[1].width = 8;
 	panel.table.columns[1].alignment = ConsoleTableAlignment_Right;
 	panel.table.columns[1].typeHint = ConsoleTableCellType_Float;
 
-	strcopy(panel.table.columns[2].title, sizeof(panel.table.columns[2].title), "Loss");
+	strcopy(panel.table.columns[2].title, sizeof(panel.table.columns[2].title), columnLoss);
 	panel.table.columns[2].width = 4;
 	panel.table.columns[2].alignment = ConsoleTableAlignment_Right;
 	panel.table.columns[2].typeHint = ConsoleTableCellType_Int;
