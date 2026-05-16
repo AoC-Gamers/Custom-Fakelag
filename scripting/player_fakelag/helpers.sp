@@ -2,37 +2,36 @@ stock void FakelagReplyPlayerStatus(int client, int target)
 {
 	if (!CFakeLag_IsClientSupported(target))
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerInvalidHumanTarget", target);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerInvalidHumanTarget", target);
 		return;
 	}
 
 	float averagePingRaw	 = FakelagGetClientAveragePingRawMs(target);
 	float averagePingDisplay = FakelagEstimateNetGraphPingForClientMs(target, averagePingRaw);
 	float fakeLag			 = FakelagGetAppliedLagMs(target);
+	int   packetLossPercent  = FakelagGetAppliedPacketLossPercent(target);
 	bool  isLagged			 = FakelagHasNetworkProfile(target);
 
 	if (!isLagged)
 	{
 		CPrintToChat(client, "%t %t", "Tag", "StatusDisabled", target, averagePingDisplay, averagePingRaw);
-		CReplyToCommand(client, "%t %t", "TagConsole", "StatusDisabled", target, averagePingDisplay, averagePingRaw);
 		return;
 	}
 
-	CPrintToChat(client, "%t %t", "Tag", "StatusEnabled", target, averagePingDisplay, averagePingRaw, fakeLag);
-	CReplyToCommand(client, "%t %t", "TagConsole", "StatusEnabled", target, averagePingDisplay, averagePingRaw, fakeLag);
+	CPrintToChat(client, "%t %t", "Tag", "StatusEnabled", target, averagePingDisplay, averagePingRaw, fakeLag, packetLossPercent);
 }
 
 stock void FakelagReplyPlayerComparison(int client, int firstTarget, int secondTarget)
 {
 	if (!IsHumanInGame(firstTarget))
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerInvalidHumanTarget", firstTarget);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerInvalidHumanTarget", firstTarget);
 		return;
 	}
 
 	if (!IsHumanInGame(secondTarget))
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerInvalidHumanTarget", secondTarget);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerInvalidHumanTarget", secondTarget);
 		return;
 	}
 
@@ -40,13 +39,13 @@ stock void FakelagReplyPlayerComparison(int client, int firstTarget, int secondT
 	float secondRaw = FakelagGetClientAveragePingRawMs(secondTarget);
 	if (firstRaw < 0.0)
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerNoPingData", firstTarget);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerNoPingData", firstTarget);
 		return;
 	}
 
 	if (secondRaw < 0.0)
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerNoPingData", secondTarget);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerNoPingData", secondTarget);
 		return;
 	}
 
@@ -55,7 +54,7 @@ stock void FakelagReplyPlayerComparison(int client, int firstTarget, int secondT
 	float difference	= FloatAbs(firstRaw - secondRaw);
 
 	CPrintToChat(client, "%t %t", "Tag", "CompareResult", firstTarget, firstDisplay, secondTarget, secondDisplay, difference);
-	CReplyToCommand(client, "%t %t", "TagConsole", "CompareResult", firstTarget, firstDisplay, secondTarget, secondDisplay, difference);
+	CReplyToCommand(client, "%t %t", "Tag", "CompareResult", firstTarget, firstDisplay, secondTarget, secondDisplay, difference);
 
 	if (difference <= 0.0)
 	{
@@ -64,7 +63,7 @@ stock void FakelagReplyPlayerComparison(int client, int firstTarget, int secondT
 
 	int higherTarget = firstRaw >= secondRaw ? firstTarget : secondTarget;
 	CPrintToChat(client, "%t %t", "Tag", "CompareHigher", higherTarget, difference);
-	CReplyToCommand(client, "%t %t", "TagConsole", "CompareHigher", higherTarget, difference);
+	CReplyToCommand(client, "%t %t", "Tag", "CompareHigher", higherTarget, difference);
 }
 
 stock int FakelagFindComparisonTarget(int client, const char[] pattern)
@@ -187,6 +186,6 @@ stock bool FakelagCommandRequiresClient(int client)
 		return true;
 	}
 
-	CReplyToCommand(client, "%t %t", "TagConsole", "ClientOnlyCommand");
+	CReplyToCommand(client, "%t %t", "Tag", "ClientOnlyCommand");
 	return false;
 }

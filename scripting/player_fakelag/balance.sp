@@ -1,5 +1,5 @@
-const int FAKELAG_GLOBAL_TABLE_INNER_WIDTH = 58;
-const int FAKELAG_PAIR_TABLE_INNER_WIDTH   = 82;
+const int FAKELAG_GLOBAL_TABLE_INNER_WIDTH = 64;
+const int FAKELAG_PAIR_TABLE_INNER_WIDTH   = 88;
 const int FAKELAG_GLOBAL_NAME_WIDTH		   = 12;
 const int FAKELAG_PAIR_NAME_WIDTH		   = 14;
 
@@ -113,7 +113,12 @@ stock void FakelagInitializeGlobalConsolePanel(ConsolePanel panel, FakelagConsol
 	panel.table.columns[3].width = 12;
 	panel.table.columns[3].alignment = ConsoleTableAlignment_Left;
 	panel.table.columns[3].typeHint = ConsoleTableCellType_String;
-	panel.table.columnCount = 4;
+
+	strcopy(panel.table.columns[4].title, sizeof(panel.table.columns[4].title), "Loss");
+	panel.table.columns[4].width = 4;
+	panel.table.columns[4].alignment = ConsoleTableAlignment_Right;
+	panel.table.columns[4].typeHint = ConsoleTableCellType_Int;
+	panel.table.columnCount = 5;
 	FakelagPopulateConsolePanelFooter(panel, client, report);
 }
 
@@ -121,6 +126,7 @@ stock void FakelagAddGlobalConsolePanelRow(ConsolePanel panel, FakelagConsoleRep
 {
 	char name[64];
 	char result[32];
+	int packetLossPercent = 0;
 	FakelagGetConsoleClientName(report, target, name, sizeof(name), FAKELAG_GLOBAL_NAME_WIDTH);
 
 	SetGlobalTransTarget(client);
@@ -129,6 +135,7 @@ stock void FakelagAddGlobalConsolePanelRow(ConsolePanel panel, FakelagConsoleRep
 		case FakelagBalanceAction_Adjust:
 		{
 			Format(result, sizeof(result), "%t", "BalanceTableActionAdjust", compensation);
+			packetLossPercent = FakelagResolvePacketLossPercent(rawPing, compensation, rawPing + compensation);
 		}
 		case FakelagBalanceAction_Clear:
 		{
@@ -141,7 +148,7 @@ stock void FakelagAddGlobalConsolePanelRow(ConsolePanel panel, FakelagConsoleRep
 	}
 
 	int rowIndex = panel.table.rowCount;
-	panel.table.rows[rowIndex].cellCount = 4;
+	panel.table.rows[rowIndex].cellCount = 5;
 
 	panel.table.rows[rowIndex].cells[0].type = ConsoleTableCellType_String;
 	strcopy(panel.table.rows[rowIndex].cells[0].stringValue, sizeof(panel.table.rows[rowIndex].cells[0].stringValue), name);
@@ -156,6 +163,9 @@ stock void FakelagAddGlobalConsolePanelRow(ConsolePanel panel, FakelagConsoleRep
 
 	panel.table.rows[rowIndex].cells[3].type = ConsoleTableCellType_String;
 	strcopy(panel.table.rows[rowIndex].cells[3].stringValue, sizeof(panel.table.rows[rowIndex].cells[3].stringValue), result);
+
+	panel.table.rows[rowIndex].cells[4].type = ConsoleTableCellType_Int;
+	panel.table.rows[rowIndex].cells[4].intValue = packetLossPercent;
 
 	panel.table.rowCount++;
 }
@@ -203,7 +213,12 @@ stock void FakelagInitializePairConsolePanel(ConsolePanel panel, FakelagConsoleR
 	panel.table.columns[6].width = 18;
 	panel.table.columns[6].alignment = ConsoleTableAlignment_Left;
 	panel.table.columns[6].typeHint = ConsoleTableCellType_String;
-	panel.table.columnCount = 7;
+
+	strcopy(panel.table.columns[7].title, sizeof(panel.table.columns[7].title), "Loss");
+	panel.table.columns[7].width = 4;
+	panel.table.columns[7].alignment = ConsoleTableAlignment_Right;
+	panel.table.columns[7].typeHint = ConsoleTableCellType_Int;
+	panel.table.columnCount = 8;
 	FakelagPopulateConsolePanelFooter(panel, client, report);
 }
 
@@ -212,6 +227,7 @@ stock void FakelagAddPairConsolePanelRow(ConsolePanel panel, FakelagConsoleRepor
 	char survivorName[64];
 	char infectedName[64];
 	char result[40];
+	int packetLossPercent = 0;
 	FakelagGetConsoleClientName(report, survivor, survivorName, sizeof(survivorName), 12);
 	FakelagGetConsoleClientName(report, infected, infectedName, sizeof(infectedName), 12);
 
@@ -225,10 +241,12 @@ stock void FakelagAddPairConsolePanelRow(ConsolePanel panel, FakelagConsoleRepor
 		char adjustedName[64];
 		FakelagGetConsoleClientName(report, adjustedClient, adjustedName, sizeof(adjustedName), 10);
 		Format(result, sizeof(result), "%t", "PairBalanceTableActionAdjust", adjustedName, compensation);
+		float adjustedRawPing = adjustedClient == survivor ? survivorRaw : infectedRaw;
+		packetLossPercent = FakelagResolvePacketLossPercent(adjustedRawPing, compensation, adjustedRawPing + compensation);
 	}
 
 	int rowIndex = panel.table.rowCount;
-	panel.table.rows[rowIndex].cellCount = 7;
+	panel.table.rows[rowIndex].cellCount = 8;
 
 	panel.table.rows[rowIndex].cells[0].type = ConsoleTableCellType_String;
 	strcopy(panel.table.rows[rowIndex].cells[0].stringValue, sizeof(panel.table.rows[rowIndex].cells[0].stringValue), survivorName);
@@ -255,6 +273,9 @@ stock void FakelagAddPairConsolePanelRow(ConsolePanel panel, FakelagConsoleRepor
 	panel.table.rows[rowIndex].cells[6].type = ConsoleTableCellType_String;
 	strcopy(panel.table.rows[rowIndex].cells[6].stringValue, sizeof(panel.table.rows[rowIndex].cells[6].stringValue), result);
 
+	panel.table.rows[rowIndex].cells[7].type = ConsoleTableCellType_Int;
+	panel.table.rows[rowIndex].cells[7].intValue = packetLossPercent;
+
 	panel.table.rowCount++;
 }
 
@@ -268,7 +289,7 @@ stock void FakelagAddUnpairedConsolePanelRow(ConsolePanel panel, FakelagConsoleR
 	Format(result, sizeof(result), "%t", "BalanceTableActionClear");
 
 	int rowIndex = panel.table.rowCount;
-	panel.table.rows[rowIndex].cellCount = 7;
+	panel.table.rows[rowIndex].cellCount = 8;
 	if (survivorSide)
 	{
 		panel.table.rows[rowIndex].cells[0].type = ConsoleTableCellType_String;
@@ -305,6 +326,8 @@ stock void FakelagAddUnpairedConsolePanelRow(ConsolePanel panel, FakelagConsoleR
 	}
 	panel.table.rows[rowIndex].cells[6].type = ConsoleTableCellType_String;
 	strcopy(panel.table.rows[rowIndex].cells[6].stringValue, sizeof(panel.table.rows[rowIndex].cells[6].stringValue), result);
+	panel.table.rows[rowIndex].cells[7].type = ConsoleTableCellType_Int;
+	panel.table.rows[rowIndex].cells[7].intValue = 0;
 	panel.table.rowCount++;
 }
 

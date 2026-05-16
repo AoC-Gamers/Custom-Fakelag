@@ -6,12 +6,6 @@
 		"es"        "[{olive}Fakelag{default}]"
 	}
 
-	"TagConsole"
-	{
-		"en"        "[Fakelag]"
-		"es"        "[Fakelag]"
-	}
-
 	"Use"
 	{
 		"en"        "{lightgreen}Usage:{default}"
@@ -80,8 +74,8 @@
 
 	"StatusEnabled"
 	{
-		"en"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fake lag raw: {green}%.1fms{default}"
-		"es"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fakelag raw: {green}%.1fms{default}"
+		"en"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fake lag raw: {green}%.1fms{default} | loss: {lightgreen}%d%%{default}"
+		"es"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fakelag raw: {green}%.1fms{default} | loss: {lightgreen}%d%%{default}"
 	}
 
 	"CompareResult"
@@ -120,6 +114,12 @@
 		"es"        "Se {lightgreen}aplico un fakelag{default} de {green}%dms{default} al jugador {teamcolor}%N{default}"
 	}
 
+	"SetOnPlayerWithLoss"
+	{
+		"en"        "{lightgreen}Set fake lag{default} of {green}%dms{default} and {lightgreen}%d%% loss{default} on player {teamcolor}%N{default}"
+		"es"        "Se {lightgreen}aplico un fakelag{default} de {green}%dms{default} y {lightgreen}%d%% loss{default} al jugador {teamcolor}%N{default}"
+	}
+
 	"TargetSelfCleared"
 	{
 		"en"        "Your modified ms were reset."
@@ -156,10 +156,22 @@
 		"es"        "Tus ms modificados ahora son {green}%d ms{default}."
 	}
 
+	"TargetSelfAdjustedWithLoss"
+	{
+		"en"        "Your modified ms are now {green}%d ms{default} with {lightgreen}%d%% loss{default}."
+		"es"        "Tus ms modificados ahora son {green}%d ms{default} con {lightgreen}%d%% loss{default}."
+	}
+
 	"TargetAdjustedByAdmin"
 	{
 		"en"        "{teamcolor}%N{default} adjusted your modified ms to {green}%d ms{default}."
 		"es"        "{teamcolor}%N{default} ajusto tus ms modificados a {green}%d ms{default}."
+	}
+
+	"TargetAdjustedByAdminWithLoss"
+	{
+		"en"        "{teamcolor}%N{default} adjusted your modified ms to {green}%d ms{default} with {lightgreen}%d%% loss{default}."
+		"es"        "{teamcolor}%N{default} ajusto tus ms modificados a {green}%d ms{default} con {lightgreen}%d%% loss{default}."
 	}
 
 	"NoEntriesToClear"

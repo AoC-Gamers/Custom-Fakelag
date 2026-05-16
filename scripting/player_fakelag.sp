@@ -83,11 +83,11 @@ public void OnPluginStart()
 	g_CvarSampleInterval			= CreateConVar("sm_fakelag_sample_interval", "1.0", "Seconds between rolling ping samples.", FCVAR_NOTIFY, true, 0.1, true, 5.0);
 	g_CvarLossBaseCeilingMs			= CreateConVar("sm_fakelag_loss_base_ceiling_ms", "60.0", "Base ping ceiling used to scale artificial packet loss for fakelag balancing.", FCVAR_NOTIFY, true, 0.0);
 	g_CvarLossBaseSpanMs			= CreateConVar("sm_fakelag_loss_base_span_ms", "40.0", "Base ping span used to scale artificial packet loss for fakelag balancing.", FCVAR_NOTIFY, true, 1.0);
-	g_CvarLossTargetFloorMs			= CreateConVar("sm_fakelag_loss_target_floor_ms", "40.0", "Target ping floor before artificial packet loss starts contributing.", FCVAR_NOTIFY, true, 0.0);
+	g_CvarLossTargetFloorMs			= CreateConVar("sm_fakelag_loss_target_floor_ms", "35.0", "Target ping floor before artificial packet loss starts contributing.", FCVAR_NOTIFY, true, 0.0);
 	g_CvarLossTargetSpanMs			= CreateConVar("sm_fakelag_loss_target_span_ms", "40.0", "Target ping span used to scale artificial packet loss for fakelag balancing.", FCVAR_NOTIFY, true, 1.0);
-	g_CvarLossAddedFloorMs			= CreateConVar("sm_fakelag_loss_added_floor_ms", "25.0", "Minimum added fakelag before artificial packet loss starts contributing.", FCVAR_NOTIFY, true, 0.0);
+	g_CvarLossAddedFloorMs			= CreateConVar("sm_fakelag_loss_added_floor_ms", "20.0", "Minimum added fakelag before artificial packet loss starts contributing.", FCVAR_NOTIFY, true, 0.0);
 	g_CvarLossAddedSpanMs			= CreateConVar("sm_fakelag_loss_added_span_ms", "35.0", "Added fakelag span used to scale artificial packet loss for fakelag balancing.", FCVAR_NOTIFY, true, 1.0);
-	g_CvarLossMaxPercent			= CreateConVar("sm_fakelag_loss_max_percent", "2", "Maximum artificial packet loss percent applied by fakelag balancing.", FCVAR_NOTIFY, true, 0.0, true, 100.0);
+	g_CvarLossMaxPercent			= CreateConVar("sm_fakelag_loss_max_percent", "3", "Maximum artificial packet loss percent applied by fakelag balancing.", FCVAR_NOTIFY, true, 0.0, true, 100.0);
 	g_CvarDefaultPacketLossMode		= CreateConVar("sm_fakelag_loss_mode_default", "0", "Default packet loss simulation mode applied by player_fakelag on config execution. 0 = Bernoulli uniforme, 1 = Gilbert-Elliott.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_CvarSampleWindow.AddChangeHook(FakelagOnSamplingSettingsChanged);
 	g_CvarSampleInterval.AddChangeHook(FakelagOnSamplingSettingsChanged);
@@ -259,7 +259,7 @@ public Action BalanceLagCmd(int client, int args)
 {
 	if (args < 1)
 	{
-		CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "TagConsole", "Use");
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "Tag", "Use");
 		return Plugin_Handled;
 	}
 
@@ -277,8 +277,8 @@ public Action BalanceLagCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	CReplyToCommand(client, "%t %t", "TagConsole", "BalanceModeInvalid", mode);
-	CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "TagConsole", "Use");
+	CReplyToCommand(client, "%t %t", "Tag", "BalanceModeInvalid", mode);
+	CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "Tag", "Use");
 	return Plugin_Handled;
 }
 
@@ -286,7 +286,7 @@ public Action PreviewBalanceLagCmd(int client, int args)
 {
 	if (args < 1)
 	{
-		CReplyToCommand(client, "%t %t {green}sm_fakelag_preview <global|pairs>{default}", "TagConsole", "Use");
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_preview <global|pairs>{default}", "Tag", "Use");
 		return Plugin_Handled;
 	}
 
@@ -304,8 +304,8 @@ public Action PreviewBalanceLagCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	CReplyToCommand(client, "%t %t", "TagConsole", "BalanceModeInvalid", mode);
-	CReplyToCommand(client, "%t %t {green}sm_fakelag_preview <global|pairs>{default}", "TagConsole", "Use");
+	CReplyToCommand(client, "%t %t", "Tag", "BalanceModeInvalid", mode);
+	CReplyToCommand(client, "%t %t {green}sm_fakelag_preview <global|pairs>{default}", "Tag", "Use");
 	return Plugin_Handled;
 }
 
@@ -318,7 +318,7 @@ public Action BalanceLagVoteCmd(int client, int args)
 
 	if (args < 1)
 	{
-		CReplyToCommand(client, "%t %t {green}sm_fakelag_vote <global|pairs>{default}", "TagConsole", "Use");
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_vote <global|pairs>{default}", "Tag", "Use");
 		return Plugin_Handled;
 	}
 
@@ -346,8 +346,8 @@ public Action BalanceLagVoteCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	CReplyToCommand(client, "%t %t", "TagConsole", "BalanceModeInvalid", mode);
-	CReplyToCommand(client, "%t %t {green}sm_fakelag_vote <global|pairs>{default}", "TagConsole", "Use");
+	CReplyToCommand(client, "%t %t", "Tag", "BalanceModeInvalid", mode);
+	CReplyToCommand(client, "%t %t {green}sm_fakelag_vote <global|pairs>{default}", "Tag", "Use");
 	return Plugin_Handled;
 }
 
@@ -360,7 +360,7 @@ public Action FakeLagCmd(int client, int args)
 
 	if (args < 2)
 	{
-		CReplyToCommand(client, "%t %t {green}sm_fakelag <#userid|name> <milliseconds|0>{default}", "TagConsole", "Use");
+		CReplyToCommand(client, "%t %t {green}sm_fakelag <#userid|name> <milliseconds|0>{default}", "Tag", "Use");
 		return Plugin_Handled;
 	}
 
@@ -375,19 +375,19 @@ public Action FakeLagCmd(int client, int args)
 
 	if (!IsClientInGame(target))
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerNotInGame", target);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerNotInGame", target);
 		return Plugin_Handled;
 	}
 
 	if (IsFakeClient(target))
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerIsBot", target);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerIsBot", target);
 		return Plugin_Handled;
 	}
 
 	if (!FakelagCanApplyLatencyToClient(target))
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerUnsupported", target);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerUnsupported", target);
 		return Plugin_Handled;
 	}
 
@@ -396,7 +396,7 @@ public Action FakeLagCmd(int client, int args)
 	int lagAmount = StringToInt(lagArg);
 	if (lagAmount < 0)
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "LagNonNegative");
+		CReplyToCommand(client, "%t %t", "Tag", "LagNonNegative");
 		return Plugin_Handled;
 	}
 
@@ -404,7 +404,7 @@ public Action FakeLagCmd(int client, int args)
 	{
 		if (!FakelagHasNetworkProfile(target))
 		{
-			CReplyToCommand(client, "%t %t", "TagConsole", "PlayerNotLagged", target);
+			CReplyToCommand(client, "%t %t", "Tag", "PlayerNotLagged", target);
 			return Plugin_Handled;
 		}
 
@@ -435,12 +435,27 @@ public Action FakeLagCmd(int client, int args)
 	FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(addedLagMs, packetLossPercent));
 	if (target == client)
 	{
-		CPrintToChatEx(target, target, "%t %t", "Tag", "TargetSelfAdjusted", lagAmount);
+		if (packetLossPercent > 0)
+		{
+			CPrintToChatEx(target, target, "%t %t", "Tag", "TargetSelfAdjustedWithLoss", lagAmount, packetLossPercent);
+		}
+		else
+		{
+			CPrintToChatEx(target, target, "%t %t", "Tag", "TargetSelfAdjusted", lagAmount);
+		}
 	}
 	else
 	{
-		CPrintToChat(client, "%t %t", "Tag", "SetOnPlayer", lagAmount, target);
-		CPrintToChatEx(target, client, "%t %t", "Tag", "TargetAdjustedByAdmin", client, lagAmount);
+		if (packetLossPercent > 0)
+		{
+			CPrintToChat(client, "%t %t", "Tag", "SetOnPlayerWithLoss", lagAmount, packetLossPercent, target);
+			CPrintToChatEx(target, client, "%t %t", "Tag", "TargetAdjustedByAdminWithLoss", client, lagAmount, packetLossPercent);
+		}
+		else
+		{
+			CPrintToChat(client, "%t %t", "Tag", "SetOnPlayer", lagAmount, target);
+			CPrintToChatEx(target, client, "%t %t", "Tag", "TargetAdjustedByAdmin", client, lagAmount);
+		}
 	}
 	return Plugin_Handled;
 }
@@ -495,13 +510,13 @@ public Action ClearLagCmd(int client, int args)
 
 	if (!CFakeLag_IsClientSupported(target))
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerUnsupported", target);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerUnsupported", target);
 		return Plugin_Handled;
 	}
 
 	if (!FakelagHasNetworkProfile(target))
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerNotLagged", target);
+		CReplyToCommand(client, "%t %t", "Tag", "PlayerNotLagged", target);
 		return Plugin_Handled;
 	}
 
@@ -510,7 +525,7 @@ public Action ClearLagCmd(int client, int args)
 	if (target == client)
 	{
 		CPrintToChatEx(client, client, "%t %t", "Tag", "TargetSelfCleared");
-		CReplyToCommand(client, "%t %t", "TagConsole", "TargetSelfCleared");
+		CReplyToCommand(client, "%t %t", "Tag", "TargetSelfCleared");
 		return Plugin_Handled;
 	}
 
@@ -528,7 +543,7 @@ public Action CompareLagCmd(int client, int args)
 
 	if (args < 1)
 	{
-		CReplyToCommand(client, "%t %t {green}sm_fakelag_compare <#userid|name> [#userid|name]{default}", "TagConsole", "Use");
+		CReplyToCommand(client, "%t %t {green}sm_fakelag_compare <#userid|name> [#userid|name]{default}", "Tag", "Use");
 		return Plugin_Handled;
 	}
 
@@ -576,7 +591,7 @@ public Action ClearAllLagCmd(int client, int args)
 	int laggedClients = FakelagGetActiveProfileCount();
 	if (laggedClients <= 0)
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "NoEntriesToClear");
+		CReplyToCommand(client, "%t %t", "Tag", "NoEntriesToClear");
 		return Plugin_Handled;
 	}
 
@@ -598,29 +613,62 @@ public Action PrintLagCmd(int client, int args)
 	int laggedClients = FakelagGetActiveProfileCount();
 	if (laggedClients <= 0)
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "NoPlayersLagged");
+		CReplyToCommand(client, "%t %t", "Tag", "NoPlayersLagged");
 		return Plugin_Handled;
 	}
 
 	CPrintToChat(client, "%t %t", "Tag", "DetailsSentToConsole");
-	PrintToConsole(client, "[Fakelag] Active fake lag entries: %d", laggedClients);
+	ConsolePanel panel;
+	ConsolePanel_Reset(panel);
+	ConsolePanel_SetWidth(panel, 52);
+	ConsolePanel_AddHeaderLine(panel, "Fakelag activos");
+
+	panel.table.columnCount = 0;
+	panel.table.rowCount = 0;
+	panel.table.buildingRow = false;
+
+	strcopy(panel.table.columns[0].title, sizeof(panel.table.columns[0].title), "Jugador");
+	panel.table.columns[0].width = 20;
+	panel.table.columns[0].alignment = ConsoleTableAlignment_Left;
+	panel.table.columns[0].typeHint = ConsoleTableCellType_String;
+
+	strcopy(panel.table.columns[1].title, sizeof(panel.table.columns[1].title), "Raw");
+	panel.table.columns[1].width = 8;
+	panel.table.columns[1].alignment = ConsoleTableAlignment_Right;
+	panel.table.columns[1].typeHint = ConsoleTableCellType_Float;
+
+	strcopy(panel.table.columns[2].title, sizeof(panel.table.columns[2].title), "Loss");
+	panel.table.columns[2].width = 4;
+	panel.table.columns[2].alignment = ConsoleTableAlignment_Right;
+	panel.table.columns[2].typeHint = ConsoleTableCellType_Int;
+	panel.table.columnCount = 3;
 
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientInGame(i) && !IsFakeClient(i) && FakelagHasNetworkProfile(i))
 		{
-			float lagMs				= FakelagGetAppliedLagMs(i);
-			int	  packetLossPercent = FakelagGetAppliedPacketLossPercent(i);
-			if (packetLossPercent > 0)
-			{
-				PrintToConsole(client, "[Fakelag] %N: %.1fms | loss: %d%%", i, lagMs, packetLossPercent);
-			}
-			else
-			{
-				PrintToConsole(client, "[Fakelag] %N: %.1fms", i, lagMs);
-			}
+			float lagMs = FakelagGetAppliedLagMs(i);
+			int packetLossPercent = FakelagGetAppliedPacketLossPercent(i);
+			char name[64];
+			GetClientName(i, name, sizeof(name));
+			ReplaceString(name, sizeof(name), "|", "/");
+			ReplaceString(name, sizeof(name), "\n", " ");
+			ReplaceString(name, sizeof(name), "\r", " ");
+
+			int rowIndex = panel.table.rowCount;
+			panel.table.rows[rowIndex].cellCount = 3;
+			panel.table.rows[rowIndex].cells[0].type = ConsoleTableCellType_String;
+			strcopy(panel.table.rows[rowIndex].cells[0].stringValue, sizeof(panel.table.rows[rowIndex].cells[0].stringValue), name);
+			panel.table.rows[rowIndex].cells[1].type = ConsoleTableCellType_Float;
+			panel.table.rows[rowIndex].cells[1].floatValue = lagMs;
+			panel.table.rows[rowIndex].cells[1].floatPrecision = 1;
+			panel.table.rows[rowIndex].cells[2].type = ConsoleTableCellType_Int;
+			panel.table.rows[rowIndex].cells[2].intValue = packetLossPercent;
+			panel.table.rowCount++;
 		}
 	}
+
+	ConsolePanel_RenderToClient(panel, client);
 
 	return Plugin_Handled;
 }

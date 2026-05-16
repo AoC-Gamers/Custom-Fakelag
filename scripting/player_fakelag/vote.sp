@@ -9,7 +9,7 @@ stock bool FakelagTryCollectBalance(int client, int targets[MAXPLAYERS + 1], flo
 	count = FakelagCollectBalanceCandidates(targets, pings, highestPing, highestClient);
 	if (count <= 0 || highestClient <= 0 || highestPing < 0.0)
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "BalanceNoPlayers");
+		CReplyToCommand(client, "%t %t", "Tag", "BalanceNoPlayers");
 		return false;
 	}
 
@@ -20,7 +20,7 @@ stock bool FakelagCanStartBalanceVote(int client)
 {
 	if (!FakelagCanUseBuiltinVotes())
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "BalanceVoteUnavailable");
+		CReplyToCommand(client, "%t %t", "Tag", "BalanceVoteUnavailable");
 		return false;
 	}
 
@@ -29,11 +29,11 @@ stock bool FakelagCanStartBalanceVote(int client)
 		int delay = CheckBuiltinVoteDelay();
 		if (delay > 0)
 		{
-			CReplyToCommand(client, "%t %t", "TagConsole", "BalanceVoteDelay", delay);
+			CReplyToCommand(client, "%t %t", "Tag", "BalanceVoteDelay", delay);
 			return false;
 		}
 
-		CReplyToCommand(client, "%t %t", "TagConsole", "BalanceVoteInProgress");
+		CReplyToCommand(client, "%t %t", "Tag", "BalanceVoteInProgress");
 		return false;
 	}
 
@@ -66,7 +66,7 @@ stock bool FakelagCanStartPairBalanceVote(int client)
 	int	  pairCount;
 	if (!FakelagPreparePairBalance(survivorClients, survivorPings, survivorCount, infectedClients, infectedPings, infectedCount, pairCount))
 	{
-		CReplyToCommand(client, "%t %t", "TagConsole", "BalanceNoPlayers");
+		CReplyToCommand(client, "%t %t", "Tag", "BalanceNoPlayers");
 		return false;
 	}
 
@@ -78,7 +78,7 @@ stock void FakelagStartBalanceVote(int initiator, int mode, const char[] questio
 	Handle vote = CreateBuiltinVote(FakeLagBalanceVoteHandler, BuiltinVoteType_Custom_YesNo, BUILTINVOTE_ACTIONS_DEFAULT);
 	if (vote == null)
 	{
-		CReplyToCommand(initiator, "%t %t", "TagConsole", "BalanceVoteUnavailable");
+		CReplyToCommand(initiator, "%t %t", "Tag", "BalanceVoteUnavailable");
 		return;
 	}
 
@@ -96,7 +96,7 @@ stock void FakelagStartBalanceVote(int initiator, int mode, const char[] questio
 		g_BalanceVoteMode	 = 0;
 		g_FakeLagBalanceVote = null;
 		delete vote;
-		CReplyToCommand(initiator, "%t %t", "TagConsole", "BalanceVoteInProgress");
+		CReplyToCommand(initiator, "%t %t", "Tag", "BalanceVoteInProgress");
 		return;
 	}
 
