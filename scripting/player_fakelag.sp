@@ -437,11 +437,11 @@ public Action FakeLagCmd(int client, int args)
 	{
 		if (packetLossPercent > 0)
 		{
-			CPrintToChatEx(target, target, "%t %t", "Tag", "TargetSelfAdjustedWithLoss", lagAmount, packetLossPercent);
+			CPrintToChat(target, "%t %t", "Tag", "TargetSelfAdjustedWithLoss", lagAmount, packetLossPercent);
 		}
 		else
 		{
-			CPrintToChatEx(target, target, "%t %t", "Tag", "TargetSelfAdjusted", lagAmount);
+			CPrintToChat(target, "%t %t", "Tag", "TargetSelfAdjusted", lagAmount);
 		}
 	}
 	else

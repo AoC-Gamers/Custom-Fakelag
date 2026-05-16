@@ -231,7 +231,14 @@ stock int FakelagResolvePacketLossPercent(float basePingMs, float addedLagMs, fl
 	float targetFactor = FakelagClamp((targetPingMs - targetFloor) / targetSpan, 0.0, 1.0);
 	float addedFactor  = FakelagClamp((addedLagMs - addedFloor) / addedSpan, 0.0, 1.0);
 	float lossFloat	   = maxPercent * baseFactor * targetFactor * addedFactor;
-	return RoundToNearest(FakelagClamp(lossFloat, 0.0, maxPercent));
+	lossFloat = FakelagClamp(lossFloat, 0.0, maxPercent);
+
+	if (lossFloat <= 0.0)
+	{
+		return 0;
+	}
+
+	return RoundToCeil(lossFloat);
 }
 
 stock PlayerNetworkProfile FakelagBuildNetworkProfile(float lagMs, int packetLossPercent)

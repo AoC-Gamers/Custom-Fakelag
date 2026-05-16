@@ -134,7 +134,7 @@ stock void FakelagAddGlobalConsolePanelRow(ConsolePanel panel, FakelagConsoleRep
 	{
 		case FakelagBalanceAction_Adjust:
 		{
-			Format(result, sizeof(result), "%t", "BalanceTableActionAdjust", compensation);
+			Format(result, sizeof(result), "%t", "BalanceTableActionAdjust", RoundToNearest(compensation));
 			packetLossPercent = FakelagResolvePacketLossPercent(rawPing, compensation, rawPing + compensation);
 		}
 		case FakelagBalanceAction_Clear:
@@ -240,7 +240,7 @@ stock void FakelagAddPairConsolePanelRow(ConsolePanel panel, FakelagConsoleRepor
 	{
 		char adjustedName[64];
 		FakelagGetConsoleClientName(report, adjustedClient, adjustedName, sizeof(adjustedName), 10);
-		Format(result, sizeof(result), "%t", "PairBalanceTableActionAdjust", adjustedName, compensation);
+		Format(result, sizeof(result), "%t", "PairBalanceTableActionAdjust", adjustedName, RoundToNearest(compensation));
 		float adjustedRawPing = adjustedClient == survivor ? survivorRaw : infectedRaw;
 		packetLossPercent = FakelagResolvePacketLossPercent(adjustedRawPing, compensation, adjustedRawPing + compensation);
 	}
@@ -358,7 +358,17 @@ stock void FakelagNotifyGlobalBalanceTarget(int target, float compensation)
 
 	if (compensation > 0.0)
 	{
-		CPrintToChat(target, "%t %t", "Tag", "BalanceTargetAdjusted", compensation);
+		float basePingMs = FakelagGetClientAveragePingRawMs(target);
+		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
+		int compensationMs = RoundToNearest(compensation);
+		if (packetLossPercent > 0)
+		{
+			CPrintToChat(target, "%t %t", "Tag", "BalanceTargetAdjustedWithLoss", compensationMs, packetLossPercent);
+		}
+		else
+		{
+			CPrintToChat(target, "%t %t", "Tag", "BalanceTargetAdjusted", compensationMs);
+		}
 	}
 	else
 	{
@@ -375,11 +385,31 @@ stock void FakelagNotifyGlobalBalancePreviewTarget(int target, int initiator, fl
 
 	if (compensation > 0.0 && initiator > 0 && initiator != target)
 	{
-		CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjustedByAdmin", initiator, compensation);
+		float basePingMs = FakelagGetClientAveragePingRawMs(target);
+		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
+		int compensationMs = RoundToNearest(compensation);
+		if (packetLossPercent > 0)
+		{
+			CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjustedByAdminWithLoss", initiator, compensationMs, packetLossPercent);
+		}
+		else
+		{
+			CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjustedByAdmin", initiator, compensationMs);
+		}
 	}
 	else if (compensation > 0.0)
 	{
-		CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjusted", compensation);
+		float basePingMs = FakelagGetClientAveragePingRawMs(target);
+		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
+		int compensationMs = RoundToNearest(compensation);
+		if (packetLossPercent > 0)
+		{
+			CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjustedWithLoss", compensationMs, packetLossPercent);
+		}
+		else
+		{
+			CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjusted", compensationMs);
+		}
 	}
 	else if (initiator > 0 && initiator != target)
 	{
@@ -400,7 +430,17 @@ stock void FakelagNotifyPairBalanceTarget(int target, int partner, float compens
 
 	if (compensation > 0.0)
 	{
-		CPrintToChat(target, "%t %t", "Tag", "PairBalanceTargetAdjusted", partner, compensation);
+		float basePingMs = FakelagGetClientAveragePingRawMs(target);
+		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
+		int compensationMs = RoundToNearest(compensation);
+		if (packetLossPercent > 0)
+		{
+			CPrintToChat(target, "%t %t", "Tag", "PairBalanceTargetAdjustedWithLoss", partner, compensationMs, packetLossPercent);
+		}
+		else
+		{
+			CPrintToChat(target, "%t %t", "Tag", "PairBalanceTargetAdjusted", partner, compensationMs);
+		}
 	}
 	else
 	{
@@ -417,11 +457,31 @@ stock void FakelagNotifyPairBalancePreviewTarget(int target, int partner, int in
 
 	if (compensation > 0.0 && initiator > 0 && initiator != target)
 	{
-		CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjustedByAdmin", initiator, partner, compensation);
+		float basePingMs = FakelagGetClientAveragePingRawMs(target);
+		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
+		int compensationMs = RoundToNearest(compensation);
+		if (packetLossPercent > 0)
+		{
+			CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjustedByAdminWithLoss", initiator, partner, compensationMs, packetLossPercent);
+		}
+		else
+		{
+			CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjustedByAdmin", initiator, partner, compensationMs);
+		}
 	}
 	else if (compensation > 0.0)
 	{
-		CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjusted", partner, compensation);
+		float basePingMs = FakelagGetClientAveragePingRawMs(target);
+		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
+		int compensationMs = RoundToNearest(compensation);
+		if (packetLossPercent > 0)
+		{
+			CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjustedWithLoss", partner, compensationMs, packetLossPercent);
+		}
+		else
+		{
+			CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjusted", partner, compensationMs);
+		}
 	}
 	else
 	{

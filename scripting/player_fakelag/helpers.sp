@@ -11,14 +11,17 @@ stock void FakelagReplyPlayerStatus(int client, int target)
 	float fakeLag			 = FakelagGetAppliedLagMs(target);
 	int   packetLossPercent  = FakelagGetAppliedPacketLossPercent(target);
 	bool  isLagged			 = FakelagHasNetworkProfile(target);
+	int   averagePingDisplayInt = RoundToNearest(averagePingDisplay);
+	int   averagePingRawInt = RoundToNearest(averagePingRaw);
+	int   fakeLagInt = RoundToNearest(fakeLag);
 
 	if (!isLagged)
 	{
-		CPrintToChat(client, "%t %t", "Tag", "StatusDisabled", target, averagePingDisplay, averagePingRaw);
+		CPrintToChat(client, "%t %t", "Tag", "StatusDisabled", target, averagePingDisplayInt, averagePingRawInt);
 		return;
 	}
 
-	CPrintToChat(client, "%t %t", "Tag", "StatusEnabled", target, averagePingDisplay, averagePingRaw, fakeLag, packetLossPercent);
+	CPrintToChat(client, "%t %t", "Tag", "StatusEnabled", target, averagePingDisplayInt, averagePingRawInt, fakeLagInt, packetLossPercent);
 }
 
 stock void FakelagReplyPlayerComparison(int client, int firstTarget, int secondTarget)
@@ -52,8 +55,11 @@ stock void FakelagReplyPlayerComparison(int client, int firstTarget, int secondT
 	float firstDisplay	= FakelagEstimateNetGraphPingForClientMs(firstTarget, firstRaw);
 	float secondDisplay = FakelagEstimateNetGraphPingForClientMs(secondTarget, secondRaw);
 	float difference	= FloatAbs(firstRaw - secondRaw);
+	int   firstDisplayInt = RoundToNearest(firstDisplay);
+	int   secondDisplayInt = RoundToNearest(secondDisplay);
+	int   differenceInt = RoundToNearest(difference);
 
-	CPrintToChat(client, "%t %t", "Tag", "CompareResult", firstTarget, firstDisplay, secondTarget, secondDisplay, difference);
+	CPrintToChat(client, "%t %t", "Tag", "CompareResult", firstTarget, firstDisplayInt, secondTarget, secondDisplayInt, differenceInt);
 	CReplyToCommand(client, "%t %t", "Tag", "CompareResult", firstTarget, firstDisplay, secondTarget, secondDisplay, difference);
 
 	if (difference <= 0.0)
@@ -62,7 +68,7 @@ stock void FakelagReplyPlayerComparison(int client, int firstTarget, int secondT
 	}
 
 	int higherTarget = firstRaw >= secondRaw ? firstTarget : secondTarget;
-	CPrintToChat(client, "%t %t", "Tag", "CompareHigher", higherTarget, difference);
+	CPrintToChat(client, "%t %t", "Tag", "CompareHigher", higherTarget, differenceInt);
 	CReplyToCommand(client, "%t %t", "Tag", "CompareHigher", higherTarget, difference);
 }
 
