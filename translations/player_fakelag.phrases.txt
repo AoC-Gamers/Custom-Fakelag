@@ -186,16 +186,34 @@
 		"es"        "Tus ms se ajustarian en {green}+%.1f ms{default}."
 	}
 
+	"BalancePreviewTargetUnchanged"
+	{
+		"en"        "Your ms would be included in the global balance and would require no adjustment."
+		"es"        "Tus ms se incluirian en el balance global y no requeririan ajuste."
+	}
+
 	"BalancePreviewTargetAdjustedByAdmin"
 	{
 		"en"        "{teamcolor}%N{default} would adjust your ms by {green}+%.1f ms{default}."
 		"es"        "{teamcolor}%N{default} ajustaria tus ms en {green}+%.1f ms{default}."
 	}
 
+	"BalancePreviewTargetUnchangedByAdmin"
+	{
+		"en"        "{teamcolor}%N{default} would include your ms in the global balance and they would require no adjustment."
+		"es"        "{teamcolor}%N{default} incluiria tus ms en el balance global y no requeririan ajuste."
+	}
+
 	"BalanceTargetAdjusted"
 	{
 		"en"        "Your ms were adjusted to {green}+%.1f ms{default}."
 		"es"        "Se ajusto tus ms a {green}+%.1f ms{default}."
+	}
+
+	"BalanceTargetUnchanged"
+	{
+		"en"        "Your ms were included in the global balance and required no adjustment."
+		"es"        "Tus ms se incluyeron en el balance global y no requirieron ajuste."
 	}
 
 	"BalanceConsoleTitle"

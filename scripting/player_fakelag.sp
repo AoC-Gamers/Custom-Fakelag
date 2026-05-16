@@ -4,13 +4,14 @@
 #include <sourcemod>
 #include <builtinvotes>
 #include <colors>
+#include <console_table>
 #include <custom_fakelag>
 #include <left4dhooks_stocks>
 
 Handle		  g_FakeLagBalanceVote			  = null;
 int			  g_BalanceVoteMode				  = 0;
 StringMap	  g_PlayerLatencyByAccountId	  = null;
-StringMap	  g_PlayerPacketLossByAccountId = null;
+StringMap	  g_PlayerPacketLossByAccountId	  = null;
 StringMap	  g_PlayerDisconnectedByAccountId = null;
 ConVar		  g_CvarDebug					  = null;
 ConVar		  g_CvarSampleWindow			  = null;
@@ -24,10 +25,10 @@ ConVar		  g_CvarLossAddedSpanMs			  = null;
 ConVar		  g_CvarLossMaxPercent			  = null;
 ConVar		  g_CvarDefaultPacketLossMode	  = null;
 bool		  g_ForgetLatencyOnNextClear[MAXPLAYERS + 1];
-Handle		  g_LatencySamplingTimer	  = null;
-GlobalForward g_FwdOnSetPlayerLatency	  = null;
-GlobalForward g_FwdOnPlayerProfileChanged = null;
-GlobalForward g_FwdOnPluginEnd			  = null;
+Handle		  g_LatencySamplingTimer	   = null;
+GlobalForward g_FwdOnSetPlayerLatency	   = null;
+GlobalForward g_FwdOnPlayerProfileChanged  = null;
+GlobalForward g_FwdOnPluginEnd			   = null;
 GlobalForward g_FwdOnPacketLossModeChanged = null;
 
 #include "player_fakelag/latency.sp"
@@ -44,9 +45,9 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int errMax)
 	CreateNative("PlayerFakelag_StartBalanceVote", Native_StartBalanceVote);
 	CreateNative("PlayerFakelag_IsBalanceVoteInProgress", Native_IsBalanceVoteInProgress);
 
-	g_FwdOnSetPlayerLatency		= new GlobalForward("PlayerFakelag_OnSetPlayerLatency", ET_Hook, Param_Cell, Param_Float, Param_FloatByRef, Param_Cell);
-	g_FwdOnPlayerProfileChanged = new GlobalForward("PlayerFakelag_OnPlayerProfileChanged", ET_Ignore, Param_Cell, Param_Float, Param_Cell, Param_Float, Param_Cell, Param_Cell);
-	g_FwdOnPluginEnd			= new GlobalForward("PlayerFakelag_OnPluginEnd", ET_Ignore);
+	g_FwdOnSetPlayerLatency		 = new GlobalForward("PlayerFakelag_OnSetPlayerLatency", ET_Hook, Param_Cell, Param_Float, Param_FloatByRef, Param_Cell);
+	g_FwdOnPlayerProfileChanged	 = new GlobalForward("PlayerFakelag_OnPlayerProfileChanged", ET_Ignore, Param_Cell, Param_Float, Param_Cell, Param_Float, Param_Cell, Param_Cell);
+	g_FwdOnPluginEnd			 = new GlobalForward("PlayerFakelag_OnPluginEnd", ET_Ignore);
 	g_FwdOnPacketLossModeChanged = new GlobalForward("PlayerFakelag_OnPacketLossModeChanged", ET_Ignore, Param_Cell, Param_Cell);
 
 	RegPluginLibrary("player_fakelag");
@@ -93,7 +94,7 @@ public void OnPluginStart()
 
 	FakelagStartLatencySampling();
 	AutoExecConfig(true, "player_fakelag");
-	
+
 	RegAdminCmd("sm_fakelag", FakeLagCmd, ADMFLAG_CONFIG, "Set fake lag for a player; use 0 to clear");
 	RegAdminCmd("sm_fakelag_balance", BalanceLagCmd, ADMFLAG_CONFIG, "Balance fake lag using a required mode: global or pairs");
 	RegAdminCmd("sm_fakelag_preview", PreviewBalanceLagCmd, ADMFLAG_CONFIG, "Preview fake lag balance using a required mode: global or pairs");
@@ -411,12 +412,12 @@ public Action FakeLagCmd(int client, int args)
 		FakelagClearNetworkProfile(target);
 		if (target == client)
 		{
-			CPrintToChat(target, "%t %t", "Tag", "TargetSelfCleared");
+			CPrintToChatEx(target, target, "%t %t", "Tag", "TargetSelfCleared");
 		}
 		else
 		{
 			CPrintToChat(client, "%t %t", "Tag", "ClearedOnPlayer", target);
-			CPrintToChat(target, "%t %t", "Tag", "TargetClearedByAdmin", client);
+			CPrintToChatEx(target, client, "%t %t", "Tag", "TargetClearedByAdmin", client);
 		}
 		return Plugin_Handled;
 	}
@@ -428,18 +429,18 @@ public Action FakeLagCmd(int client, int args)
 		basePingMs = FakelagGetClientBasePingRawMs(target);
 	}
 
-	float targetPingMs = basePingMs >= 0.0 ? (basePingMs + addedLagMs) : addedLagMs;
-	int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, addedLagMs, targetPingMs);
+	float targetPingMs		= basePingMs >= 0.0 ? (basePingMs + addedLagMs) : addedLagMs;
+	int	  packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, addedLagMs, targetPingMs);
 
 	FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(addedLagMs, packetLossPercent));
 	if (target == client)
 	{
-		CPrintToChat(target, "%t %t", "Tag", "TargetSelfAdjusted", lagAmount);
+		CPrintToChatEx(target, target, "%t %t", "Tag", "TargetSelfAdjusted", lagAmount);
 	}
 	else
 	{
 		CPrintToChat(client, "%t %t", "Tag", "SetOnPlayer", lagAmount, target);
-		CPrintToChat(target, "%t %t", "Tag", "TargetAdjustedByAdmin", client, lagAmount);
+		CPrintToChatEx(target, client, "%t %t", "Tag", "TargetAdjustedByAdmin", client, lagAmount);
 	}
 	return Plugin_Handled;
 }
@@ -508,13 +509,13 @@ public Action ClearLagCmd(int client, int args)
 	FakelagClearNetworkProfile(target);
 	if (target == client)
 	{
-		CPrintToChat(client, "%t %t", "Tag", "TargetSelfCleared");
+		CPrintToChatEx(client, client, "%t %t", "Tag", "TargetSelfCleared");
 		CReplyToCommand(client, "%t %t", "TagConsole", "TargetSelfCleared");
 		return Plugin_Handled;
 	}
 
 	CPrintToChat(client, "%t %t", "Tag", "ClearedOnPlayer", target);
-	CPrintToChat(target, "%t %t", "Tag", "TargetClearedByAdmin", client);
+	CPrintToChatEx(target, client, "%t %t", "Tag", "TargetClearedByAdmin", client);
 	return Plugin_Handled;
 }
 
@@ -602,13 +603,22 @@ public Action PrintLagCmd(int client, int args)
 	}
 
 	CPrintToChat(client, "%t %t", "Tag", "DetailsSentToConsole");
-	CReplyToCommand(client, "%t %t", "TagConsole", "ActiveEntries", laggedClients);
+	PrintToConsole(client, "[Fakelag] Active fake lag entries: %d", laggedClients);
 
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientInGame(i) && !IsFakeClient(i) && FakelagHasNetworkProfile(i))
 		{
-			CReplyToCommand(client, "%t %t", "TagConsole", "PlayerEntry", i, FakelagGetAppliedLagMs(i));
+			float lagMs				= FakelagGetAppliedLagMs(i);
+			int	  packetLossPercent = FakelagGetAppliedPacketLossPercent(i);
+			if (packetLossPercent > 0)
+			{
+				PrintToConsole(client, "[Fakelag] %N: %.1fms | loss: %d%%", i, lagMs, packetLossPercent);
+			}
+			else
+			{
+				PrintToConsole(client, "[Fakelag] %N: %.1fms", i, lagMs);
+			}
 		}
 	}
 

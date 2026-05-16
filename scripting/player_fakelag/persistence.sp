@@ -158,7 +158,7 @@ stock void FakelagRestoreClientLatencyIfEligible(int client)
 	}
 
 	float storedLag;
-	int storedPacketLossPercent;
+	int	  storedPacketLossPercent;
 	if (!FakelagTryGetStoredProfile(client, storedLag, storedPacketLossPercent))
 	{
 		if (FakelagIsDebugEnabled())

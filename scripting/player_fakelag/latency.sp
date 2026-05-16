@@ -1,6 +1,6 @@
 #define FAKELAG_PING_SAMPLE_COUNT 5
 
-#define PlayerNetworkProfile CFakeLagNetworkProfile
+#define PlayerNetworkProfile	  CFakeLagNetworkProfile
 
 stock float FakelagClamp(float value, float minValue, float maxValue)
 {
@@ -219,18 +219,18 @@ stock int FakelagResolvePacketLossPercent(float basePingMs, float addedLagMs, fl
 		return 0;
 	}
 
-	float baseCeiling = g_CvarLossBaseCeilingMs != null ? g_CvarLossBaseCeilingMs.FloatValue : 60.0;
-	float baseSpan = g_CvarLossBaseSpanMs != null ? g_CvarLossBaseSpanMs.FloatValue : 40.0;
-	float targetFloor = g_CvarLossTargetFloorMs != null ? g_CvarLossTargetFloorMs.FloatValue : 40.0;
-	float targetSpan = g_CvarLossTargetSpanMs != null ? g_CvarLossTargetSpanMs.FloatValue : 40.0;
-	float addedFloor = g_CvarLossAddedFloorMs != null ? g_CvarLossAddedFloorMs.FloatValue : 25.0;
-	float addedSpan = g_CvarLossAddedSpanMs != null ? g_CvarLossAddedSpanMs.FloatValue : 35.0;
-	float maxPercent = g_CvarLossMaxPercent != null ? float(g_CvarLossMaxPercent.IntValue) : 2.0;
+	float baseCeiling  = g_CvarLossBaseCeilingMs != null ? g_CvarLossBaseCeilingMs.FloatValue : 60.0;
+	float baseSpan	   = g_CvarLossBaseSpanMs != null ? g_CvarLossBaseSpanMs.FloatValue : 40.0;
+	float targetFloor  = g_CvarLossTargetFloorMs != null ? g_CvarLossTargetFloorMs.FloatValue : 40.0;
+	float targetSpan   = g_CvarLossTargetSpanMs != null ? g_CvarLossTargetSpanMs.FloatValue : 40.0;
+	float addedFloor   = g_CvarLossAddedFloorMs != null ? g_CvarLossAddedFloorMs.FloatValue : 25.0;
+	float addedSpan	   = g_CvarLossAddedSpanMs != null ? g_CvarLossAddedSpanMs.FloatValue : 35.0;
+	float maxPercent   = g_CvarLossMaxPercent != null ? float(g_CvarLossMaxPercent.IntValue) : 2.0;
 
-	float baseFactor = FakelagClamp((baseCeiling - basePingMs) / baseSpan, 0.0, 1.0);
+	float baseFactor   = FakelagClamp((baseCeiling - basePingMs) / baseSpan, 0.0, 1.0);
 	float targetFactor = FakelagClamp((targetPingMs - targetFloor) / targetSpan, 0.0, 1.0);
-	float addedFactor = FakelagClamp((addedLagMs - addedFloor) / addedSpan, 0.0, 1.0);
-	float lossFloat = maxPercent * baseFactor * targetFactor * addedFactor;
+	float addedFactor  = FakelagClamp((addedLagMs - addedFloor) / addedSpan, 0.0, 1.0);
+	float lossFloat	   = maxPercent * baseFactor * targetFactor * addedFactor;
 	return RoundToNearest(FakelagClamp(lossFloat, 0.0, maxPercent));
 }
 
