@@ -58,3 +58,10 @@ void LagDetour_Shutdown()
 	s_LagSystem = nullptr;
 	s_LagManager = nullptr;
 }
+
+void LagDetour_ClearPacketLossState()
+{
+	if (s_LagPacketPolicy != nullptr) {
+		s_LagPacketPolicy->ClearPacketLossState();
+	}
+}

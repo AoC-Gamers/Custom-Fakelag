@@ -6,12 +6,6 @@
 		"es"        "[{olive}Fakelag{default}]"
 	}
 
-	"TagConsole"
-	{
-		"en"        "[Fakelag]"
-		"es"        "[Fakelag]"
-	}
-
 	"Use"
 	{
 		"en"        "{lightgreen}Usage:{default}"
@@ -26,14 +20,16 @@
 
 	"PlayerNotInGame"
 	{
-		"en"        "Player {teamcolor}%N{default} is {lightgreen}not in game{default} yet."
-		"es"        "El jugador {teamcolor}%N{default} {lightgreen}todavia no esta en juego{default}."
+		"#format"   "{1:N}"
+		"en"        "Player {teamcolor}{1}{default} is {lightgreen}not in game{default} yet."
+		"es"        "El jugador {teamcolor}{1}{default} {lightgreen}todavia no esta en juego{default}."
 	}
 
 	"PlayerIsBot"
 	{
-		"en"        "Player {teamcolor}%N{default} is a fake client and {lightgreen}can't be lagged{default}."
-		"es"        "El jugador {teamcolor}%N{default} es un cliente falso y {lightgreen}no puede recibir fakelag{default}."
+		"#format"   "{1:N}"
+		"en"        "Player {teamcolor}{1}{default} is a fake client and {lightgreen}can't be lagged{default}."
+		"es"        "El jugador {teamcolor}{1}{default} es un cliente falso y {lightgreen}no puede recibir fakelag{default}."
 	}
 
 	"LagNonNegative"
@@ -44,80 +40,160 @@
 
 	"BalanceModeInvalid"
 	{
-		"en"        "Unknown balance mode {green}%s{default}. Valid modes: {lightgreen}global{default}, {lightgreen}pairs{default}."
-		"es"        "Modo de balance {green}%s{default} desconocido. Modos validos: {lightgreen}global{default}, {lightgreen}pairs{default}."
+		"#format"   "{1:s}"
+		"en"        "Unknown balance mode {green}{1}{default}. Valid modes: {lightgreen}global{default}, {lightgreen}pairs{default}."
+		"es"        "Modo de balance {green}{1}{default} desconocido. Modos validos: {lightgreen}global{default}, {lightgreen}pairs{default}."
 	}
 
 	"PlayerNotLagged"
 	{
-		"en"        "Player {teamcolor}%N{default} does not currently have {lightgreen}fake lag{default}."
-		"es"        "El jugador {teamcolor}%N{default} no tiene {lightgreen}fakelag{default} aplicado actualmente."
+		"#format"   "{1:N}"
+		"en"        "Player {teamcolor}{1}{default} does not currently have {lightgreen}fake lag{default}."
+		"es"        "El jugador {teamcolor}{1}{default} no tiene {lightgreen}fakelag{default} aplicado actualmente."
 	}
 
 	"PlayerUnsupported"
 	{
-		"en"        "Player {teamcolor}%N{default} {lightgreen}cannot be lagged{default} right now."
-		"es"        "No se puede {lightgreen}aplicar fakelag{default} al jugador {teamcolor}%N{default} en este momento."
+		"#format"   "{1:N}"
+		"en"        "Player {teamcolor}{1}{default} {lightgreen}cannot be lagged{default} right now."
+		"es"        "No se puede {lightgreen}aplicar fakelag{default} al jugador {teamcolor}{1}{default} en este momento."
 	}
 
 	"PlayerInvalidHumanTarget"
 	{
-		"en"        "Player {teamcolor}%N{default} is not a valid human target."
-		"es"        "El jugador {teamcolor}%N{default} no es un objetivo humano valido."
+		"#format"   "{1:N}"
+		"en"        "Player {teamcolor}{1}{default} is not a valid human target."
+		"es"        "El jugador {teamcolor}{1}{default} no es un objetivo humano valido."
 	}
 
 	"PlayerNoPingData"
 	{
-		"en"        "Player {teamcolor}%N{default} does not have valid {lightgreen}ping data{default} right now."
-		"es"        "El jugador {teamcolor}%N{default} no tiene {lightgreen}datos de ping validos{default} en este momento."
+		"#format"   "{1:N}"
+		"en"        "Player {teamcolor}{1}{default} does not have valid {lightgreen}ping data{default} right now."
+		"es"        "El jugador {teamcolor}{1}{default} no tiene {lightgreen}datos de ping validos{default} en este momento."
 	}
 
 	"StatusDisabled"
 	{
-		"en"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fake lag raw: {lightgreen}disabled{default}"
-		"es"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fakelag raw: {lightgreen}desactivado{default}"
+		"#format"   "{1:N},{2:d},{3:d}"
+		"en"        "{teamcolor}{1}{default} ping x̅: {green}{2}ms{default} ({default}raw: {green}{3}ms{default}) | fakelag: {lightgreen}disabled{default}"
+		"es"        "{teamcolor}{1}{default} ping x̅: {green}{2}ms{default} ({default}raw: {green}{3}ms{default}) | fakelag: {lightgreen}desactivado{default}"
 	}
 
 	"StatusEnabled"
 	{
-		"en"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fake lag raw: {green}%.1fms{default}"
-		"es"        "{teamcolor}%N{default} ping x̅: {green}%.1fms{default} ({default}raw: {green}%.1fms{default}) | fakelag raw: {green}%.1fms{default}"
+		"#format"   "{1:N},{2:d},{3:d},{4:d},{5:d}"
+		"en"        "{teamcolor}{1}{default} ping x̅: {green}{2}ms{default} ({default}raw: {green}{3}ms{default}) | fakelag: {green}+{4}ms{default} | loss: {lightgreen}{5}%%{default}"
+		"es"        "{teamcolor}{1}{default} ping x̅: {green}{2}ms{default} ({default}raw: {green}{3}ms{default}) | fakelag: {green}+{4}ms{default} | loss: {lightgreen}{5}%%{default}"
 	}
 
 	"CompareResult"
 	{
-		"en"        "{teamcolor}%N{default}: {green}%.1fms{default} | {teamcolor}%N{default}: {green}%.1fms{default} | diff: {lightgreen}%.1fms{default}"
-		"es"        "{teamcolor}%N{default}: {green}%.1fms{default} | {teamcolor}%N{default}: {green}%.1fms{default} | dif: {lightgreen}%.1fms{default}"
+		"#format"   "{1:N},{2:d},{3:N},{4:d},{5:d}"
+		"en"        "{teamcolor}{1}{default}: {green}{2}ms{default} | {teamcolor}{3}{default}: {green}{4}ms{default} | diff: {lightgreen}{5}ms{default}"
+		"es"        "{teamcolor}{1}{default}: {green}{2}ms{default} | {teamcolor}{3}{default}: {green}{4}ms{default} | dif: {lightgreen}{5}ms{default}"
 	}
 
 	"CompareHigher"
 	{
-		"en"        "{teamcolor}%N{default} is higher by {lightgreen}%.1fms{default}."
-		"es"        "{teamcolor}%N{default} esta mas alto por {lightgreen}%.1fms{default}."
+		"#format"   "{1:N},{2:d}"
+		"en"        "{teamcolor}{1}{default} is higher by {lightgreen}{2}ms{default}."
+		"es"        "{teamcolor}{1}{default} esta mas alto por {lightgreen}{2}ms{default}."
 	}
 
 	"ClearedOnPlayer"
 	{
-		"en"        "{lightgreen}Cleared fake lag{default} on player {teamcolor}%N{default}"
-		"es"        "Se {lightgreen}quito el fakelag{default} al jugador {teamcolor}%N{default}"
+		"#format"   "{1:N}"
+		"en"        "{lightgreen}Cleared fake lag{default} on player {teamcolor}{1}{default}"
+		"es"        "Se {lightgreen}quito el fakelag{default} al jugador {teamcolor}{1}{default}"
 	}
 
 	"SelfClearedAnnounce"
 	{
-		"en"        "Player {teamcolor}%N{default} removed their fake lag."
-		"es"        "El jugador {teamcolor}%N{default} se quito el fakelag."
+		"#format"   "{1:N}"
+		"en"        "Player {teamcolor}{1}{default} removed their fake lag."
+		"es"        "El jugador {teamcolor}{1}{default} se quito el fakelag."
 	}
 
 	"RestoredOnSelf"
 	{
-		"en"        "Your fake lag was restored: {green}%.1fms{default} raw."
-		"es"        "Se restauro tu fakelag: {green}%.1fms{default} raw."
+		"#format"   "{1:f}"
+		"en"        "Your fakelag was restored: {green}+{1:.1}ms{default}."
+		"es"        "Se restauro tu fakelag: {green}+{1:.1}ms{default}."
 	}
 
 	"SetOnPlayer"
 	{
-		"en"        "{lightgreen}Set fake lag{default} of {green}%dms{default} on player {teamcolor}%N{default}"
-		"es"        "Se {lightgreen}aplico un fakelag{default} de {green}%dms{default} al jugador {teamcolor}%N{default}"
+		"#format"   "{1:d},{2:N}"
+		"en"        "{lightgreen}Set fake lag{default} of {green}{1}ms{default} on player {teamcolor}{2}{default}"
+		"es"        "Se {lightgreen}aplico un fakelag{default} de {green}{1}ms{default} al jugador {teamcolor}{2}{default}"
+	}
+
+	"SetOnPlayerWithLoss"
+	{
+		"#format"   "{1:d},{2:d},{3:N}"
+		"en"        "{lightgreen}Set fake lag{default} of {green}{1}ms{default} and {lightgreen}{2}%%{default} loss on player {teamcolor}{3}{default}"
+		"es"        "Se {lightgreen}aplico un fakelag{default} de {green}{1}ms{default} y {lightgreen}{2}%%{default} loss al jugador {teamcolor}{3}{default}"
+	}
+
+	"TargetSelfCleared"
+	{
+		"en"        "Your modified ms were reset."
+		"es"        "Tus ms modificados fueron restablecidos."
+	}
+
+	"TargetClearedByAdmin"
+	{
+		"#format"   "{1:N}"
+		"en"        "{teamcolor}{1}{default} reset your modified ms."
+		"es"        "{teamcolor}{1}{default} restablecio tus ms modificados."
+	}
+
+	"PacketLossModeBernoulli"
+	{
+		"en"        "Bernoulli uniforme"
+		"es"        "Bernoulli uniforme"
+	}
+
+	"PacketLossModeGilbertElliott"
+	{
+		"en"        "Gilbert-Elliott"
+		"es"        "Gilbert-Elliott"
+	}
+
+	"PacketLossModeChanged"
+	{
+		"#format"   "{1:s},{2:s}"
+		"en"        "Packet loss mode changed from {lightgreen}{1}{default} to {lightgreen}{2}{default}. All active fakelag profiles were reset."
+		"es"        "El modo de packet loss cambio de {lightgreen}{1}{default} a {lightgreen}{2}{default}. Todos los perfiles activos de fakelag fueron restablecidos."
+	}
+
+	"TargetSelfAdjusted"
+	{
+		"#format"   "{1:d}"
+		"en"        "Your modified ms are now {green}{1}% ms{default}."
+		"es"        "Tus ms modificados ahora son {green}{1}% ms{default}."
+	}
+
+	"TargetSelfAdjustedWithLoss"
+	{
+		"#format"   "{1:d},{2:d}"
+		"en"        "Your modified ms are now {green}{1} ms{default} with {lightgreen}{2}%%{default} loss."
+		"es"        "Tus ms modificados ahora son {green}{1} ms{default} con {lightgreen}{2}%%{default} de loss."
+	}
+
+	"TargetAdjustedByAdmin"
+	{
+		"#format"   "{1:N},{2:d}"
+		"en"        "{teamcolor}{1}{default} adjusted your modified ms to {green}{2} ms{default}."
+		"es"        "{teamcolor}{1}{default} ajusto tus ms modificados a {green}{2} ms{default}."
+	}
+
+	"TargetAdjustedByAdminWithLoss"
+	{
+		"#format"   "{1:N},{2:d},{3:d}"
+		"en"        "{teamcolor}{1}{default} adjusted your modified ms to {green}{2} ms{default} with {lightgreen}{3}%%{default} loss."
+		"es"        "{teamcolor}{1}{default} ajusto tus ms modificados a {green}{2} ms{default} con {lightgreen}{3}%%{default} de loss."
 	}
 
 	"NoEntriesToClear"
@@ -138,10 +214,79 @@
 		"es"        "Balanceando globalmente."
 	}
 
+	"BalancePreviewTargetAdjusted"
+	{
+		"#format"   "{1:d}"
+		"en"        "Your ms would be adjusted by {green}+{1} ms{default}."
+		"es"        "Tus ms se ajustarian en {green}+{1} ms{default}."
+	}
+
+	"BalancePreviewTargetAdjustedWithLoss"
+	{
+		"#format"   "{1:d},{2:d}"
+		"en"        "Your ms would be adjusted by {green}+{1} ms{default} with {lightgreen}{2}%%{default} loss."
+		"es"        "Tus ms se ajustarian en {green}+{1} ms{default} con {lightgreen}{2}%%{default} de loss."
+	}
+
+	"BalancePreviewTargetUnchanged"
+	{
+		"en"        "Your ms would be included in the global balance and would require no adjustment."
+		"es"        "Tus ms se incluirian en el balance global y no requeririan ajuste."
+	}
+
+	"BalancePreviewTargetAdjustedByAdmin"
+	{
+		"#format"   "{1:N},{2:d}"
+		"en"        "{teamcolor}{1}{default} would adjust your ms by {green}+{2} ms{default}."
+		"es"        "{teamcolor}{1}{default} ajustaria tus ms en {green}+{2} ms{default}."
+	}
+
+	"BalancePreviewTargetAdjustedByAdminWithLoss"
+	{
+		"#format"   "{1:N},{2:d},{3:d}"
+		"en"        "{teamcolor}{1}{default} would adjust your ms by {green}+{2} ms{default} with {lightgreen}{3}%%{default} loss."
+		"es"        "{teamcolor}{1}{default} ajustaria tus ms en {green}+{2} ms{default} con {lightgreen}{3}%%{default} de loss."
+	}
+
+	"BalancePreviewTargetUnchangedByAdmin"
+	{
+		"#format"   "{1:N}"
+		"en"        "{teamcolor}{1}{default} would include your ms in the global balance and they would require no adjustment."
+		"es"        "{teamcolor}{1}{default} incluiria tus ms en el balance global y no requeririan ajuste."
+	}
+
+	"BalanceTargetAdjusted"
+	{
+		"#format"   "{1:d}"
+		"en"        "Your ms were adjusted to {green}+{1} ms{default}."
+		"es"        "Se ajusto tus ms a {green}+{1} ms{default}."
+	}
+
+	"BalanceTargetAdjustedWithLoss"
+	{
+		"#format"   "{1:d},{2:d}"
+		"en"        "Your ms were adjusted to {green}+{1} ms{default} with {lightgreen}{2}%%{default} loss."
+		"es"        "Se ajusto tus ms a {green}+{1} ms{default} con {lightgreen}{2}%%{default} de loss."
+	}
+
+	"BalanceTargetUnchanged"
+	{
+		"en"        "Your ms were included in the global balance and required no adjustment."
+		"es"        "Tus ms se incluyeron en el balance global y no requirieron ajuste."
+	}
+
 	"BalanceConsoleTitle"
 	{
-		"en"        "Balance against %N with ping x̅ %.1fms (raw %.1fms)."
-		"es"        "Balance contra %N con ping x̅ de %.1fms (raw %.1fms)."
+		"#format"   "{1:s},{2:f},{3:f}"
+		"en"        "Balance against\n{1} with ping x̅ {2:.1}ms (raw {3:.1}ms)."
+		"es"        "Balance contra\n{1} con ping x̅ de {2:.1}ms (raw {3:.1}ms)."
+	}
+
+	"BalanceConsoleTitleByAdmin"
+	{
+		"#format"   "{1:s},{2:s},{3:f},{4:f}"
+		"en"        "{1} started a global balance against\n{2} with ping x̅ {3:.1}ms (raw {4:.1}ms)."
+		"es"        "{1} inicio un balance global contra\n{2} con ping x̅ de {3:.1}ms (raw {4:.1}ms)."
 	}
 
 	"BalanceTableColumns"
@@ -156,10 +301,16 @@
 		"es"        "Survivor       |     Avg |     Raw | Infected       |     Avg |     Raw | Resultado"
 	}
 
-	"BalanceTableLegend"
+	"BalanceTableLegendAvg"
 	{
-		"en"        "Avg = estimated net_graph ping | Raw = measured base ping before fakelag"
-		"es"        "Avg = ping estimado de net_graph | Raw = ping base medido antes del fakelag"
+		"en"        "Avg = estimated net_graph ping"
+		"es"        "Avg = ping estimado de net_graph"
+	}
+
+	"BalanceTableLegendRaw"
+	{
+		"en"        "Raw = measured base ping before fakelag"
+		"es"        "Raw = ping base medido antes del fakelag"
 	}
 
 	"BalanceTableActionSame"
@@ -176,32 +327,37 @@
 
 	"BalanceTableActionAdjust"
 	{
-		"en"        "+%.1f raw"
-		"es"        "+%.1f raw"
+		"#format"   "{1:d}"
+		"en"        "+{1}ms"
+		"es"        "+{1}ms"
 	}
 
 	"PairBalanceTableActionAdjust"
 	{
-		"en"        "%s +%.1f raw"
-		"es"        "%s +%.1f raw"
+		"#format"   "{1:s},{2:d}"
+		"en"        "{1} +{2}ms"
+		"es"        "{1} +{2}ms"
 	}
 
 	"BalanceConsolePlayerUnchanged"
 	{
-		"en"        "Player %N: ping x̅ %.1fms (raw %.1fms), unchanged."
-		"es"        "Jugador %N: ping x̅ %.1fms (raw %.1fms), sin cambios."
+		"#format"   "{1:N},{2:f},{3:f}"
+		"en"        "Player {1}: ping x̅ {2:.1}ms (raw {3:.1}ms), unchanged."
+		"es"        "Jugador {1}: ping x̅ {2:.1}ms (raw {3:.1}ms), sin cambios."
 	}
 
 	"BalanceConsolePlayerAdjusted"
 	{
-		"en"        "Player %N: ping x̅ %.1fms (raw %.1fms), added raw %.1fms."
-		"es"        "Jugador %N: ping x̅ %.1fms (raw %.1fms), se agrego raw %.1fms."
+		"#format"   "{1:N},{2:f},{3:f},{4:f}"
+		"en"        "Player {1}: ping x̅ {2:.1}ms (raw {3:.1}ms), added fakelag {4:.1}ms."
+		"es"        "Jugador {1}: ping x̅ {2:.1}ms (raw {3:.1}ms), se agrego fakelag {4:.1}ms."
 	}
 
 	"BalanceConsoleApplied"
 	{
-		"en"        "Balanced %d players, adjusted %d, cleared %d."
-		"es"        "Balanceados %d jugadores, ajustados %d, limpiados %d."
+		"#format"   "{1:d},{2:d},{3:d}"
+		"en"        "Balanced {1} players, adjusted {2}, cleared {3}."
+		"es"        "Balanceados {1} jugadores, ajustados {2}, limpiados {3}."
 	}
 
 	"PairBalanceStarted"
@@ -210,52 +366,127 @@
 		"es"        "Balanceando por emparejamiento."
 	}
 
+	"PairBalancePreviewTargetAdjusted"
+	{
+		"#format"   "{1:N},{2:d}"
+		"en"        "Your ms would be balanced with {teamcolor}{1}{default} and adjusted by {green}+{2} ms{default}."
+		"es"        "Tus ms se balancearian con {teamcolor}{1}{default} y se ajustarian en {green}+{2} ms{default}."
+	}
+
+	"PairBalancePreviewTargetAdjustedWithLoss"
+	{
+		"#format"   "{1:N},{2:d},{3:d}"
+		"en"        "Your ms would be balanced with {teamcolor}{1}{default} and adjusted by {green}+{2} ms{default} with {lightgreen}{3}%%{default} loss."
+		"es"        "Tus ms se balancearian con {teamcolor}{1}{default} y se ajustarian en {green}+{2} ms{default} con {lightgreen}{3}%%{default} de loss."
+	}
+
+	"PairBalancePreviewTargetUnchanged"
+	{
+		"#format"   "{1:N}"
+		"en"        "Your ms would be balanced with {teamcolor}{1}{default} and would require no adjustment."
+		"es"        "Tus ms se balancearian con {teamcolor}{1}{default} y no requeririan ajuste."
+	}
+
+	"PairBalancePreviewTargetAdjustedByAdmin"
+	{
+		"#format"   "{1:N},{2:N},{3:d}"
+		"en"        "{teamcolor}{1}{default} would balance your ms with {teamcolor}{2}{default} and adjust them by {green}+{3} ms{default}."
+		"es"        "{teamcolor}{1}{default} balancearia tus ms con {teamcolor}{2}{default} y los ajustaria en {green}+{3} ms{default}."
+	}
+
+	"PairBalancePreviewTargetAdjustedByAdminWithLoss"
+	{
+		"#format"   "{1:N},{2:N},{3:d},{4:d}"
+		"en"        "{teamcolor}{1}{default} would balance your ms with {teamcolor}{2}{default} and adjust them by {green}+{3} ms{default} with {lightgreen}{4}%%{default} loss."
+		"es"        "{teamcolor}{1}{default} balancearia tus ms con {teamcolor}{2}{default} y los ajustaria en {green}+{3} ms{default} con {lightgreen}{4}%%{default} de loss."
+	}
+
+	"PairBalanceTargetAdjusted"
+	{
+		"#format"   "{1:N},{2:d}"
+		"en"        "Your ms were balanced with {teamcolor}{1}{default} and adjusted to {green}+{2} ms{default}."
+		"es"        "Se balanceo tus ms con {teamcolor}{1}{default} y se ajustaron a {green}+{2} ms{default}."
+	}
+
+	"PairBalanceTargetAdjustedWithLoss"
+	{
+		"#format"   "{1:N},{2:d},{3:d}"
+		"en"        "Your ms were balanced with {teamcolor}{1}{default} and adjusted to {green}+{2} ms{default} with {lightgreen}{3}%%{default} loss."
+		"es"        "Se balanceo tus ms con {teamcolor}{1}{default} y se ajustaron a {green}+{2} ms{default} con {lightgreen}{3}%%{default} de loss."
+	}
+
+	"PairBalanceTargetUnchanged"
+	{
+		"#format"   "{1:N}"
+		"en"        "Your ms were balanced with {teamcolor}{1}{default} and required no adjustment."
+		"es"        "Se balanceo tus ms con {teamcolor}{1}{default} y no requirieron ajuste."
+	}
+
 	"DetailsSentToConsole"
 	{
 		"en"        "More information was sent to your console."
 		"es"        "Mas informacion en tu consola."
 	}
 
+	"DetailsSentToTargetConsole"
+	{
+		"en"        "More information is in your console."
+		"es"        "Mas informacion en tu consola."
+	}
+
 	"PairBalanceConsoleTitle"
 	{
-		"en"        "Pair balance across %d survivor/infected pair(s)."
-		"es"        "Balance por pares en %d pareja(s) survivor/infected."
+		"#format"   "{1:d}"
+		"en"        "Pair balance across {1} survivor/infected pair(s)."
+		"es"        "Balance por pares en {1} pareja(s) survivor/infected."
+	}
+
+	"PairBalanceConsoleTitleByAdmin"
+	{
+		"#format"   "{1:s},{2:d}"
+		"en"        "{1} started a pair balance across {2} survivor/infected pair(s)."
+		"es"        "{1} inicio un balance por pares en {2} pareja(s) survivor/infected."
 	}
 
 	"PairBalanceConsolePair"
 	{
-		"en"        "Pair %N x̅ %.1fms (raw %.1fms) vs %N x̅ %.1fms (raw %.1fms), raw %.1fms on %N."
-		"es"        "Par %N ping x̅ %.1fms (raw %.1fms) vs %N ping x̅ %.1fms (raw %.1fms), raw %.1fms en %N."
+		"#format"   "{1:N},{2:f},{3:f},{4:N},{5:f},{6:f},{7:f},{8:N}"
+		"en"        "Pair {1} x̅ {2:.1}ms (raw {3:.1}ms) vs {4} x̅ {5:.1}ms (raw {6:.1}ms), raw {7:.1}ms on {8}."
+		"es"        "Par {1} ping x̅ {2:.1}ms (raw {3:.1}ms) vs {4} ping x̅ {5:.1}ms (raw {6:.1}ms), raw {7:.1}ms en {8}."
 	}
 
 	"PairBalanceConsoleUnpaired"
 	{
-		"en"        "Unpaired %N: ping x̅ %.1fms (raw %.1fms), cleared."
-		"es"        "Sin pareja %N: ping x̅ %.1fms (raw %.1fms), se limpio."
+		"#format"   "{1:N},{2:f},{3:f}"
+		"en"        "Unpaired {1}: ping x̅ {2:.1}ms (raw {3:.1}ms), cleared."
+		"es"        "Sin pareja {1}: ping x̅ {2:.1}ms (raw {3:.1}ms), se limpio."
 	}
 
 	"PairBalanceConsolePairUnchanged"
 	{
-		"en"        "Pair %N x̅ %.1fms (raw %.1fms) vs %N x̅ %.1fms (raw %.1fms), unchanged."
-		"es"        "Par %N ping x̅ %.1fms (raw %.1fms) vs %N ping x̅ %.1fms (raw %.1fms), sin cambios."
+		"#format"   "{1:N},{2:f},{3:f},{4:N},{5:f},{6:f}"
+		"en"        "Pair {1} x̅ {2:.1}ms (raw {3:.1}ms) vs {4} x̅ {5:.1}ms (raw {6:.1}ms), unchanged."
+		"es"        "Par {1} ping x̅ {2:.1}ms (raw {3:.1}ms) vs {4} ping x̅ {5:.1}ms (raw {6:.1}ms), sin cambios."
 	}
 
 	"BalancePreviewPlayerAdjustedConsole"
 	{
-		"en"        "Player %N: ping x̅ %.1fms (raw %.1fms), added raw %.1fms."
-		"es"        "Jugador %N: ping x̅ %.1fms (raw %.1fms), se agregaria raw %.1fms."
+		"#format"   "{1:N},{2:f},{3:f},{4:f}"
+		"en"        "Player {1}: ping x̅ {2:.1}ms (raw {3:.1}ms), added fakelag {4:.1}ms."
+		"es"        "Jugador {1}: ping x̅ {2:.1}ms (raw {3:.1}ms), se agregaria fakelag {4:.1}ms."
 	}
 
 	"BalancePreviewAppliedConsole"
 	{
-		"en"        "Previewed %d players, would adjust %d."
-		"es"        "Previsualizados %d jugadores, ajustaria %d."
+		"#format"   "{1:d},{2:d}"
+		"en"        "Previewed {1} players, would adjust {2}."
+		"es"        "Previsualizados {1} jugadores, ajustaria {2}."
 	}
 
 	"PreviewSentToConsole"
 	{
 		"en"        "{lightgreen}Preview details{default} were sent to your console."
-		"es"        "La {lightgreen}informacion de la vista previa{default} fue enviada a tu consola."
+		"es"        "Mas informacion de la vista previa en tu consola."
 	}
 
 	"BalanceVoteUnavailable"
@@ -272,8 +503,9 @@
 
 	"BalanceVoteDelay"
 	{
-		"en"        "You must wait {green}%d{default} seconds before starting another vote."
-		"es"        "Debes esperar {green}%d{default} segundos antes de iniciar otra votacion."
+		"#format"   "{1:d}"
+		"en"        "You must wait {green}{1}{default} seconds before starting another vote."
+		"es"        "Debes esperar {green}{1}{default} segundos antes de iniciar otra votacion."
 	}
 
 	"BalanceVoteStarted"
@@ -290,8 +522,9 @@
 
 	"BalanceVoteAnnounce"
 	{
-		"en"        "{teamcolor}%N{default} started a {lightgreen}vote{default} to balance fake lag across teams."
-		"es"        "{teamcolor}%N{default} inicio una {lightgreen}votacion{default} para balancear el fakelag entre equipos."
+		"#format"   "{1:N}"
+		"en"        "{teamcolor}{1}{default} started a {lightgreen}vote{default} to balance fake lag across teams."
+		"es"        "{teamcolor}{1}{default} inicio una {lightgreen}votacion{default} para balancear el fakelag entre equipos."
 	}
 
 	"BalanceVoteQuestion"
@@ -350,14 +583,16 @@
 
 	"PairBalanceVoteAnnounce"
 	{
-		"en"        "{teamcolor}%N{default} started a {lightgreen}vote{default} to balance fake lag by survivor/infected pairs."
-		"es"        "{teamcolor}%N{default} inicio una {lightgreen}votacion{default} para balancear el fakelag por pares survivor/infected."
+		"#format"   "{1:N}"
+		"en"        "{teamcolor}{1}{default} started a {lightgreen}vote{default} to balance fake lag by survivor/infected pairs."
+		"es"        "{teamcolor}{1}{default} inicio una {lightgreen}votacion{default} para balancear el fakelag por pares survivor/infected."
 	}
 
 	"ClearedAll"
 	{
-		"en"        "{lightgreen}Cleared all fake lag entries{default} ({green}%d{default} active)"
-		"es"        "Se {lightgreen}limpiaron todas las entradas de fakelag{default} ({green}%d{default} activas)"
+		"#format"   "{1:d}"
+		"en"        "{lightgreen}Cleared all fake lag entries{default} ({green}{1}{default} active)"
+		"es"        "Se {lightgreen}limpiaron todas las entradas de fakelag{default} ({green}{1}{default} activas)"
 	}
 
 	"NoPlayersLagged"
@@ -368,13 +603,15 @@
 
 	"ActiveEntries"
 	{
-		"en"        "{lightgreen}Active fake lag entries:{default} {green}%d{default}"
-		"es"        "{lightgreen}Entradas activas de fakelag:{default} {green}%d{default}"
+		"#format"   "{1:d}"
+		"en"        "{lightgreen}Active fake lag entries:{default} {green}{1}{default}"
+		"es"        "{lightgreen}Entradas activas de fakelag:{default} {green}{1}{default}"
 	}
 
 	"PlayerEntry"
 	{
-		"en"        "{teamcolor}%N{default}: {green}%.1fms{default}"
-		"es"        "{teamcolor}%N{default}: {green}%.1fms{default}"
+		"#format"   "{1:N},{2:f}"
+		"en"        "{teamcolor}{1}{default}: {green}{2:.1}ms{default}"
+		"es"        "{teamcolor}{1}{default}: {green}{2:.1}ms{default}"
 	}
 }

@@ -6,6 +6,11 @@
 #include <amtl/am-hashmap.h>
 #include "../network/net_structures.h"
 
+using ClientIndex = int;
+using LagMilliseconds = float;
+using PacketLossPercent = int;
+using ProfileCount = size_t;
+
 struct NetAdrHashPolicy_s {
 	static uint32_t hash(const dumb_netadr_t& value)
 	{
@@ -33,15 +38,15 @@ class IClientNetAdrResolver
 {
 public:
 	virtual ~IClientNetAdrResolver() = default;
-	virtual bool TryResolveClientNetAdr(int client, dumb_netadr_t* netadr) const = 0;
+	virtual bool TryResolveClientNetAdr(ClientIndex client, dumb_netadr_t* netadr) const = 0;
 };
 
 class IPlayerLagManagerEvents
 {
 public:
 	virtual ~IPlayerLagManagerEvents() = default;
-	virtual void OnClientNetAdrResolutionFailed(int client) = 0;
-	virtual void OnPlayerLagChanged(int client, const dumb_netadr_t& netadr, float lagTime) = 0;
+	virtual void OnClientNetAdrResolutionFailed(ClientIndex client) = 0;
+	virtual void OnPlayerLagChanged(ClientIndex client, const dumb_netadr_t& netadr, LagMilliseconds lagTime) = 0;
 };
 
 class EngineClientNetAdrResolver final : public IClientNetAdrResolver
@@ -53,33 +58,43 @@ public:
 	explicit EngineClientNetAdrResolver(IVEngineServer* engine)
 		: m_Engine(engine) {}
 
-	bool TryResolveClientNetAdr(int client, dumb_netadr_t* netadr) const override;
+	bool TryResolveClientNetAdr(ClientIndex client, dumb_netadr_t* netadr) const override;
 };
 
 class PlayerLagManager
 {
 private:
+	struct PlayerNetworkProfile {
+		LagMilliseconds lagTime = 0.0f;
+		PacketLossPercent packetLossPercent = 0;
+	};
+
 	const IClientNetAdrResolver* m_NetAdrResolver;
 	IPlayerLagManagerEvents* m_Events;
-	ke::HashMap<dumb_netadr_t, float, NetAdrHashPolicy_s> m_LagTimes;
+	ke::HashMap<dumb_netadr_t, PlayerNetworkProfile, NetAdrHashPolicy_s> m_NetworkProfiles;
 
-	bool TryGetClientNetAdr(int client, dumb_netadr_t* netadr) const;
+	bool TryGetClientNetAdr(ClientIndex client, dumb_netadr_t* netadr) const;
 	void RemoveLagEntry(const dumb_netadr_t& netadr);
 
 public:
 	explicit PlayerLagManager(const IClientNetAdrResolver* netAdrResolver, IPlayerLagManagerEvents* events = nullptr)
 		: m_NetAdrResolver(netAdrResolver),
 		  m_Events(events) {
-		m_LagTimes.init(32);
+		m_NetworkProfiles.init(32);
 	}
 
-	void SetPlayerLag(int client, float lagTime);
-	void ClearPlayerLag(int client);
+	void SetPlayerLag(ClientIndex client, LagMilliseconds lagTime);
+	void ClearPlayerLag(ClientIndex client);
+	void SetPlayerPacketLoss(ClientIndex client, PacketLossPercent packetLossPercent);
+	void ClearPlayerPacketLoss(ClientIndex client);
 	void ClearAll();
 
-	bool HasPlayerLag(int client) const;
-	float GetPlayerLag(int client) const;
-	size_t GetLagCount() const { return m_LagTimes.elements(); }
+	bool HasPlayerLag(ClientIndex client) const;
+	LagMilliseconds GetPlayerLag(ClientIndex client) const;
+	bool HasPlayerPacketLoss(ClientIndex client) const;
+	PacketLossPercent GetPlayerPacketLoss(ClientIndex client) const;
+	ProfileCount GetLagCount() const { return m_NetworkProfiles.elements(); }
 
-	float GetPlayerLag(const dumb_netadr_t& netadr) const;
+	LagMilliseconds GetPlayerLag(const dumb_netadr_t& netadr) const;
+	PacketLossPercent GetPlayerPacketLoss(const dumb_netadr_t& netadr) const;
 };

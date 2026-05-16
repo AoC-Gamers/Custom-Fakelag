@@ -26,8 +26,9 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 - Se agrego una API high-level en `player_fakelag.inc` con natives para aplicar, previsualizar y votar el balanceo.
 - Se agregaron forwards high-level en `player_fakelag.inc` para que otros plugins puedan interceptar y observar cambios de fake lag desde `player_fakelag`:
   - `PlayerFakelag_OnSetPlayerLatency`
-  - `PlayerFakelag_OnPlayerLatencyChanged`
+  - `PlayerFakelag_OnPlayerProfileChanged`
   - `PlayerFakelag_OnPluginEnd`
+  - `PlayerFakelag_OnPacketLossModeChanged`
 - Se agrego `custom_fakelag_forward.sp` como plugin de ejemplo para los forwards low-level de la extension.
 - Se agregaron translations para la UX del plugin `player_fakelag`.
 - Se agregaron scripts de bootstrap y compilacion para Linux y Windows bajo `scripts/`.
@@ -38,8 +39,8 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
   - `docs/DEVELOPMENT.md`
 - Se agregaron capas internas nuevas en la extension para separar responsabilidades:
   - `LagPacketPolicy`
-  - `PlayerLatencyService`
-  - `PlayerLatencyApiBridge`
+  - `PlayerProfileService`
+  - `PlayerProfileApiBridge`
   - `EngineClientNetAdrResolver`
 
 ### Cambiado
@@ -48,6 +49,9 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
   - `extension/latency`
   - `extension/network`
 - Se normalizaron a minusculas los nombres de directorios del proyecto.
+- Se reemplazo el forward posterior `CFakeLag_OnPlayerLatencyChanged` por el forward compuesto `CFakeLag_OnPlayerProfileChanged`.
+- Se agrego el forward low-level `CFakeLag_OnPacketLossModeChanged` y su equivalente high-level `PlayerFakelag_OnPacketLossModeChanged` para observar cambios de modelo de packet loss.
+- Se reemplazo el forward posterior `PlayerFakelag_OnPlayerLatencyChanged` por `PlayerFakelag_OnPlayerProfileChanged`.
 - Se simplifico el `Makefile` con targets explicitos para dependencias y build:
   - `make help`
   - `make deps`
@@ -111,3 +115,8 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 
 ### Notas
 - Version base original del proyecto publicado por `ProdigySim`.
+## 2.0.0
+
+- Se elevo la version mayor de la extension a `2.0.0` por ruptura de compatibilidad con la API original basada en latencia separada.
+- La API publica de `custom_fakelag.inc` quedo centrada en perfiles (`lag + packet loss`) y elimino los nativos legacy fraccionados.
+- `player_fakelag` y `custom_fakelag_test` quedaron alineados con la API nueva.

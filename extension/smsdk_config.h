@@ -3,7 +3,7 @@
 
 #define SMEXT_CONF_NAME			"Custom Fakelag"
 #define SMEXT_CONF_DESCRIPTION	"Customize Fakelag implementation"
-#define SMEXT_CONF_VERSION		"1.1.0"
+#define SMEXT_CONF_VERSION		"2.0.0"
 #define SMEXT_CONF_AUTHOR		"ProdigySim, lechuga"
 #define SMEXT_CONF_URL			"https://github.com/AoC-Gamers/Custom-Fakelag"
 #define SMEXT_CONF_LOGTAG		"CUSTOM_FAKELAG"

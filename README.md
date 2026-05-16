@@ -39,6 +39,11 @@ make deps-linux
 make build-linux
 ```
 
+En Linux, el paquete final incluye solo `custom_fakelag.ext.so`. La extension
+depende de las bibliotecas del gameserver (`libtier0_srv.so`,
+`libvstdlib_srv.so`) normalmente presentes en `left4dead2/bin` o `linux/bin`,
+por lo que no se empaquetan dentro de `addons/sourcemod/extensions`.
+
 Flujo recomendado en Windows:
 
 ```powershell
@@ -66,6 +71,12 @@ Cuando llega un paquete de red:
 En términos simples: no cambia solamente un valor visual de ping. Retrasa el
 procesamiento real de paquetes para ese jugador.
 
+Además, la extensión ahora puede simular packet loss artificial por jugador.
+Ese packet loss puede distribuirse con dos modelos:
+
+- `Bernoulli uniforme`
+- `Gilbert-Elliott`
+
 ## Arquitectura
 
 El repositorio está dividido en dos capas principales.
@@ -85,8 +96,8 @@ extension/
 ├── extension.cpp
 ├── NET_LagPacket_Detour.cpp
 ├── latency/
-│   ├── PlayerLatencyApiBridge.cpp
-│   ├── PlayerLatencyService.cpp
+│   ├── PlayerProfileApiBridge.cpp
+│   ├── PlayerProfileService.cpp
 │   └── PlayerLagManager.cpp
 └── network/
     ├── LagPacketPolicy.cpp
@@ -101,7 +112,11 @@ Responsabilidades principales:
 - crear forwards para hooks de plugins;
 - interceptar `NET_LagPacket`;
 - retrasar paquetes mediante colas internas;
+- simular packet loss artificial por jugador;
 - limpiar estado al desconectar jugadores o descargar la extensión.
+
+La extensión no decide persistencia ni restauración de perfiles entre
+desconexiones. Su rol es ejecutar y limpiar estado activo del motor.
 
 ### Plugin SourcePawn
 
@@ -118,9 +133,17 @@ Este plugin entrega la capa administrativa y de uso práctico:
 - comandos de estado y comparación de ping;
 - balance global de latencia;
 - balance por pares Survivor/Infected;
+- resolución heurística de packet loss para balances;
 - votaciones para aplicar balance;
 - persistencia temporal por Steam Account ID;
 - muestreo estable de ping para evitar decisiones basadas en picos aislados.
+
+El plugin es el dueño de la gobernanza del sistema:
+
+- decide cuándo aplicar un perfil;
+- decide cuándo olvidarlo;
+- decide si debe restaurarse tras reconexión;
+- y al descargarse ordena a la extensión eliminar todo el estado residual.
 
 ## Gamedata
 
@@ -149,14 +172,44 @@ scripting/include/custom_fakelag.inc
 Natives disponibles:
 
 ```sourcepawn
-native void CFakeLag_SetPlayerLatency(int client, float lagTime);
-native float CFakeLag_GetPlayerLatency(int client);
-native bool CFakeLag_HasPlayerLatency(int client);
-native void CFakeLag_ClearPlayerLatency(int client);
-native void CFakeLag_ClearAllPlayerLatencies();
+enum CFakeLagPacketLossMode
+{
+    CFakeLagPacketLoss_BernoulliUniform = 0,
+    CFakeLagPacketLoss_GilbertElliott
+};
+
+enum struct CFakeLagNetworkProfile
+{
+    float lagMs;
+    int packetLossPercent;
+};
+
+native void CFakeLag_SetPlayerProfile(int client, float lagTime, int packetLossPercent);
+native bool CFakeLag_GetPlayerProfile(int client, CFakeLagNetworkProfile profile);
+native bool CFakeLag_HasPlayerProfile(int client);
+native void CFakeLag_ClearPlayerProfile(int client);
+
+native void CFakeLag_SetPacketLossMode(CFakeLagPacketLossMode mode);
+native CFakeLagPacketLossMode CFakeLag_GetPacketLossMode();
+
+native void CFakeLag_ClearAllPlayerProfiles();
+native void CFakeLag_ResetState();
+native int CFakeLag_GetProfiledClientCount();
 native bool CFakeLag_IsClientSupported(int client);
-native int CFakeLag_GetLaggedClientCount();
 ```
+
+Helpers stock relevantes:
+
+```sourcepawn
+stock CFakeLagNetworkProfile CFakeLag_BuildNetworkProfile(float lagMs, int packetLossPercent);
+```
+
+Notas:
+
+- la API pública gira alrededor de `CFakeLagNetworkProfile`.
+- `CFakeLag_ResetState()` deja la extensión como si nunca hubiera aplicado fakelag.
+- `CFakeLag_ClearAllPlayerProfiles()` limpia todos los perfiles activos.
+- `CFakeLag_GetProfiledClientCount()` devuelve la cantidad de perfiles activos.
 
 Forwards disponibles:
 
@@ -168,18 +221,61 @@ forward Action CFakeLag_OnSetPlayerLatency(
     CFakeLagChangeReason reason
 );
 
-forward void CFakeLag_OnPlayerLatencyChanged(
+forward void CFakeLag_OnPlayerProfileChanged(
     int client,
     float oldLag,
+    int oldPacketLossPercent,
     float newLag,
+    int newPacketLossPercent,
     CFakeLagChangeReason reason
+);
+
+forward void CFakeLag_OnPacketLossModeChanged(
+    CFakeLagPacketLossMode oldMode,
+    CFakeLagPacketLossMode newMode
 );
 ```
 
 `CFakeLag_OnSetPlayerLatency` permite modificar o bloquear un cambio antes de
 que se aplique.
 
-`CFakeLag_OnPlayerLatencyChanged` notifica después de que el cambio fue aplicado.
+`CFakeLag_OnPlayerProfileChanged` notifica después de que el perfil fue aplicado,
+incluyendo `lag` y `packet loss`.
+
+`CFakeLag_OnPacketLossModeChanged` notifica después de que la extensión cambia
+de modelo de pérdida y resetea el estado activo.
+
+## Packet Loss Modes
+
+La extensión expone la ConVar:
+
+```text
+sm_custom_fakelag_loss_mode
+```
+
+Valores:
+
+- `0`: `Bernoulli uniforme`
+- `1`: `Gilbert-Elliott`
+
+El plugin decide cuánto `%` de packet loss aplicar. La extensión decide cómo
+materializar ese `%` en el flujo real de paquetes.
+
+Cambiar `sm_custom_fakelag_loss_mode` en vivo es posible, pero el cambio es
+estricto: si el modo cambia, la extensión limpia todo el estado activo de
+fakelag antes de aplicar el nuevo modo. Esto evita mezclar perfiles y estado
+interno entre modelos distintos durante la misma sesión.
+
+Para evitar depender del orden de carga del servidor, `player_fakelag` expone
+su propio valor por defecto en:
+
+```text
+sm_fakelag_loss_mode_default
+```
+
+Ese valor se aplica en `OnConfigsExecuted()` desde el autoexec del plugin
+(`cfg/sourcemod/player_fakelag.cfg`), por lo que es la forma recomendada de
+fijar el modo persistente del servidor.
 
 ## Plugin `player_fakelag`
 
@@ -315,13 +411,41 @@ Los jugadores que quedan sin pareja tienen su fake lag limpiado.
 
 ## Persistencia temporal
 
-El plugin mantiene fake lag por Steam Account ID usando `StringMap`.
+El plugin mantiene perfiles de fakelag por Steam Account ID usando `StringMap`.
+
+Ese perfil incluye:
+
+- `lagMs`
+- `packetLossPercent`
 
 Esto permite restaurar el fake lag cuando un jugador vuelve a ser elegible, por
 ejemplo después de reconectar o cambiar de equipo.
 
-Esta persistencia es temporal y vive en memoria mientras el plugin está cargado.
-No usa base de datos.
+Esta persistencia:
+
+- es temporal;
+- vive solo en memoria mientras `player_fakelag` está cargado;
+- no usa base de datos;
+- no pertenece a la extensión.
+
+Cuando `player_fakelag` se descarga, el plugin llama `CFakeLag_ResetState()`.
+La regla operativa es simple:
+
+- si el plugin no está cargado, no debe quedar fakelag activo ni estado interno
+  residual en la extensión.
+
+## Gobernanza
+
+La separación de responsabilidades es intencional:
+
+- la extensión aplica `lag` y `packet loss` a clientes activos;
+- la extensión no decide si un jugador debe recuperar su perfil;
+- la extensión no conserva intención de restauración por su cuenta;
+- el plugin decide persistencia, restauración y olvido por `Steam Account ID`;
+- el plugin ordena el reset total al final de su ciclo de vida.
+
+Esto evita mover lógica competitiva o administrativa a la capa nativa y mantiene
+la extensión como un motor reutilizable.
 
 ## Requisitos
 
@@ -507,6 +631,29 @@ El gamedata debe quedar en:
 
 ```text
 addons/sourcemod/gamedata/custom_fakelag.games.txt
+```
+
+## Consideraciones importantes
+
+Esta extensión depende de internals del motor Source. Si cambian las firmas de
+`NET_LagPacket` o `net_time`, puede fallar al cargar.
+
+El fake lag se aplica a jugadores humanos soportados. Los fake clients/bots no
+son targets válidos.
+
+El sistema trabaja retrasando paquetes por dirección de red. Si no se puede
+resolver la dirección de red de un cliente, no se aplica fake lag para ese
+cliente.
+
+El plugin `player_fakelag` está pensado para L4D2 y usa lógica de equipos
+Survivor/Infected mediante Left 4 DHooks.
+
+## Documentación adicional
+
+Ver:
+
+```text
+docs/DEVELOPMENT.md
 ```
 
 ## Consideraciones importantes

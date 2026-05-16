@@ -53,14 +53,16 @@ native bool PlayerFakelag_IsBalanceVoteInProgress();
 forward Action PlayerFakelag_OnSetPlayerLatency(int client, float oldLag, float &newLag, CFakeLagChangeReason reason);
 
 /**
- * @brief Called after player_fakelag applies or clears fakelag on a player.
+ * @brief Called after player_fakelag applies or clears a fakelag profile on a player.
  *
  * @param client		Client index that changed.
  * @param oldLag		Previous lag value in milliseconds.
+ * @param oldPacketLossPercent	Previous packet loss percentage.
  * @param newLag		Applied lag value in milliseconds.
+ * @param newPacketLossPercent	Applied packet loss percentage.
  * @param reason		Reason for the change.
  */
-forward void PlayerFakelag_OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason);
+forward void PlayerFakelag_OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason);
 
 /**
  * @brief Called when player_fakelag is being unloaded.
@@ -69,6 +71,17 @@ forward void PlayerFakelag_OnPlayerLatencyChanged(int client, float oldLag, floa
  * are cancelled and before all fake lag entries are cleared.
  */
 forward void PlayerFakelag_OnPluginEnd();
+
+/**
+ * @brief Called after the packet loss simulation mode changes.
+ *
+ * Changing mode resets all active fakelag state before the new mode is
+ * adopted.
+ *
+ * @param oldMode	Previous packet loss simulation mode.
+ * @param newMode	New packet loss simulation mode.
+ */
+forward void PlayerFakelag_OnPacketLossModeChanged(CFakeLagPacketLossMode oldMode, CFakeLagPacketLossMode newMode);
 
 public SharedPlugin __pl_player_fakelag =
 {

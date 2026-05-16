@@ -102,7 +102,7 @@ stock void FakelagStartBalanceVote(int initiator, int mode, const char[] questio
 
 	FakeClientCommand(initiator, "Vote Yes");
 	FakelagNotifyVoteAudience(announcePhrase, initiator);
-	CReplyToCommand(initiator, "%t %t", "Tag", startedPhrase);
+	CPrintToChat(initiator, "%t %t", "Tag", startedPhrase);
 }
 
 stock void FakelagNotifyVoteAudience(const char[] phrase, int initiator = 0)
@@ -121,11 +121,11 @@ stock void FakelagNotifyVoteAudience(const char[] phrase, int initiator = 0)
 
 		if (initiator > 0)
 		{
-			CReplyToCommand(client, "%t %t", "Tag", phrase, initiator);
+			CPrintToChat(client, "%t %t", "Tag", phrase, initiator);
 			continue;
 		}
 
-		CReplyToCommand(client, "%t %t", "Tag", phrase);
+		CPrintToChat(client, "%t %t", "Tag", phrase);
 	}
 }
 
