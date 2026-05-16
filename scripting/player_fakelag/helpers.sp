@@ -94,12 +94,17 @@ stock bool FakelagIsSupportedBalanceTeam(L4DTeam team)
 
 stock bool IsHumanInGame(int client)
 {
-	return IsClientInGame(client) && !IsFakeClient(client);
+	return client > 0 && client <= MaxClients && IsClientInGame(client) && !IsFakeClient(client);
 }
 
 stock bool FakelagIsBalanceAudienceClient(int client)
 {
-	return IsHumanInGame(client) && L4D_GetClientTeam(client) >= L4DTeam_Survivor;
+	if (!IsHumanInGame(client))
+	{
+		return false;
+	}
+
+	return L4D_GetClientTeam(client) >= L4DTeam_Survivor;
 }
 
 stock bool FakelagCanApplyLatencyToClient(int client)

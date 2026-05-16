@@ -26,7 +26,7 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 - Se agrego una API high-level en `player_fakelag.inc` con natives para aplicar, previsualizar y votar el balanceo.
 - Se agregaron forwards high-level en `player_fakelag.inc` para que otros plugins puedan interceptar y observar cambios de fake lag desde `player_fakelag`:
   - `PlayerFakelag_OnSetPlayerLatency`
-  - `PlayerFakelag_OnPlayerLatencyChanged`
+  - `PlayerFakelag_OnPlayerProfileChanged`
   - `PlayerFakelag_OnPluginEnd`
 - Se agrego `custom_fakelag_forward.sp` como plugin de ejemplo para los forwards low-level de la extension.
 - Se agregaron translations para la UX del plugin `player_fakelag`.
@@ -48,6 +48,8 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
   - `extension/latency`
   - `extension/network`
 - Se normalizaron a minusculas los nombres de directorios del proyecto.
+- Se reemplazo el forward posterior `CFakeLag_OnPlayerLatencyChanged` por el forward compuesto `CFakeLag_OnPlayerProfileChanged`.
+- Se reemplazo el forward posterior `PlayerFakelag_OnPlayerLatencyChanged` por `PlayerFakelag_OnPlayerProfileChanged`.
 - Se simplifico el `Makefile` con targets explicitos para dependencias y build:
   - `make help`
   - `make deps`

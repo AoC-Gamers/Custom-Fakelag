@@ -120,6 +120,30 @@
 		"es"        "Se {lightgreen}aplico un fakelag{default} de {green}%dms{default} al jugador {teamcolor}%N{default}"
 	}
 
+	"TargetSelfCleared"
+	{
+		"en"        "Your modified ms were reset."
+		"es"        "Tus ms modificados fueron restablecidos."
+	}
+
+	"TargetClearedByAdmin"
+	{
+		"en"        "{teamcolor}%N{default} reset your modified ms."
+		"es"        "{teamcolor}%N{default} restablecio tus ms modificados."
+	}
+
+	"TargetSelfAdjusted"
+	{
+		"en"        "Your modified ms are now {green}%d ms{default}."
+		"es"        "Tus ms modificados ahora son {green}%d ms{default}."
+	}
+
+	"TargetAdjustedByAdmin"
+	{
+		"en"        "{teamcolor}%N{default} adjusted your modified ms to {green}%d ms{default}."
+		"es"        "{teamcolor}%N{default} ajusto tus ms modificados a {green}%d ms{default}."
+	}
+
 	"NoEntriesToClear"
 	{
 		"en"        "There are no {lightgreen}active fake lag entries{default} to clear."
@@ -136,6 +160,12 @@
 	{
 		"en"        "Balancing globally."
 		"es"        "Balanceando globalmente."
+	}
+
+	"BalanceTargetAdjusted"
+	{
+		"en"        "Your ms were adjusted to {green}+%.1f ms{default}."
+		"es"        "Se ajusto tus ms a {green}+%.1f ms{default}."
 	}
 
 	"BalanceConsoleTitle"
@@ -210,9 +240,21 @@
 		"es"        "Balanceando por emparejamiento."
 	}
 
+	"PairBalanceTargetAdjusted"
+	{
+		"en"        "Your ms were balanced with {teamcolor}%N{default} and adjusted to {green}+%.1f ms{default}."
+		"es"        "Se balanceo tus ms con {teamcolor}%N{default} y se ajustaron a {green}+%.1f ms{default}."
+	}
+
 	"DetailsSentToConsole"
 	{
 		"en"        "More information was sent to your console."
+		"es"        "Mas informacion en tu consola."
+	}
+
+	"DetailsSentToTargetConsole"
+	{
+		"en"        "More information is in your console."
 		"es"        "Mas informacion en tu consola."
 	}
 

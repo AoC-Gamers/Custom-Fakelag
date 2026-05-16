@@ -14,10 +14,17 @@ StringMap	  g_PlayerDisconnectedByAccountId = null;
 ConVar		  g_CvarDebug					  = null;
 ConVar		  g_CvarSampleWindow			  = null;
 ConVar		  g_CvarSampleInterval			  = null;
+ConVar		  g_CvarLossBaseCeilingMs		  = null;
+ConVar		  g_CvarLossBaseSpanMs			  = null;
+ConVar		  g_CvarLossTargetFloorMs		  = null;
+ConVar		  g_CvarLossTargetSpanMs		  = null;
+ConVar		  g_CvarLossAddedFloorMs		  = null;
+ConVar		  g_CvarLossAddedSpanMs			  = null;
+ConVar		  g_CvarLossMaxPercent			  = null;
 bool		  g_ForgetLatencyOnNextClear[MAXPLAYERS + 1];
 Handle		  g_LatencySamplingTimer	  = null;
 GlobalForward g_FwdOnSetPlayerLatency	  = null;
-GlobalForward g_FwdOnPlayerLatencyChanged = null;
+GlobalForward g_FwdOnPlayerProfileChanged = null;
 GlobalForward g_FwdOnPluginEnd			  = null;
 
 #include "player_fakelag/latency.sp"
@@ -35,7 +42,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int errMax)
 	CreateNative("PlayerFakelag_IsBalanceVoteInProgress", Native_IsBalanceVoteInProgress);
 
 	g_FwdOnSetPlayerLatency		= new GlobalForward("PlayerFakelag_OnSetPlayerLatency", ET_Hook, Param_Cell, Param_Float, Param_FloatByRef, Param_Cell);
-	g_FwdOnPlayerLatencyChanged = new GlobalForward("PlayerFakelag_OnPlayerLatencyChanged", ET_Ignore, Param_Cell, Param_Float, Param_Float, Param_Cell);
+	g_FwdOnPlayerProfileChanged = new GlobalForward("PlayerFakelag_OnPlayerProfileChanged", ET_Ignore, Param_Cell, Param_Float, Param_Cell, Param_Float, Param_Cell, Param_Cell);
 	g_FwdOnPluginEnd			= new GlobalForward("PlayerFakelag_OnPluginEnd", ET_Ignore);
 
 	RegPluginLibrary("player_fakelag");
@@ -68,6 +75,13 @@ public void OnPluginStart()
 	g_CvarDebug						= CreateConVar("sm_fakelag_debug", "0", "Log player_fakelag persistence and restore activity to the SourceMod logs.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_CvarSampleWindow				= CreateConVar("sm_fakelag_sample_window", "5", "Number of rolling ping samples used for latency averaging.", FCVAR_NOTIFY, true, 1.0, true, 5.0);
 	g_CvarSampleInterval			= CreateConVar("sm_fakelag_sample_interval", "1.0", "Seconds between rolling ping samples.", FCVAR_NOTIFY, true, 0.1, true, 5.0);
+	g_CvarLossBaseCeilingMs			= CreateConVar("sm_fakelag_loss_base_ceiling_ms", "60.0", "Base ping ceiling used to scale artificial packet loss for fakelag balancing.", FCVAR_NOTIFY, true, 0.0);
+	g_CvarLossBaseSpanMs			= CreateConVar("sm_fakelag_loss_base_span_ms", "40.0", "Base ping span used to scale artificial packet loss for fakelag balancing.", FCVAR_NOTIFY, true, 1.0);
+	g_CvarLossTargetFloorMs			= CreateConVar("sm_fakelag_loss_target_floor_ms", "40.0", "Target ping floor before artificial packet loss starts contributing.", FCVAR_NOTIFY, true, 0.0);
+	g_CvarLossTargetSpanMs			= CreateConVar("sm_fakelag_loss_target_span_ms", "40.0", "Target ping span used to scale artificial packet loss for fakelag balancing.", FCVAR_NOTIFY, true, 1.0);
+	g_CvarLossAddedFloorMs			= CreateConVar("sm_fakelag_loss_added_floor_ms", "25.0", "Minimum added fakelag before artificial packet loss starts contributing.", FCVAR_NOTIFY, true, 0.0);
+	g_CvarLossAddedSpanMs			= CreateConVar("sm_fakelag_loss_added_span_ms", "35.0", "Added fakelag span used to scale artificial packet loss for fakelag balancing.", FCVAR_NOTIFY, true, 1.0);
+	g_CvarLossMaxPercent			= CreateConVar("sm_fakelag_loss_max_percent", "2", "Maximum artificial packet loss percent applied by fakelag balancing.", FCVAR_NOTIFY, true, 0.0, true, 100.0);
 	g_CvarSampleWindow.AddChangeHook(FakelagOnSamplingSettingsChanged);
 	g_CvarSampleInterval.AddChangeHook(FakelagOnSamplingSettingsChanged);
 
@@ -101,7 +115,7 @@ public void OnPluginEnd()
 	g_FakeLagBalanceVote = null;
 	g_BalanceVoteMode	 = 0;
 	FakelagStopLatencySampling();
-	CFakeLag_ClearAllPlayerLatencies();
+	CFakeLag_ClearAllPlayerProfiles();
 	delete g_PlayerLatencyByAccountId;
 	g_PlayerLatencyByAccountId = null;
 	delete g_PlayerDisconnectedByAccountId;
@@ -109,12 +123,19 @@ public void OnPluginEnd()
 	g_CvarDebug						= null;
 	g_CvarSampleWindow				= null;
 	g_CvarSampleInterval			= null;
+	g_CvarLossBaseCeilingMs			= null;
+	g_CvarLossBaseSpanMs			= null;
+	g_CvarLossTargetFloorMs			= null;
+	g_CvarLossTargetSpanMs			= null;
+	g_CvarLossAddedFloorMs			= null;
+	g_CvarLossAddedSpanMs			= null;
+	g_CvarLossMaxPercent			= null;
 
 	delete g_FwdOnSetPlayerLatency;
 	g_FwdOnSetPlayerLatency = null;
 
-	delete g_FwdOnPlayerLatencyChanged;
-	g_FwdOnPlayerLatencyChanged = null;
+	delete g_FwdOnPlayerProfileChanged;
+	g_FwdOnPlayerProfileChanged = null;
 
 	delete g_FwdOnPluginEnd;
 	g_FwdOnPluginEnd = null;
@@ -162,7 +183,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	{
 		if (CFakeLag_HasPlayerLatency(client))
 		{
-			CFakeLag_ClearPlayerLatency(client);
+			FakelagClearNetworkProfile(client);
 		}
 		return;
 	}
@@ -327,13 +348,39 @@ public Action FakeLagCmd(int client, int args)
 		}
 
 		g_ForgetLatencyOnNextClear[target] = true;
-		CFakeLag_ClearPlayerLatency(target);
+		FakelagClearNetworkProfile(target);
 		CReplyToCommand(client, "%t %t", "Tag", "ClearedOnPlayer", target);
+		if (target == client)
+		{
+			CPrintToChat(target, "%t %t", "Tag", "TargetSelfCleared");
+		}
+		else
+		{
+			CPrintToChat(target, "%t %t", "Tag", "TargetClearedByAdmin", client);
+		}
 		return Plugin_Handled;
 	}
 
-	CFakeLag_SetPlayerLatency(target, float(lagAmount));
+	float addedLagMs = float(lagAmount);
+	float basePingMs = FakelagGetClientAveragePingRawMs(target);
+	if (basePingMs < 0.0)
+	{
+		basePingMs = FakelagGetClientBasePingRawMs(target);
+	}
+
+	float targetPingMs = basePingMs >= 0.0 ? (basePingMs + addedLagMs) : addedLagMs;
+	int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, addedLagMs, targetPingMs);
+
+	FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(addedLagMs, packetLossPercent));
 	CReplyToCommand(client, "%t %t", "Tag", "SetOnPlayer", lagAmount, target);
+	if (target == client)
+	{
+		CPrintToChat(target, "%t %t", "Tag", "TargetSelfAdjusted", lagAmount);
+	}
+	else
+	{
+		CPrintToChat(target, "%t %t", "Tag", "TargetAdjustedByAdmin", client, lagAmount);
+	}
 	return Plugin_Handled;
 }
 
@@ -398,7 +445,7 @@ public Action ClearLagCmd(int client, int args)
 	}
 
 	g_ForgetLatencyOnNextClear[target] = true;
-	CFakeLag_ClearPlayerLatency(target);
+	FakelagClearNetworkProfile(target);
 	if (target == client && !canTargetOthers)
 	{
 		CPrintToChatAll("%t %t", "Tag", "SelfClearedAnnounce", client);

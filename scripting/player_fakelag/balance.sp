@@ -85,6 +85,100 @@ stock void FakelagPrintConsoleTableFinish(int client, const char[] summary)
 	FakelagPrintConsoleTableBorder(client);
 }
 
+stock void FakelagPrintConsoleTableStartToAudience(const char[] title, int excludedClient = 0)
+{
+	for (int audience = 1; audience <= MaxClients; audience++)
+	{
+		if (audience == excludedClient)
+		{
+			continue;
+		}
+
+		if (!FakelagIsBalanceAudienceClient(audience))
+		{
+			continue;
+		}
+
+		FakelagPrintConsoleTableStart(audience, title);
+	}
+}
+
+stock void FakelagPrintConsoleTableColumnsToAudience(const char[] columns, int excludedClient = 0)
+{
+	for (int audience = 1; audience <= MaxClients; audience++)
+	{
+		if (audience == excludedClient)
+		{
+			continue;
+		}
+
+		if (!FakelagIsBalanceAudienceClient(audience))
+		{
+			continue;
+		}
+
+		FakelagPrintConsoleTableColumns(audience, columns);
+	}
+}
+
+stock void FakelagPrintConsoleTableLineToAudience(const char[] line, int excludedClient = 0)
+{
+	for (int audience = 1; audience <= MaxClients; audience++)
+	{
+		if (audience == excludedClient)
+		{
+			continue;
+		}
+
+		if (!FakelagIsBalanceAudienceClient(audience))
+		{
+			continue;
+		}
+
+		FakelagPrintConsoleTableLine(audience, line);
+	}
+}
+
+stock void FakelagPrintConsoleTableFinishToAudience(const char[] summary, int excludedClient = 0)
+{
+	for (int audience = 1; audience <= MaxClients; audience++)
+	{
+		if (audience == excludedClient)
+		{
+			continue;
+		}
+
+		if (!FakelagIsBalanceAudienceClient(audience))
+		{
+			continue;
+		}
+
+		FakelagPrintConsoleTableFinish(audience, summary);
+	}
+}
+
+stock void FakelagNotifyGlobalBalanceTarget(int target, float compensation)
+{
+	if (!IsHumanInGame(target) || compensation <= 0.0)
+	{
+		return;
+	}
+
+	CPrintToChat(target, "%t %t", "Tag", "BalanceTargetAdjusted", compensation);
+	CPrintToChat(target, "%t %t", "Tag", "DetailsSentToTargetConsole");
+}
+
+stock void FakelagNotifyPairBalanceTarget(int target, int partner, float compensation)
+{
+	if (!IsHumanInGame(target) || !IsHumanInGame(partner) || compensation <= 0.0)
+	{
+		return;
+	}
+
+	CPrintToChat(target, "%t %t", "Tag", "PairBalanceTargetAdjusted", partner, compensation);
+	CPrintToChat(target, "%t %t", "Tag", "DetailsSentToTargetConsole");
+}
+
 stock void FakelagGetConsoleClientName(int client, char[] buffer, int maxlen, int maxWidth)
 {
 	char original[64];
@@ -215,6 +309,11 @@ stock int FakelagCollectBalanceCandidates(int clients[MAXPLAYERS + 1], float pin
 			continue;
 		}
 
+		if (!IsClientInGame(client))
+		{
+			continue;
+		}
+
 		L4DTeam team = L4D_GetClientTeam(client);
 		if (!FakelagIsSupportedBalanceTeam(team))
 		{
@@ -296,7 +395,7 @@ stock bool FakelagClearPlayerLatencyExplicit(int client)
 	}
 
 	g_ForgetLatencyOnNextClear[client] = true;
-	CFakeLag_ClearPlayerLatency(client);
+	FakelagClearNetworkProfile(client);
 	return true;
 }
 
@@ -351,7 +450,9 @@ stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &
 				clearedCount++;
 			}
 
-			CFakeLag_SetPlayerLatency(infected, survivorPing - infectedPing);
+			float compensation = survivorPing - infectedPing;
+			FakelagApplyNetworkProfile(infected, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(infectedPing, compensation, survivorPing)));
+			FakelagNotifyPairBalanceTarget(infected, survivor, compensation);
 			adjustedCount++;
 			continue;
 		}
@@ -363,7 +464,9 @@ stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &
 				clearedCount++;
 			}
 
-			CFakeLag_SetPlayerLatency(survivor, infectedPing - survivorPing);
+			float compensation = infectedPing - survivorPing;
+			FakelagApplyNetworkProfile(survivor, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(survivorPing, compensation, infectedPing)));
+			FakelagNotifyPairBalanceTarget(survivor, infected, compensation);
 			adjustedCount++;
 			continue;
 		}
@@ -418,25 +521,29 @@ stock void FakelagApplyBalance(int admin, const int clients[MAXPLAYERS + 1], con
 			if (CFakeLag_HasPlayerLatency(target))
 			{
 				g_ForgetLatencyOnNextClear[target] = true;
-				CFakeLag_ClearPlayerLatency(target);
+				FakelagClearNetworkProfile(target);
 				cleared++;
 				clearedClient = true;
 			}
 
 			FakelagFormatGlobalBalanceRow(admin, target, displayPing, rawPing, compensation, clearedClient, row, sizeof(row));
 			FakelagPrintConsoleTableLine(admin, row);
+			FakelagPrintConsoleTableLineToAudience(row, admin);
 			continue;
 		}
 
-		CFakeLag_SetPlayerLatency(target, compensation);
+		FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(rawPing, compensation, targetPing)));
 		adjusted++;
+		FakelagNotifyGlobalBalanceTarget(target, compensation);
 		FakelagFormatGlobalBalanceRow(admin, target, displayPing, rawPing, compensation, false, row, sizeof(row));
 		FakelagPrintConsoleTableLine(admin, row);
+		FakelagPrintConsoleTableLineToAudience(row, admin);
 	}
 
 	SetGlobalTransTarget(admin);
 	Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "BalanceConsoleApplied", count, adjusted, cleared);
 	FakelagPrintConsoleTableFinish(admin, formatted);
+	FakelagPrintConsoleTableFinishToAudience(formatted, admin);
 }
 
 stock void FakelagPreviewBalance(int admin, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing)
@@ -493,13 +600,13 @@ stock bool FakelagApplyBalanceSilent(float &targetPing, int &highestClient, int 
 			if (CFakeLag_HasPlayerLatency(target))
 			{
 				g_ForgetLatencyOnNextClear[target] = true;
-				CFakeLag_ClearPlayerLatency(target);
+				FakelagClearNetworkProfile(target);
 				clearedCount++;
 			}
 			continue;
 		}
 
-		CFakeLag_SetPlayerLatency(target, compensation);
+		FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(pings[index], compensation, targetPing)));
 		adjustedCount++;
 	}
 
@@ -538,6 +645,18 @@ stock void FakelagRunBalanceCommand(int client)
 		FakelagPrintConsoleTableStart(client, formatted);
 		Format(columns, sizeof(columns), "%t", "BalanceTableColumns");
 		FakelagPrintConsoleTableColumns(client, columns);
+		FakelagPrintConsoleTableStartToAudience(formatted, client);
+		FakelagPrintConsoleTableColumnsToAudience(columns, client);
+
+		for (int audience = 1; audience <= MaxClients; audience++)
+		{
+			if (!FakelagIsBalanceAudienceClient(audience))
+			{
+				continue;
+			}
+
+			CPrintToChat(audience, "%t %t", "Tag", "BalanceStarted");
+		}
 	}
 	else {
 		char formatted[512];
@@ -547,6 +666,8 @@ stock void FakelagRunBalanceCommand(int client)
 		FakelagPrintConsoleTableStart(client, formatted);
 		Format(columns, sizeof(columns), "%t", "BalanceTableColumns");
 		FakelagPrintConsoleTableColumns(client, columns);
+		FakelagPrintConsoleTableStartToAudience(formatted);
+		FakelagPrintConsoleTableColumnsToAudience(columns);
 
 		for (int audience = 1; audience <= MaxClients; audience++)
 		{
@@ -623,6 +744,21 @@ stock void FakelagRunPairBalanceCommand(int client)
 	FakelagPrintConsoleTableStart(client, formatted);
 	Format(columns, sizeof(columns), "%t", "PairBalanceTableColumns");
 	FakelagPrintConsoleTableColumns(client, columns);
+	FakelagPrintConsoleTableStartToAudience(formatted, client);
+	FakelagPrintConsoleTableColumnsToAudience(columns, client);
+
+	if (client != 0)
+	{
+		for (int audience = 1; audience <= MaxClients; audience++)
+		{
+			if (!FakelagIsBalanceAudienceClient(audience))
+			{
+				continue;
+			}
+
+			CPrintToChat(audience, "%t %t", "Tag", "PairBalanceStarted");
+		}
+	}
 
 	for (int index = 0; index < pairCount; index++)
 	{
@@ -646,6 +782,8 @@ stock void FakelagRunPairBalanceCommand(int client)
 		}
 
 		FakelagPrintConsoleTableLine(client, row);
+		FakelagPrintConsoleTableLineToAudience(row, client);
+
 	}
 
 	for (int index = pairCount; index < survivorCount; index++)
@@ -654,6 +792,7 @@ stock void FakelagRunPairBalanceCommand(int client)
 		float displayPing = FakelagEstimateNetGraphPingForClientMs(survivorClients[index], rawPing);
 		FakelagFormatUnpairedBalanceRow(client, survivorClients[index], displayPing, rawPing, true, row, sizeof(row));
 		FakelagPrintConsoleTableLine(client, row);
+		FakelagPrintConsoleTableLineToAudience(row, client);
 	}
 
 	for (int index = pairCount; index < infectedCount; index++)
@@ -662,6 +801,7 @@ stock void FakelagRunPairBalanceCommand(int client)
 		float displayPing = FakelagEstimateNetGraphPingForClientMs(infectedClients[index], rawPing);
 		FakelagFormatUnpairedBalanceRow(client, infectedClients[index], displayPing, rawPing, false, row, sizeof(row));
 		FakelagPrintConsoleTableLine(client, row);
+		FakelagPrintConsoleTableLineToAudience(row, client);
 	}
 
 	int playerCount;
@@ -677,6 +817,17 @@ stock void FakelagRunPairBalanceCommand(int client)
 	SetGlobalTransTarget(client);
 	Format(formatted, sizeof(formatted), "%t %t", "TagConsole", "BalanceConsoleApplied", playerCount, adjustedCount, clearedCount);
 	FakelagPrintConsoleTableFinish(client, formatted);
+	FakelagPrintConsoleTableFinishToAudience(formatted, client);
+
+	for (int audience = 1; audience <= MaxClients; audience++)
+	{
+		if (!FakelagIsBalanceAudienceClient(audience))
+		{
+			continue;
+		}
+
+		CPrintToChat(audience, "%t %t", "Tag", "DetailsSentToTargetConsole");
+	}
 
 	if (client != 0)
 	{

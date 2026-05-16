@@ -53,14 +53,16 @@ native bool PlayerFakelag_IsBalanceVoteInProgress();
 forward Action PlayerFakelag_OnSetPlayerLatency(int client, float oldLag, float &newLag, CFakeLagChangeReason reason);
 
 /**
- * @brief Called after player_fakelag applies or clears fakelag on a player.
+ * @brief Called after player_fakelag applies or clears a fakelag profile on a player.
  *
  * @param client		Client index that changed.
  * @param oldLag		Previous lag value in milliseconds.
+ * @param oldPacketLossPercent	Previous packet loss percentage.
  * @param newLag		Applied lag value in milliseconds.
+ * @param newPacketLossPercent	Applied packet loss percentage.
  * @param reason		Reason for the change.
  */
-forward void PlayerFakelag_OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason);
+forward void PlayerFakelag_OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason);
 
 /**
  * @brief Called when player_fakelag is being unloaded.

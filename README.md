@@ -66,6 +66,12 @@ Cuando llega un paquete de red:
 En términos simples: no cambia solamente un valor visual de ping. Retrasa el
 procesamiento real de paquetes para ese jugador.
 
+Además, la extensión ahora puede simular packet loss artificial por jugador.
+Ese packet loss puede distribuirse con dos modelos:
+
+- `Bernoulli uniforme`
+- `Gilbert-Elliott`
+
 ## Arquitectura
 
 El repositorio está dividido en dos capas principales.
@@ -101,6 +107,7 @@ Responsabilidades principales:
 - crear forwards para hooks de plugins;
 - interceptar `NET_LagPacket`;
 - retrasar paquetes mediante colas internas;
+- simular packet loss artificial por jugador;
 - limpiar estado al desconectar jugadores o descargar la extensión.
 
 ### Plugin SourcePawn
@@ -118,6 +125,7 @@ Este plugin entrega la capa administrativa y de uso práctico:
 - comandos de estado y comparación de ping;
 - balance global de latencia;
 - balance por pares Survivor/Infected;
+- resolución heurística de packet loss para balances;
 - votaciones para aplicar balance;
 - persistencia temporal por Steam Account ID;
 - muestreo estable de ping para evitar decisiones basadas en picos aislados.
@@ -149,14 +157,54 @@ scripting/include/custom_fakelag.inc
 Natives disponibles:
 
 ```sourcepawn
+enum CFakeLagPacketLossMode
+{
+    CFakeLagPacketLoss_BernoulliUniform = 0,
+    CFakeLagPacketLoss_GilbertElliott
+};
+
+enum struct CFakeLagNetworkProfile
+{
+    float lagMs;
+    int packetLossPercent;
+};
+
 native void CFakeLag_SetPlayerLatency(int client, float lagTime);
 native float CFakeLag_GetPlayerLatency(int client);
 native bool CFakeLag_HasPlayerLatency(int client);
 native void CFakeLag_ClearPlayerLatency(int client);
+
+native void CFakeLag_SetPlayerPacketLoss(int client, int packetLossPercent);
+native int CFakeLag_GetPlayerPacketLoss(int client);
+native bool CFakeLag_HasPlayerPacketLoss(int client);
+native void CFakeLag_ClearPlayerPacketLoss(int client);
+
+native void CFakeLag_SetPacketLossMode(CFakeLagPacketLossMode mode);
+native CFakeLagPacketLossMode CFakeLag_GetPacketLossMode();
+
+native void CFakeLag_ClearAllPlayerProfiles();
+native int CFakeLag_GetProfiledClientCount();
+
 native void CFakeLag_ClearAllPlayerLatencies();
 native bool CFakeLag_IsClientSupported(int client);
 native int CFakeLag_GetLaggedClientCount();
 ```
+
+Helpers stock relevantes:
+
+```sourcepawn
+stock CFakeLagNetworkProfile CFakeLag_BuildNetworkProfile(float lagMs, int packetLossPercent);
+stock void CFakeLag_GetPlayerProfile(int client, CFakeLagNetworkProfile profile);
+stock void CFakeLag_ApplyPlayerProfile(int client, const CFakeLagNetworkProfile profile);
+stock void CFakeLag_ClearPlayerProfile(int client);
+```
+
+Notas:
+
+- `CFakeLag_ClearAllPlayerProfiles()` es la API preferida actual.
+- `CFakeLag_ClearAllPlayerLatencies()` se mantiene como alias legacy.
+- `CFakeLag_GetProfiledClientCount()` es la API preferida actual.
+- `CFakeLag_GetLaggedClientCount()` se mantiene como alias legacy.
 
 Forwards disponibles:
 
@@ -168,10 +216,12 @@ forward Action CFakeLag_OnSetPlayerLatency(
     CFakeLagChangeReason reason
 );
 
-forward void CFakeLag_OnPlayerLatencyChanged(
+forward void CFakeLag_OnPlayerProfileChanged(
     int client,
     float oldLag,
+    int oldPacketLossPercent,
     float newLag,
+    int newPacketLossPercent,
     CFakeLagChangeReason reason
 );
 ```
@@ -179,7 +229,24 @@ forward void CFakeLag_OnPlayerLatencyChanged(
 `CFakeLag_OnSetPlayerLatency` permite modificar o bloquear un cambio antes de
 que se aplique.
 
-`CFakeLag_OnPlayerLatencyChanged` notifica después de que el cambio fue aplicado.
+`CFakeLag_OnPlayerProfileChanged` notifica después de que el perfil fue aplicado,
+incluyendo `lag` y `packet loss`.
+
+## Packet Loss Modes
+
+La extensión expone la ConVar:
+
+```text
+sm_custom_fakelag_loss_mode
+```
+
+Valores:
+
+- `0`: `Bernoulli uniforme`
+- `1`: `Gilbert-Elliott`
+
+El plugin decide cuánto `%` de packet loss aplicar. La extensión decide cómo
+materializar ese `%` en el flujo real de paquetes.
 
 ## Plugin `player_fakelag`
 

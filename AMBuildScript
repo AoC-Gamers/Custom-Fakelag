@@ -263,7 +263,9 @@ class ExtensionConfig(object):
 
   def configure_linux(self, cxx):
     cxx.defines += ['_LINUX', 'POSIX']
-    cxx.linkflags += ['-Wl,--exclude-libs,ALL', '-lm']
+    cxx.cflags += ['-fPIC']
+    cxx.cxxflags += ['-fPIC']
+    cxx.linkflags += ['-Wl,--exclude-libs,ALL', '-Wl,--no-undefined', '-Wl,-rpath,$ORIGIN', '-lm']
     if cxx.vendor == 'gcc':
       cxx.linkflags += ['-static-libgcc']
     elif cxx.vendor == 'clang':
@@ -393,13 +395,17 @@ class ExtensionConfig(object):
         compiler.postlink += [compiler.Dep(os.path.join(lib_folder, 'interfaces_i486.a'))]
 
     dynamic_libs = []
+    runtime_link_libs = []
     if builder.target_platform == 'linux':
       if sdk.name in ['css', 'hl2dm', 'dods', 'tf2', 'sdk2013', 'bms', 'nucleardawn', 'l4d2', 'insurgency', 'doi']:
         dynamic_libs = ['libtier0_srv.so', 'libvstdlib_srv.so']
+        runtime_link_libs = ['-ltier0_srv', '-lvstdlib_srv']
       elif sdk.name in ['l4d', 'blade', 'insurgency', 'doi', 'csgo', 'pvkii']:
         dynamic_libs = ['libtier0.so', 'libvstdlib.so']
+        runtime_link_libs = ['-ltier0', '-lvstdlib']
       else:
         dynamic_libs = ['tier0_i486.so', 'vstdlib_i486.so']
+        runtime_link_libs = ['-ltier0_i486', '-lvstdlib_i486']
     elif builder.target_platform == 'mac':
       compiler.linkflags.append('-liconv')
       dynamic_libs = ['libtier0.dylib', 'libvstdlib.dylib']
@@ -423,6 +429,12 @@ class ExtensionConfig(object):
 
       linker = make_linker(source_path, output_path)
       compiler.linkflags[0:0] = [compiler.Dep(library, linker)]
+
+    if runtime_link_libs:
+      # On GNU ld, static archives such as tier1_i486.a only resolve undefined
+      # symbols against libraries that appear later on the command line. Keep
+      # the runtime libs in postlink so they are emitted after the SDK archives.
+      compiler.postlink += ['-L' + lib_folder] + runtime_link_libs
 
     return binary
 

@@ -1,5 +1,22 @@
 #define FAKELAG_PING_SAMPLE_COUNT 5
 
+#define PlayerNetworkProfile CFakeLagNetworkProfile
+
+stock float FakelagClamp(float value, float minValue, float maxValue)
+{
+	if (value < minValue)
+	{
+		return minValue;
+	}
+
+	if (value > maxValue)
+	{
+		return maxValue;
+	}
+
+	return value;
+}
+
 float	   g_ClientLatencySamples[MAXPLAYERS + 1][FAKELAG_PING_SAMPLE_COUNT];
 int		   g_ClientLatencySampleCount[MAXPLAYERS + 1];
 int		   g_ClientLatencySampleIndex[MAXPLAYERS + 1];
@@ -193,6 +210,43 @@ stock float FakelagEstimateNetGraphPingForClientMs(int client, float rawPingMs)
 	}
 
 	return FakelagEstimateNetGraphPingMs(rawPingMs, updateRate);
+}
+
+stock int FakelagResolvePacketLossPercent(float basePingMs, float addedLagMs, float targetPingMs)
+{
+	if (basePingMs < 0.0 || addedLagMs <= 0.0 || targetPingMs < 0.0)
+	{
+		return 0;
+	}
+
+	float baseCeiling = g_CvarLossBaseCeilingMs != null ? g_CvarLossBaseCeilingMs.FloatValue : 60.0;
+	float baseSpan = g_CvarLossBaseSpanMs != null ? g_CvarLossBaseSpanMs.FloatValue : 40.0;
+	float targetFloor = g_CvarLossTargetFloorMs != null ? g_CvarLossTargetFloorMs.FloatValue : 40.0;
+	float targetSpan = g_CvarLossTargetSpanMs != null ? g_CvarLossTargetSpanMs.FloatValue : 40.0;
+	float addedFloor = g_CvarLossAddedFloorMs != null ? g_CvarLossAddedFloorMs.FloatValue : 25.0;
+	float addedSpan = g_CvarLossAddedSpanMs != null ? g_CvarLossAddedSpanMs.FloatValue : 35.0;
+	float maxPercent = g_CvarLossMaxPercent != null ? float(g_CvarLossMaxPercent.IntValue) : 2.0;
+
+	float baseFactor = FakelagClamp((baseCeiling - basePingMs) / baseSpan, 0.0, 1.0);
+	float targetFactor = FakelagClamp((targetPingMs - targetFloor) / targetSpan, 0.0, 1.0);
+	float addedFactor = FakelagClamp((addedLagMs - addedFloor) / addedSpan, 0.0, 1.0);
+	float lossFloat = maxPercent * baseFactor * targetFactor * addedFactor;
+	return RoundToNearest(FakelagClamp(lossFloat, 0.0, maxPercent));
+}
+
+stock PlayerNetworkProfile FakelagBuildNetworkProfile(float lagMs, int packetLossPercent)
+{
+	return CFakeLag_BuildNetworkProfile(lagMs, packetLossPercent);
+}
+
+stock void FakelagApplyNetworkProfile(int client, const PlayerNetworkProfile profile)
+{
+	CFakeLag_ApplyPlayerProfile(client, profile);
+}
+
+stock void FakelagClearNetworkProfile(int client)
+{
+	CFakeLag_ClearPlayerProfile(client);
 }
 
 stock float FakelagGetClientAveragePingMs(int client)

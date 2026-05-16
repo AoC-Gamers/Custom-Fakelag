@@ -1,5 +1,18 @@
 #include "extension.h"
 #include "NET_LagPacket_Detour.h"
+#include <ctime>
+#include <cstdlib>
+#include "tier1/convar.h"
+
+ConVar sm_custom_fakelag_loss_mode(
+	"sm_custom_fakelag_loss_mode",
+	"0",
+	FCVAR_NOTIFY,
+	"Packet loss simulation mode: 0 = Bernoulli uniform, 1 = Gilbert-Elliott.",
+	true,
+	0.0f,
+	true,
+	1.0f);
 
 CustomFakelag g_Sample;
 extern sp_nativeinfo_t g_CFakeLagNatives[];
@@ -60,6 +73,8 @@ int CustomFakelag::GetMaxClients() const
 
 bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 {
+	std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
 	char conf_error[255];
 	if (!gameconfs->LoadGameConfigFile("custom_fakelag.games", &g_pGameConf, &conf_error[0], sizeof(conf_error)))
 	{
@@ -178,10 +193,60 @@ void CustomFakelag::ClearPlayerLatency(int client)
 	}
 }
 
+void CustomFakelag::SetPlayerPacketLoss(int client, int packetLossPercent)
+{
+	if (m_PlayerLatencyService != nullptr) {
+		m_PlayerLatencyService->SetPlayerPacketLoss(client, packetLossPercent);
+	}
+}
+
+int CustomFakelag::GetPlayerPacketLoss(int client) const
+{
+	if (m_PlayerLatencyService != nullptr) {
+		return m_PlayerLatencyService->GetPlayerPacketLoss(client);
+	}
+
+	return 0;
+}
+
+bool CustomFakelag::HasPlayerPacketLoss(int client) const
+{
+	return m_PlayerLatencyService != nullptr && m_PlayerLatencyService->HasPlayerPacketLoss(client);
+}
+
+void CustomFakelag::ClearPlayerPacketLoss(int client)
+{
+	if (m_PlayerLatencyService != nullptr) {
+		m_PlayerLatencyService->ClearPlayerPacketLoss(client);
+	}
+}
+
+void CustomFakelag::SetPacketLossMode(CFakeLagPacketLossMode mode)
+{
+	sm_custom_fakelag_loss_mode.SetValue(static_cast<int>(mode));
+}
+
+CFakeLagPacketLossMode CustomFakelag::GetPacketLossMode() const
+{
+	const int modeValue = sm_custom_fakelag_loss_mode.GetInt();
+	if (modeValue == static_cast<int>(CFakeLagPacketLossMode::GilbertElliott)) {
+		return CFakeLagPacketLossMode::GilbertElliott;
+	}
+
+	return CFakeLagPacketLossMode::BernoulliUniform;
+}
+
 void CustomFakelag::ClearAllPlayerLatencies()
 {
 	if (m_PlayerLatencyService != nullptr) {
 		m_PlayerLatencyService->ClearAllPlayerLatencies();
+	}
+}
+
+void CustomFakelag::ClearAllPlayerProfiles()
+{
+	if (m_PlayerLatencyService != nullptr) {
+		m_PlayerLatencyService->ClearAllPlayerProfiles();
 	}
 }
 
@@ -202,6 +267,11 @@ int CustomFakelag::GetLaggedClientCount() const
 	}
 
 	return 0;
+}
+
+int CustomFakelag::GetProfiledClientCount() const
+{
+	return GetLaggedClientCount();
 }
 
 cell_t CFakeLag_SetPlayerLatency(IPluginContext* pContext, const cell_t* params)
@@ -251,9 +321,79 @@ cell_t CFakeLag_ClearPlayerLatency(IPluginContext* pContext, const cell_t* param
 	return 1;
 }
 
+cell_t CFakeLag_SetPlayerPacketLoss(IPluginContext* pContext, const cell_t* params)
+{
+	int client = params[1];
+	int packetLossPercent = params[2];
+	if (!g_Sample.ThrowIfUnsupportedClient(pContext, client)) {
+		return 0;
+	}
+
+	if (packetLossPercent < 0 || packetLossPercent > 100) {
+		return pContext->ThrowNativeError("Packet loss percent must be between 0 and 100.");
+	}
+
+	g_Sample.SetPlayerPacketLoss(client, packetLossPercent);
+	return 1;
+}
+
+cell_t CFakeLag_GetPlayerPacketLoss(IPluginContext* pContext, const cell_t* params)
+{
+	int client = params[1];
+	if (!g_Sample.ThrowIfUnsupportedClient(pContext, client)) {
+		return 0;
+	}
+
+	return g_Sample.GetPlayerPacketLoss(client);
+}
+
+cell_t CFakeLag_HasPlayerPacketLoss(IPluginContext* pContext, const cell_t* params)
+{
+	int client = params[1];
+	if (!g_Sample.ThrowIfUnsupportedClient(pContext, client)) {
+		return 0;
+	}
+
+	return g_Sample.HasPlayerPacketLoss(client) ? 1 : 0;
+}
+
+cell_t CFakeLag_ClearPlayerPacketLoss(IPluginContext* pContext, const cell_t* params)
+{
+	int client = params[1];
+	if (!g_Sample.ThrowIfUnsupportedClient(pContext, client)) {
+		return 0;
+	}
+
+	g_Sample.ClearPlayerPacketLoss(client);
+	return 1;
+}
+
+cell_t CFakeLag_SetPacketLossMode(IPluginContext* pContext, const cell_t* params)
+{
+	const int modeValue = params[1];
+	if (modeValue < static_cast<int>(CFakeLagPacketLossMode::BernoulliUniform)
+		|| modeValue > static_cast<int>(CFakeLagPacketLossMode::GilbertElliott)) {
+		return pContext->ThrowNativeError("Packet loss mode must be 0 (BernoulliUniform) or 1 (GilbertElliott).");
+	}
+
+	g_Sample.SetPacketLossMode(static_cast<CFakeLagPacketLossMode>(modeValue));
+	return 1;
+}
+
+cell_t CFakeLag_GetPacketLossMode(IPluginContext* pContext, const cell_t* params)
+{
+	return static_cast<cell_t>(g_Sample.GetPacketLossMode());
+}
+
 cell_t CFakeLag_ClearAllPlayerLatencies(IPluginContext* pContext, const cell_t* params)
 {
 	g_Sample.ClearAllPlayerLatencies();
+	return 1;
+}
+
+cell_t CFakeLag_ClearAllPlayerProfiles(IPluginContext* pContext, const cell_t* params)
+{
+	g_Sample.ClearAllPlayerProfiles();
 	return 1;
 }
 
@@ -267,14 +407,27 @@ cell_t CFakeLag_GetLaggedClientCount(IPluginContext* pContext, const cell_t* par
 	return g_Sample.GetLaggedClientCount();
 }
 
+cell_t CFakeLag_GetProfiledClientCount(IPluginContext* pContext, const cell_t* params)
+{
+	return g_Sample.GetProfiledClientCount();
+}
+
 sp_nativeinfo_t g_CFakeLagNatives[] =
 {
 	{"CFakeLag_SetPlayerLatency", CFakeLag_SetPlayerLatency},
 	{"CFakeLag_GetPlayerLatency", CFakeLag_GetPlayerLatency},
 	{"CFakeLag_HasPlayerLatency", CFakeLag_HasPlayerLatency},
 	{"CFakeLag_ClearPlayerLatency", CFakeLag_ClearPlayerLatency},
+	{"CFakeLag_SetPlayerPacketLoss", CFakeLag_SetPlayerPacketLoss},
+	{"CFakeLag_GetPlayerPacketLoss", CFakeLag_GetPlayerPacketLoss},
+	{"CFakeLag_HasPlayerPacketLoss", CFakeLag_HasPlayerPacketLoss},
+	{"CFakeLag_ClearPlayerPacketLoss", CFakeLag_ClearPlayerPacketLoss},
+	{"CFakeLag_SetPacketLossMode", CFakeLag_SetPacketLossMode},
+	{"CFakeLag_GetPacketLossMode", CFakeLag_GetPacketLossMode},
+	{"CFakeLag_ClearAllPlayerProfiles", CFakeLag_ClearAllPlayerProfiles},
 	{"CFakeLag_ClearAllPlayerLatencies", CFakeLag_ClearAllPlayerLatencies},
 	{"CFakeLag_IsClientSupported", CFakeLag_IsClientSupported},
+	{"CFakeLag_GetProfiledClientCount", CFakeLag_GetProfiledClientCount},
 	{"CFakeLag_GetLaggedClientCount", CFakeLag_GetLaggedClientCount},
 	{nullptr, nullptr}
 };

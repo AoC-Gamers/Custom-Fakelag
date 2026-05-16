@@ -173,7 +173,7 @@ stock void FakelagRestoreClientLatencyIfEligible(int client)
 	}
 
 	bool restoredAfterDisconnect = FakelagConsumeDisconnectedState(client);
-	CFakeLag_SetPlayerLatency(client, storedLag);
+	FakelagApplyNetworkProfile(client, FakelagBuildNetworkProfile(storedLag, 0));
 	if (FakelagIsDebugEnabled())
 	{
 		char accountKey[16];

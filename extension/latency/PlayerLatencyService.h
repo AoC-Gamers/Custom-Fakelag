@@ -19,16 +19,16 @@ class IPlayerLatencyHooks
 {
 public:
 	virtual ~IPlayerLatencyHooks() = default;
-	virtual bool OnSetPlayerLatency(int client, float oldLag, float* requestedLag, CFakeLagChangeReason reason) = 0;
-	virtual void OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason) = 0;
+	virtual bool OnSetPlayerLatency(ClientIndex client, LagMilliseconds oldLag, LagMilliseconds* requestedLag, CFakeLagChangeReason reason) = 0;
+	virtual void OnPlayerProfileChanged(ClientIndex client, LagMilliseconds oldLag, PacketLossPercent oldPacketLossPercent, LagMilliseconds newLag, PacketLossPercent newPacketLossPercent, CFakeLagChangeReason reason) = 0;
 };
 
 class IClientRegistry
 {
 public:
 	virtual ~IClientRegistry() = default;
-	virtual ClientEligibility GetClientEligibility(int client, IGamePlayer** player = nullptr) const = 0;
-	virtual int GetMaxClients() const = 0;
+	virtual ClientEligibility GetClientEligibility(ClientIndex client, IGamePlayer** player = nullptr) const = 0;
+	virtual ClientIndex GetMaxClients() const = 0;
 };
 
 class PlayerLatencyService
@@ -38,8 +38,8 @@ private:
 	IPlayerLatencyHooks* m_Hooks;
 	const IClientRegistry* m_ClientRegistry;
 
-	bool ApplyPlayerLatencyChange(int client, float lagTime, CFakeLagChangeReason reason, bool allowPreForward);
-	void NotifyPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason) const;
+	bool ApplyPlayerLatencyChange(ClientIndex client, LagMilliseconds lagTime, CFakeLagChangeReason reason, bool allowPreForward);
+	void NotifyPlayerProfileChanged(ClientIndex client, LagMilliseconds oldLag, PacketLossPercent oldPacketLossPercent, LagMilliseconds newLag, PacketLossPercent newPacketLossPercent, CFakeLagChangeReason reason) const;
 
 public:
 	PlayerLatencyService(PlayerLagManager* lagManager, IPlayerLatencyHooks* hooks, const IClientRegistry* clientRegistry)
@@ -47,17 +47,22 @@ public:
 		  m_Hooks(hooks),
 		  m_ClientRegistry(clientRegistry) {}
 
-	bool TryGetSupportedClient(int client, IGamePlayer** player = nullptr) const;
-	bool ThrowIfUnsupportedClient(IPluginContext* context, int client) const;
+	bool TryGetSupportedClient(ClientIndex client, IGamePlayer** player = nullptr) const;
+	bool ThrowIfUnsupportedClient(IPluginContext* context, ClientIndex client) const;
 
-	bool IsClientSupported(int client) const;
-	void OnClientDisconnecting(int client);
+	bool IsClientSupported(ClientIndex client) const;
+	void OnClientDisconnecting(ClientIndex client);
 
-	bool SetPlayerLatency(int client, float lagTime);
-	void ClearPlayerLatency(int client);
+	bool SetPlayerLatency(ClientIndex client, LagMilliseconds lagTime);
+	void ClearPlayerLatency(ClientIndex client);
+	bool SetPlayerPacketLoss(ClientIndex client, PacketLossPercent packetLossPercent);
+	void ClearPlayerPacketLoss(ClientIndex client);
+	void ClearAllPlayerProfiles();
 	void ClearAllPlayerLatencies();
 
-	float GetPlayerLatency(int client) const;
-	bool HasPlayerLatency(int client) const;
-	int GetLaggedClientCount() const;
+	LagMilliseconds GetPlayerLatency(ClientIndex client) const;
+	bool HasPlayerLatency(ClientIndex client) const;
+	PacketLossPercent GetPlayerPacketLoss(ClientIndex client) const;
+	bool HasPlayerPacketLoss(ClientIndex client) const;
+	ProfileCount GetLaggedClientCount() const;
 };

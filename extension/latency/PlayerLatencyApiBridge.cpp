@@ -2,6 +2,7 @@
 
 namespace {
 constexpr int kLatencyForwardParamCount = 4;
+constexpr int kProfileForwardParamCount = 6;
 }
 
 bool PlayerLatencyApiBridge::Initialize()
@@ -15,17 +16,19 @@ bool PlayerLatencyApiBridge::Initialize()
 		Param_Float,
 		Param_FloatByRef,
 		Param_Cell);
-	m_OnPlayerLatencyChanged = forwards->CreateForward(
-		"CFakeLag_OnPlayerLatencyChanged",
+	m_OnPlayerProfileChanged = forwards->CreateForward(
+		"CFakeLag_OnPlayerProfileChanged",
 		ET_Ignore,
-		kLatencyForwardParamCount,
+		kProfileForwardParamCount,
 		nullptr,
 		Param_Cell,
 		Param_Float,
+		Param_Cell,
 		Param_Float,
+		Param_Cell,
 		Param_Cell);
 
-	if (m_OnSetPlayerLatency == nullptr || m_OnPlayerLatencyChanged == nullptr) {
+	if (m_OnSetPlayerLatency == nullptr || m_OnPlayerProfileChanged == nullptr) {
 		Shutdown();
 		return false;
 	}
@@ -40,9 +43,9 @@ void PlayerLatencyApiBridge::Shutdown()
 		m_OnSetPlayerLatency = nullptr;
 	}
 
-	if (m_OnPlayerLatencyChanged != nullptr) {
-		forwards->ReleaseForward(m_OnPlayerLatencyChanged);
-		m_OnPlayerLatencyChanged = nullptr;
+	if (m_OnPlayerProfileChanged != nullptr) {
+		forwards->ReleaseForward(m_OnPlayerProfileChanged);
+		m_OnPlayerProfileChanged = nullptr;
 	}
 }
 
@@ -65,15 +68,17 @@ bool PlayerLatencyApiBridge::OnSetPlayerLatency(int client, float oldLag, float*
 	return result < Pl_Handled;
 }
 
-void PlayerLatencyApiBridge::OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason)
+void PlayerLatencyApiBridge::OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason)
 {
-	if (m_OnPlayerLatencyChanged == nullptr || m_OnPlayerLatencyChanged->GetFunctionCount() == 0) {
+	if (m_OnPlayerProfileChanged == nullptr || m_OnPlayerProfileChanged->GetFunctionCount() == 0) {
 		return;
 	}
 
-	m_OnPlayerLatencyChanged->PushCell(client);
-	m_OnPlayerLatencyChanged->PushFloat(oldLag);
-	m_OnPlayerLatencyChanged->PushFloat(newLag);
-	m_OnPlayerLatencyChanged->PushCell(static_cast<cell_t>(reason));
-	m_OnPlayerLatencyChanged->Execute();
+	m_OnPlayerProfileChanged->PushCell(client);
+	m_OnPlayerProfileChanged->PushFloat(oldLag);
+	m_OnPlayerProfileChanged->PushCell(oldPacketLossPercent);
+	m_OnPlayerProfileChanged->PushFloat(newLag);
+	m_OnPlayerProfileChanged->PushCell(newPacketLossPercent);
+	m_OnPlayerProfileChanged->PushCell(static_cast<cell_t>(reason));
+	m_OnPlayerProfileChanged->Execute();
 }

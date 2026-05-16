@@ -109,7 +109,7 @@ public Action CFakeLag_OnSetPlayerLatency(int client, float oldLag, float &newLa
 	return result;
 }
 
-public void CFakeLag_OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason)
+public void CFakeLag_OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason)
 {
 	if (oldLag != newLag)
 	{
@@ -138,10 +138,12 @@ public void CFakeLag_OnPlayerLatencyChanged(int client, float oldLag, float newL
 		LogMessage("[player_fakelag] Preserved persisted fakelag for %L while active latency was cleared implicitly (reason=%d)", client, reason);
 	}
 
-	Call_StartForward(g_FwdOnPlayerLatencyChanged);
+	Call_StartForward(g_FwdOnPlayerProfileChanged);
 	Call_PushCell(client);
 	Call_PushFloat(oldLag);
+	Call_PushCell(oldPacketLossPercent);
 	Call_PushFloat(newLag);
+	Call_PushCell(newPacketLossPercent);
 	Call_PushCell(reason);
 	Call_Finish();
 }

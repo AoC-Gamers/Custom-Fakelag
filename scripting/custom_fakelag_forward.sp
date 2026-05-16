@@ -76,7 +76,13 @@ public Action CFakeLag_OnSetPlayerLatency(int client, float oldLag, float &newLa
 	return Plugin_Changed;
 }
 
-public void CFakeLag_OnPlayerLatencyChanged(int client, float oldLag, float newLag, CFakeLagChangeReason reason)
+public void CFakeLag_OnPlayerProfileChanged(
+	int client,
+	float oldLag,
+	int oldPacketLossPercent,
+	float newLag,
+	int newPacketLossPercent,
+	CFakeLagChangeReason reason)
 {
 	if (!g_CvarEnable.BoolValue || !g_CvarVerbose.BoolValue) {
 		return;
@@ -86,10 +92,12 @@ public void CFakeLag_OnPlayerLatencyChanged(int client, float oldLag, float newL
 	GetChangeReasonName(reason, reasonName, sizeof(reasonName));
 
 	LogMessage(
-		"Fakelag changed for %L: %.1fms -> %.1fms (%s)",
+		"Fakelag profile changed for %L: %.1fms/%d%% -> %.1fms/%d%% (%s)",
 		client,
 		oldLag,
+		oldPacketLossPercent,
 		newLag,
+		newPacketLossPercent,
 		reasonName);
 }
 
