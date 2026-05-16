@@ -121,6 +121,27 @@ stock void FakelagGetPacketLossModeName(int client, CFakeLagPacketLossMode mode,
 	}
 }
 
+stock void FakelagQueueApplyDefaultPacketLossMode()
+{
+	if (g_DefaultPacketLossModeApplyQueued)
+	{
+		if (FakelagIsDebugEnabled())
+		{
+			LogMessage("[player_fakelag] Default packet loss mode apply already queued");
+		}
+		return;
+	}
+
+	g_DefaultPacketLossModeApplyQueued = true;
+	RequestFrame(FakelagApplyDefaultPacketLossModeOnNextFrame);
+}
+
+void FakelagApplyDefaultPacketLossModeOnNextFrame(any data)
+{
+	g_DefaultPacketLossModeApplyQueued = false;
+	FakelagApplyDefaultPacketLossMode();
+}
+
 stock void FakelagApplyDefaultPacketLossMode()
 {
 	if (g_CvarDefaultPacketLossMode == null)
@@ -129,12 +150,134 @@ stock void FakelagApplyDefaultPacketLossMode()
 	}
 
 	CFakeLagPacketLossMode mode = view_as<CFakeLagPacketLossMode>(g_CvarDefaultPacketLossMode.IntValue);
-	if (CFakeLag_GetPacketLossMode() == mode)
+	CFakeLagPacketLossMode currentMode = CFakeLag_GetPacketLossMode();
+	if (currentMode == mode)
 	{
+		if (FakelagIsDebugEnabled())
+		{
+			LogMessage("[player_fakelag] Packet loss mode already matches default (%d); skipping mode-change flow", view_as<int>(mode));
+		}
 		return;
 	}
 
+	if (FakelagIsDebugEnabled())
+	{
+		LogMessage("[player_fakelag] Applying default packet loss mode change: current=%d target=%d", view_as<int>(currentMode), view_as<int>(mode));
+	}
+
+	FakelagSnapshotProfilesForModeChange();
 	CFakeLag_SetPacketLossMode(mode);
+	FakelagQueueModeChangeRestore();
+}
+
+stock void FakelagSnapshotProfilesForModeChange()
+{
+	g_ModeChangeRestorePending = false;
+	int snapshotCount = 0;
+
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		g_ModeChangeRestoreLag[client] = 0.0;
+		g_ModeChangeRestoreLoss[client] = 0;
+		g_ModeChangeRestoreUserId[client] = 0;
+
+		if (!IsHumanInGame(client))
+		{
+			continue;
+		}
+
+		PlayerNetworkProfile profile;
+		if (!FakelagGetNetworkProfile(client, profile))
+		{
+			continue;
+		}
+
+		if (profile.lagMs <= 0.0)
+		{
+			continue;
+		}
+
+		g_ModeChangeRestoreLag[client] = profile.lagMs;
+		g_ModeChangeRestoreLoss[client] = profile.packetLossPercent;
+		g_ModeChangeRestoreUserId[client] = GetClientUserId(client);
+		g_ModeChangeRestorePending = true;
+		snapshotCount++;
+
+		if (FakelagIsDebugEnabled())
+		{
+			LogMessage("[player_fakelag] Snapshot fakelag profile for %L before mode change: lag=%.1fms loss=%d%% userid=%d", client, profile.lagMs, profile.packetLossPercent, g_ModeChangeRestoreUserId[client]);
+		}
+	}
+
+	if (FakelagIsDebugEnabled())
+	{
+		LogMessage("[player_fakelag] Mode-change snapshot completed: %d active profile(s) captured", snapshotCount);
+	}
+}
+
+stock void FakelagQueueModeChangeRestore()
+{
+	if (!g_ModeChangeRestorePending)
+	{
+		if (FakelagIsDebugEnabled())
+		{
+			LogMessage("[player_fakelag] No active fakelag profiles to restore after mode change");
+		}
+		return;
+	}
+
+	if (FakelagIsDebugEnabled())
+	{
+		LogMessage("[player_fakelag] Scheduling mode-change profile restore on next frame");
+	}
+
+	RequestFrame(FakelagRestoreProfilesAfterModeChange);
+}
+
+void FakelagRestoreProfilesAfterModeChange(any data)
+{
+	int restoredCount = 0;
+	int skippedCount = 0;
+
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		float lagMs = g_ModeChangeRestoreLag[client];
+		int packetLossPercent = g_ModeChangeRestoreLoss[client];
+		int userId = g_ModeChangeRestoreUserId[client];
+
+		g_ModeChangeRestoreLag[client] = 0.0;
+		g_ModeChangeRestoreLoss[client] = 0;
+		g_ModeChangeRestoreUserId[client] = 0;
+
+		if (lagMs <= 0.0 || userId <= 0)
+		{
+			continue;
+		}
+
+		int currentClient = GetClientOfUserId(userId);
+		if (currentClient <= 0 || !FakelagCanApplyLatencyToClient(currentClient))
+		{
+			skippedCount++;
+			if (FakelagIsDebugEnabled())
+			{
+				LogMessage("[player_fakelag] Skipped mode-change restore for userid=%d: client unavailable or ineligible", userId);
+			}
+			continue;
+		}
+
+		FakelagApplyNetworkProfile(currentClient, FakelagBuildNetworkProfile(lagMs, packetLossPercent));
+		restoredCount++;
+		if (FakelagIsDebugEnabled())
+		{
+			LogMessage("[player_fakelag] Restored profile after mode change for %L: lag=%.1fms loss=%d%%", currentClient, lagMs, packetLossPercent);
+		}
+	}
+
+	g_ModeChangeRestorePending = false;
+	if (FakelagIsDebugEnabled())
+	{
+		LogMessage("[player_fakelag] Mode-change restore finished: restored=%d skipped=%d", restoredCount, skippedCount);
+	}
 }
 
 stock bool FakelagIsBalanceAudienceClient(int client)

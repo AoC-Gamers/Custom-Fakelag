@@ -25,6 +25,11 @@ ConVar		  g_CvarLossAddedSpanMs			  = null;
 ConVar		  g_CvarLossMaxPercent			  = null;
 ConVar		  g_CvarDefaultPacketLossMode	  = null;
 bool		  g_ForgetLatencyOnNextClear[MAXPLAYERS + 1];
+bool		  g_ModeChangeRestorePending	  = false;
+float		  g_ModeChangeRestoreLag[MAXPLAYERS + 1];
+int			  g_ModeChangeRestoreLoss[MAXPLAYERS + 1];
+int			  g_ModeChangeRestoreUserId[MAXPLAYERS + 1];
+bool		  g_DefaultPacketLossModeApplyQueued = false;
 Handle		  g_LatencySamplingTimer	   = null;
 GlobalForward g_FwdOnSetPlayerLatency	   = null;
 GlobalForward g_FwdOnPlayerProfileChanged  = null;
@@ -88,9 +93,10 @@ public void OnPluginStart()
 	g_CvarLossAddedFloorMs			= CreateConVar("sm_fakelag_loss_added_floor_ms", "20.0", "Minimum added fakelag before artificial packet loss starts contributing.", FCVAR_NOTIFY, true, 0.0);
 	g_CvarLossAddedSpanMs			= CreateConVar("sm_fakelag_loss_added_span_ms", "35.0", "Added fakelag span used to scale artificial packet loss for fakelag balancing.", FCVAR_NOTIFY, true, 1.0);
 	g_CvarLossMaxPercent			= CreateConVar("sm_fakelag_loss_max_percent", "3", "Maximum artificial packet loss percent applied by fakelag balancing.", FCVAR_NOTIFY, true, 0.0, true, 100.0);
-	g_CvarDefaultPacketLossMode		= CreateConVar("sm_fakelag_loss_mode_default", "0", "Default packet loss simulation mode applied by player_fakelag on config execution. 0 = Bernoulli uniforme, 1 = Gilbert-Elliott.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_CvarDefaultPacketLossMode		= CreateConVar("sm_fakelag_loss_mode_default", "1", "Default packet loss simulation mode applied by player_fakelag on config execution. 0 = Bernoulli uniforme, 1 = Gilbert-Elliott.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_CvarSampleWindow.AddChangeHook(FakelagOnSamplingSettingsChanged);
 	g_CvarSampleInterval.AddChangeHook(FakelagOnSamplingSettingsChanged);
+	g_CvarDefaultPacketLossMode.AddChangeHook(FakelagOnDefaultPacketLossModeChanged);
 
 	FakelagStartLatencySampling();
 	AutoExecConfig(true, "player_fakelag");
@@ -109,7 +115,17 @@ public void OnPluginStart()
 
 public void OnConfigsExecuted()
 {
-	FakelagApplyDefaultPacketLossMode();
+	FakelagQueueApplyDefaultPacketLossMode();
+}
+
+public void FakelagOnDefaultPacketLossModeChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+{
+	if (strcmp(oldValue, newValue) == 0)
+	{
+		return;
+	}
+
+	FakelagQueueApplyDefaultPacketLossMode();
 }
 
 public void OnPluginEnd()
