@@ -608,6 +608,54 @@
 		"es"        "{lightgreen}Entradas activas de fakelag:{default} {green}{1}{default}"
 	}
 
+	"ActiveEntriesTitle"
+	{
+		"en"        "Active fakelag entries"
+		"es"        "Fakelag activos"
+	}
+
+	"ConsoleColumnPlayer"
+	{
+		"en"        "Player"
+		"es"        "Jugador"
+	}
+
+	"ConsoleColumnSurvivor"
+	{
+		"en"        "Survivor"
+		"es"        "Survivor"
+	}
+
+	"ConsoleColumnInfected"
+	{
+		"en"        "Infected"
+		"es"        "Infected"
+	}
+
+	"ConsoleColumnAvg"
+	{
+		"en"        "Avg"
+		"es"        "Avg"
+	}
+
+	"ConsoleColumnRaw"
+	{
+		"en"        "Raw"
+		"es"        "Raw"
+	}
+
+	"ConsoleColumnResult"
+	{
+		"en"        "Result"
+		"es"        "Resultado"
+	}
+
+	"ConsoleColumnLoss"
+	{
+		"en"        "Loss"
+		"es"        "Loss"
+	}
+
 	"PlayerEntry"
 	{
 		"#format"   "{1:N},{2:f}"
