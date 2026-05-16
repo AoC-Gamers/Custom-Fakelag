@@ -8,8 +8,8 @@ stock void FakelagReplyPlayerStatus(int client, int target)
 
 	float averagePingRaw	 = FakelagGetClientAveragePingRawMs(target);
 	float averagePingDisplay = FakelagEstimateNetGraphPingForClientMs(target, averagePingRaw);
-	float fakeLag			 = CFakeLag_GetPlayerLatency(target);
-	bool  isLagged			 = CFakeLag_HasPlayerLatency(target);
+	float fakeLag			 = FakelagGetAppliedLagMs(target);
+	bool  isLagged			 = FakelagHasNetworkProfile(target);
 
 	if (!isLagged)
 	{
@@ -99,6 +99,37 @@ stock bool FakelagIsSupportedBalanceTeam(L4DTeam team)
 stock bool IsHumanInGame(int client)
 {
 	return client > 0 && client <= MaxClients && IsClientInGame(client) && !IsFakeClient(client);
+}
+
+stock void FakelagGetPacketLossModeName(int client, CFakeLagPacketLossMode mode, char[] buffer, int maxlen)
+{
+	switch (mode)
+	{
+		case CFakeLagPacketLoss_GilbertElliott:
+		{
+			Format(buffer, maxlen, "%T", "PacketLossModeGilbertElliott", client);
+		}
+		default:
+		{
+			Format(buffer, maxlen, "%T", "PacketLossModeBernoulli", client);
+		}
+	}
+}
+
+stock void FakelagApplyDefaultPacketLossMode()
+{
+	if (g_CvarDefaultPacketLossMode == null)
+	{
+		return;
+	}
+
+	CFakeLagPacketLossMode mode = view_as<CFakeLagPacketLossMode>(g_CvarDefaultPacketLossMode.IntValue);
+	if (CFakeLag_GetPacketLossMode() == mode)
+	{
+		return;
+	}
+
+	CFakeLag_SetPacketLossMode(mode);
 }
 
 stock bool FakelagIsBalanceAudienceClient(int client)

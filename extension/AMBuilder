@@ -9,8 +9,8 @@ sourceFiles = [
   'NET_LagPacket_Detour.cpp',
   'network/LagPacketPolicy.cpp',
   'network/LagSystem.cpp',
-  'latency/PlayerLatencyApiBridge.cpp',
-  'latency/PlayerLatencyService.cpp',
+  'latency/PlayerProfileApiBridge.cpp',
+  'latency/PlayerProfileService.cpp',
   'latency/PlayerLagManager.cpp',
   'cdetour/detours.cpp',
   'asm/asm.c'

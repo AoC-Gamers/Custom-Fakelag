@@ -254,6 +254,15 @@ Valores:
 - `0` = `Bernoulli uniforme`
 - `1` = `Gilbert-Elliott`
 
+El cambio de modo puede hacerse en vivo, pero la implementacion actual lo trata
+de forma estricta:
+
+- si el modo cambia, la extension hace `ResetState()`
+- eso limpia todos los perfiles activos antes de adoptar el nuevo modelo
+
+La razon es evitar mezclar estado interno y trafico retrasado entre modelos
+distintos dentro de la misma sesion.
+
 ### Parametros efectivos del modo Gilbert-Elliott
 
 La implementacion actual usa:

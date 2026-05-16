@@ -184,8 +184,7 @@ El include de la extension expone un perfil compuesto:
 Helpers disponibles:
 
 - `CFakeLag_BuildNetworkProfile(float lagMs, int lossPercent)`
-- `CFakeLag_GetPlayerProfile(int client, CFakeLagNetworkProfile &profile)`
-- `CFakeLag_ApplyPlayerProfile(int client, const CFakeLagNetworkProfile profile)`
+- `CFakeLag_GetPlayerProfile(int client, CFakeLagNetworkProfile profile)`
 - `CFakeLag_ClearPlayerProfile(int client)`
 
 Eso permite trabajar con un solo perfil logico por jugador, aunque

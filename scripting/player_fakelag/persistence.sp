@@ -43,7 +43,7 @@ stock void FakelagSetDisconnectedState(int client, bool disconnected)
 
 	if (disconnected)
 	{
-		if (CFakeLag_HasPlayerLatency(client) || g_PlayerLatencyByAccountId.ContainsKey(accountKey))
+		if (FakelagHasNetworkProfile(client) || g_PlayerLatencyByAccountId.ContainsKey(accountKey))
 		{
 			g_PlayerDisconnectedByAccountId.SetValue(accountKey, 1);
 			if (FakelagIsDebugEnabled())
@@ -148,7 +148,7 @@ stock void FakelagRestoreClientLatencyIfEligible(int client)
 		return;
 	}
 
-	if (CFakeLag_HasPlayerLatency(client))
+	if (FakelagHasNetworkProfile(client))
 	{
 		if (FakelagIsDebugEnabled())
 		{

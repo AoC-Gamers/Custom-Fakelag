@@ -96,8 +96,8 @@ extension/
 ├── extension.cpp
 ├── NET_LagPacket_Detour.cpp
 ├── latency/
-│   ├── PlayerLatencyApiBridge.cpp
-│   ├── PlayerLatencyService.cpp
+│   ├── PlayerProfileApiBridge.cpp
+│   ├── PlayerProfileService.cpp
 │   └── PlayerLagManager.cpp
 └── network/
     ├── LagPacketPolicy.cpp
@@ -184,15 +184,10 @@ enum struct CFakeLagNetworkProfile
     int packetLossPercent;
 };
 
-native void CFakeLag_SetPlayerLatency(int client, float lagTime);
-native float CFakeLag_GetPlayerLatency(int client);
-native bool CFakeLag_HasPlayerLatency(int client);
-native void CFakeLag_ClearPlayerLatency(int client);
-
-native void CFakeLag_SetPlayerPacketLoss(int client, int packetLossPercent);
-native int CFakeLag_GetPlayerPacketLoss(int client);
-native bool CFakeLag_HasPlayerPacketLoss(int client);
-native void CFakeLag_ClearPlayerPacketLoss(int client);
+native void CFakeLag_SetPlayerProfile(int client, float lagTime, int packetLossPercent);
+native bool CFakeLag_GetPlayerProfile(int client, CFakeLagNetworkProfile profile);
+native bool CFakeLag_HasPlayerProfile(int client);
+native void CFakeLag_ClearPlayerProfile(int client);
 
 native void CFakeLag_SetPacketLossMode(CFakeLagPacketLossMode mode);
 native CFakeLagPacketLossMode CFakeLag_GetPacketLossMode();
@@ -200,28 +195,21 @@ native CFakeLagPacketLossMode CFakeLag_GetPacketLossMode();
 native void CFakeLag_ClearAllPlayerProfiles();
 native void CFakeLag_ResetState();
 native int CFakeLag_GetProfiledClientCount();
-
-native void CFakeLag_ClearAllPlayerLatencies();
 native bool CFakeLag_IsClientSupported(int client);
-native int CFakeLag_GetLaggedClientCount();
 ```
 
 Helpers stock relevantes:
 
 ```sourcepawn
 stock CFakeLagNetworkProfile CFakeLag_BuildNetworkProfile(float lagMs, int packetLossPercent);
-stock void CFakeLag_GetPlayerProfile(int client, CFakeLagNetworkProfile profile);
-stock void CFakeLag_ApplyPlayerProfile(int client, const CFakeLagNetworkProfile profile);
-stock void CFakeLag_ClearPlayerProfile(int client);
 ```
 
 Notas:
 
-- `CFakeLag_ClearAllPlayerProfiles()` es la API preferida actual.
+- la API pública gira alrededor de `CFakeLagNetworkProfile`.
 - `CFakeLag_ResetState()` deja la extensión como si nunca hubiera aplicado fakelag.
-- `CFakeLag_ClearAllPlayerLatencies()` se mantiene como alias legacy.
-- `CFakeLag_GetProfiledClientCount()` es la API preferida actual.
-- `CFakeLag_GetLaggedClientCount()` se mantiene como alias legacy.
+- `CFakeLag_ClearAllPlayerProfiles()` limpia todos los perfiles activos.
+- `CFakeLag_GetProfiledClientCount()` devuelve la cantidad de perfiles activos.
 
 Forwards disponibles:
 
@@ -241,6 +229,11 @@ forward void CFakeLag_OnPlayerProfileChanged(
     int newPacketLossPercent,
     CFakeLagChangeReason reason
 );
+
+forward void CFakeLag_OnPacketLossModeChanged(
+    CFakeLagPacketLossMode oldMode,
+    CFakeLagPacketLossMode newMode
+);
 ```
 
 `CFakeLag_OnSetPlayerLatency` permite modificar o bloquear un cambio antes de
@@ -248,6 +241,9 @@ que se aplique.
 
 `CFakeLag_OnPlayerProfileChanged` notifica después de que el perfil fue aplicado,
 incluyendo `lag` y `packet loss`.
+
+`CFakeLag_OnPacketLossModeChanged` notifica después de que la extensión cambia
+de modelo de pérdida y resetea el estado activo.
 
 ## Packet Loss Modes
 
@@ -264,6 +260,22 @@ Valores:
 
 El plugin decide cuánto `%` de packet loss aplicar. La extensión decide cómo
 materializar ese `%` en el flujo real de paquetes.
+
+Cambiar `sm_custom_fakelag_loss_mode` en vivo es posible, pero el cambio es
+estricto: si el modo cambia, la extensión limpia todo el estado activo de
+fakelag antes de aplicar el nuevo modo. Esto evita mezclar perfiles y estado
+interno entre modelos distintos durante la misma sesión.
+
+Para evitar depender del orden de carga del servidor, `player_fakelag` expone
+su propio valor por defecto en:
+
+```text
+sm_fakelag_loss_mode_default
+```
+
+Ese valor se aplica en `OnConfigsExecuted()` desde el autoexec del plugin
+(`cfg/sourcemod/player_fakelag.cfg`), por lo que es la forma recomendada de
+fijar el modo persistente del servidor.
 
 ## Plugin `player_fakelag`
 

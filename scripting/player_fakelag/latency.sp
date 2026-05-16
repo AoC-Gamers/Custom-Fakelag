@@ -148,7 +148,7 @@ stock float FakelagGetClientBasePingRawMs(int client)
 		return rawPingMs;
 	}
 
-	float appliedFakeLag = CFakeLag_HasPlayerLatency(client) ? CFakeLag_GetPlayerLatency(client) : 0.0;
+	float appliedFakeLag = FakelagGetAppliedLagMs(client);
 	float basePingMs	 = rawPingMs - appliedFakeLag;
 	return basePingMs < 0.0 ? 0.0 : basePingMs;
 }
@@ -241,12 +241,49 @@ stock PlayerNetworkProfile FakelagBuildNetworkProfile(float lagMs, int packetLos
 
 stock void FakelagApplyNetworkProfile(int client, const PlayerNetworkProfile profile)
 {
-	CFakeLag_ApplyPlayerProfile(client, profile);
+	CFakeLag_SetPlayerProfile(client, profile.lagMs, profile.packetLossPercent);
 }
 
 stock void FakelagClearNetworkProfile(int client)
 {
 	CFakeLag_ClearPlayerProfile(client);
+}
+
+stock bool FakelagHasNetworkProfile(int client)
+{
+	return CFakeLag_HasPlayerProfile(client);
+}
+
+stock bool FakelagGetNetworkProfile(int client, PlayerNetworkProfile profile)
+{
+	return CFakeLag_GetPlayerProfile(client, profile);
+}
+
+stock float FakelagGetAppliedLagMs(int client)
+{
+	PlayerNetworkProfile profile;
+	if (!FakelagGetNetworkProfile(client, profile))
+	{
+		return 0.0;
+	}
+
+	return profile.lagMs;
+}
+
+stock int FakelagGetAppliedPacketLossPercent(int client)
+{
+	PlayerNetworkProfile profile;
+	if (!FakelagGetNetworkProfile(client, profile))
+	{
+		return 0;
+	}
+
+	return profile.packetLossPercent;
+}
+
+stock int FakelagGetActiveProfileCount()
+{
+	return CFakeLag_GetProfiledClientCount();
 }
 
 stock float FakelagGetClientAveragePingMs(int client)

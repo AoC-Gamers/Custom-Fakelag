@@ -1,11 +1,11 @@
-#include "PlayerLatencyService.h"
+#include "PlayerProfileService.h"
 #include "../NET_LagPacket_Detour.h"
 
 namespace {
 constexpr float kNoLag = 0.0f;
 }
 
-bool PlayerLatencyService::TryGetSupportedClient(int client, IGamePlayer** player) const
+bool PlayerProfileService::TryGetSupportedClient(int client, IGamePlayer** player) const
 {
 	if (m_ClientRegistry == nullptr) {
 		if (player != nullptr) {
@@ -17,7 +17,7 @@ bool PlayerLatencyService::TryGetSupportedClient(int client, IGamePlayer** playe
 	return m_ClientRegistry->GetClientEligibility(client, player) == ClientEligibility::Supported;
 }
 
-bool PlayerLatencyService::ThrowIfUnsupportedClient(IPluginContext* context, int client) const
+bool PlayerProfileService::ThrowIfUnsupportedClient(IPluginContext* context, int client) const
 {
 	if (context == nullptr || m_ClientRegistry == nullptr) {
 		return false;
@@ -37,12 +37,12 @@ bool PlayerLatencyService::ThrowIfUnsupportedClient(IPluginContext* context, int
 	return false;
 }
 
-bool PlayerLatencyService::IsClientSupported(int client) const
+bool PlayerProfileService::IsClientSupported(int client) const
 {
 	return TryGetSupportedClient(client);
 }
 
-void PlayerLatencyService::OnClientDisconnecting(int client)
+void PlayerProfileService::OnClientDisconnecting(int client)
 {
 	if (m_LagManager == nullptr) {
 		return;
@@ -60,7 +60,7 @@ void PlayerLatencyService::OnClientDisconnecting(int client)
 	NotifyPlayerProfileChanged(client, oldLag, oldPacketLossPercent, kNoLag, 0, CFakeLagChangeReason::Disconnect);
 }
 
-bool PlayerLatencyService::SetPlayerLatency(int client, float lagTime)
+bool PlayerProfileService::SetPlayerLatency(int client, float lagTime)
 {
 	return ApplyPlayerLatencyChange(
 		client,
@@ -69,12 +69,12 @@ bool PlayerLatencyService::SetPlayerLatency(int client, float lagTime)
 		true);
 }
 
-void PlayerLatencyService::ClearPlayerLatency(int client)
+void PlayerProfileService::ClearPlayerLatency(int client)
 {
 	ApplyPlayerLatencyChange(client, 0.0f, CFakeLagChangeReason::Clear, true);
 }
 
-bool PlayerLatencyService::SetPlayerProfile(int client, float lagTime, int packetLossPercent)
+bool PlayerProfileService::SetPlayerProfile(int client, float lagTime, int packetLossPercent)
 {
 	return ApplyPlayerProfileChange(
 		client,
@@ -84,7 +84,7 @@ bool PlayerLatencyService::SetPlayerProfile(int client, float lagTime, int packe
 		true);
 }
 
-bool PlayerLatencyService::SetPlayerPacketLoss(int client, int packetLossPercent)
+bool PlayerProfileService::SetPlayerPacketLoss(int client, int packetLossPercent)
 {
 	if (m_LagManager == nullptr) {
 		return false;
@@ -104,7 +104,7 @@ bool PlayerLatencyService::SetPlayerPacketLoss(int client, int packetLossPercent
 	return changed;
 }
 
-void PlayerLatencyService::ClearPlayerPacketLoss(int client)
+void PlayerProfileService::ClearPlayerPacketLoss(int client)
 {
 	if (m_LagManager == nullptr) {
 		return;
@@ -114,7 +114,7 @@ void PlayerLatencyService::ClearPlayerPacketLoss(int client)
 	LagDetour_ClearPacketLossState();
 }
 
-void PlayerLatencyService::ClearAllPlayerProfiles()
+void PlayerProfileService::ClearAllPlayerProfiles()
 {
 	if (m_LagManager == nullptr || m_ClientRegistry == nullptr) {
 		return;
@@ -139,12 +139,12 @@ void PlayerLatencyService::ClearAllPlayerProfiles()
 	LagDetour_ClearPacketLossState();
 }
 
-void PlayerLatencyService::ClearAllPlayerLatencies()
+void PlayerProfileService::ClearAllPlayerLatencies()
 {
 	ClearAllPlayerProfiles();
 }
 
-float PlayerLatencyService::GetPlayerLatency(int client) const
+float PlayerProfileService::GetPlayerLatency(int client) const
 {
 	if (m_LagManager == nullptr) {
 		return kNoLag;
@@ -153,12 +153,12 @@ float PlayerLatencyService::GetPlayerLatency(int client) const
 	return m_LagManager->GetPlayerLag(client);
 }
 
-bool PlayerLatencyService::HasPlayerLatency(int client) const
+bool PlayerProfileService::HasPlayerLatency(int client) const
 {
 	return m_LagManager != nullptr && m_LagManager->HasPlayerLag(client);
 }
 
-PacketLossPercent PlayerLatencyService::GetPlayerPacketLoss(ClientIndex client) const
+PacketLossPercent PlayerProfileService::GetPlayerPacketLoss(ClientIndex client) const
 {
 	if (m_LagManager == nullptr) {
 		return 0;
@@ -167,12 +167,12 @@ PacketLossPercent PlayerLatencyService::GetPlayerPacketLoss(ClientIndex client) 
 	return m_LagManager->GetPlayerPacketLoss(client);
 }
 
-bool PlayerLatencyService::HasPlayerPacketLoss(ClientIndex client) const
+bool PlayerProfileService::HasPlayerPacketLoss(ClientIndex client) const
 {
 	return m_LagManager != nullptr && m_LagManager->HasPlayerPacketLoss(client);
 }
 
-ProfileCount PlayerLatencyService::GetLaggedClientCount() const
+ProfileCount PlayerProfileService::GetLaggedClientCount() const
 {
 	if (m_LagManager == nullptr) {
 		return 0;
@@ -181,7 +181,7 @@ ProfileCount PlayerLatencyService::GetLaggedClientCount() const
 	return m_LagManager->GetLagCount();
 }
 
-bool PlayerLatencyService::ApplyPlayerLatencyChange(ClientIndex client, LagMilliseconds lagTime, CFakeLagChangeReason reason, bool allowPreForward)
+bool PlayerProfileService::ApplyPlayerLatencyChange(ClientIndex client, LagMilliseconds lagTime, CFakeLagChangeReason reason, bool allowPreForward)
 {
 	if (m_LagManager == nullptr) {
 		return false;
@@ -210,7 +210,7 @@ bool PlayerLatencyService::ApplyPlayerLatencyChange(ClientIndex client, LagMilli
 	return true;
 }
 
-bool PlayerLatencyService::ApplyPlayerProfileChange(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent, CFakeLagChangeReason reason, bool allowPreForward)
+bool PlayerProfileService::ApplyPlayerProfileChange(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent, CFakeLagChangeReason reason, bool allowPreForward)
 {
 	if (m_LagManager == nullptr) {
 		return false;
@@ -244,7 +244,7 @@ bool PlayerLatencyService::ApplyPlayerProfileChange(ClientIndex client, LagMilli
 	return true;
 }
 
-void PlayerLatencyService::NotifyPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason) const
+void PlayerProfileService::NotifyPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason) const
 {
 	if (m_Hooks == nullptr) {
 		return;

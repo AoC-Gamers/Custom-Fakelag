@@ -4,10 +4,10 @@
 #include <mathlib.h>
 #include "smsdk_ext.h"
 #include "cdetour/detours.h"
-#include "latency/PlayerLatencyApiBridge.h"
-#include "latency/PlayerLatencyService.h"
+#include "latency/PlayerProfileApiBridge.h"
+#include "latency/PlayerProfileService.h"
 
-enum class CFakeLagPacketLossMode {
+enum class CFakeLagPacketLossMode : int {
 	BernoulliUniform = 0,
 	GilbertElliott = 1
 };
@@ -20,8 +20,8 @@ class CustomFakelag : public SDKExtension,
 private:
 	EngineClientNetAdrResolver* m_NetAdrResolver = nullptr;
 	PlayerLagManager* m_LagManager = nullptr;
-	PlayerLatencyService* m_PlayerLatencyService = nullptr;
-	PlayerLatencyApiBridge* m_PlayerLatencyApiBridge = nullptr;
+	PlayerProfileService* m_PlayerProfileService = nullptr;
+	PlayerProfileApiBridge* m_PlayerProfileApiBridge = nullptr;
 
 	void OnClientNetAdrResolutionFailed(int client) override;
 	void OnPlayerLagChanged(int client, const dumb_netadr_t& netadr, float lagTime) override;
@@ -29,24 +29,17 @@ private:
 	int GetMaxClients() const override;
 
 public:
-	void SetPlayerLatency(int client, float lagTime);
-	float GetPlayerLatency(int client);
-	bool HasPlayerLatency(int client) const;
-	void ClearPlayerLatency(int client);
 	void SetPlayerProfile(int client, float lagTime, int packetLossPercent);
-	void SetPlayerPacketLoss(int client, int packetLossPercent);
-	int GetPlayerPacketLoss(int client) const;
-	bool HasPlayerPacketLoss(int client) const;
-	void ClearPlayerPacketLoss(int client);
+	bool GetPlayerProfile(int client, float& lagTime, int& packetLossPercent) const;
+	bool HasPlayerProfile(int client) const;
+	void ClearPlayerProfile(int client);
 	void SetPacketLossMode(CFakeLagPacketLossMode mode);
 	CFakeLagPacketLossMode GetPacketLossMode() const;
 	void ClearAllPlayerProfiles();
-	void ClearAllPlayerLatencies();
 	void ResetState();
 	bool IsClientSupported(int client) const;
 	bool ThrowIfUnsupportedClient(IPluginContext* context, int client) const;
 	int GetProfiledClientCount() const;
-	int GetLaggedClientCount() const;
 
 public:
 	bool SDK_OnLoad(char* error, size_t maxlen, bool late) override;

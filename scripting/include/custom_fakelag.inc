@@ -25,15 +25,6 @@ enum struct CFakeLagNetworkProfile
 }
 
 /**
- * @brief Set custom fake latency for the given player.
- *
- * @param client	Client index of the player to lag.
- * @param lagTime Amount of time to lag the packet, in milliseconds.
- *                Values less than or equal to 0 clear any existing fakelag.
- */
-native void CFakeLag_SetPlayerLatency(int client, float lagTime);
-
-/**
  * @brief Set the full fakelag profile for the given player.
  *
  * Applies artificial latency and artificial packet loss in a single operation.
@@ -45,57 +36,28 @@ native void CFakeLag_SetPlayerLatency(int client, float lagTime);
 native void CFakeLag_SetPlayerProfile(int client, float lagTime, int packetLossPercent);
 
 /**
- * @brief Get custom fake latency amount for the given player.
- *
- * @param client	Client index of the player to check latency for.
- */
- native float CFakeLag_GetPlayerLatency(int client);
-
-/**
- * @brief Check whether the player currently has fake latency applied.
- *
- * @param client	Client index of the player to check.
- * @return		True if fake latency is currently active for the player.
- */
-native bool CFakeLag_HasPlayerLatency(int client);
-
-/**
- * @brief Clear custom fake latency for the given player.
- *
- * @param client	Client index of the player to clear.
- */
-native void CFakeLag_ClearPlayerLatency(int client);
-
-/**
- * @brief Set artificial packet loss percentage for the given player.
- *
- * @param client			Client index of the player to affect.
- * @param packetLossPercent	Packet loss percentage to apply, from 0 to 100.
- */
-native void CFakeLag_SetPlayerPacketLoss(int client, int packetLossPercent);
-
-/**
- * @brief Get artificial packet loss percentage for the given player.
+ * @brief Read the full fakelag profile for the given player.
  *
  * @param client	Client index of the player to inspect.
- * @return		Current artificial packet loss percentage.
+ * @param profile	Output profile struct.
+ * @return		True if the player currently has an active profile.
  */
-native int CFakeLag_GetPlayerPacketLoss(int client);
+native bool CFakeLag_GetPlayerProfile(int client, CFakeLagNetworkProfile profile);
 
 /**
- * @brief Check whether the player currently has artificial packet loss applied.
+ * @brief Check whether the player currently has an active fakelag profile.
  *
  * @param client	Client index of the player to check.
- * @return		True if artificial packet loss is currently active for the player.
+ * @return		True if the player has artificial latency, packet loss, or both.
  */
-native bool CFakeLag_HasPlayerPacketLoss(int client);
+native bool CFakeLag_HasPlayerProfile(int client);
 
 /**
- * @brief Clear artificial packet loss for the given player.
+ * @brief Clear the full fakelag profile for the given player.
  *
  * @param client	Client index of the player to clear.
  */
-native void CFakeLag_ClearPlayerPacketLoss(int client);
+native void CFakeLag_ClearPlayerProfile(int client);
 
 /**
  * @brief Set the packet loss simulation mode used by the extension.
@@ -128,13 +90,6 @@ native void CFakeLag_ClearAllPlayerProfiles();
 native void CFakeLag_ResetState();
 
 /**
- * @brief Clear all stored fake latency entries.
- *
- * Legacy alias for CFakeLag_ClearAllPlayerProfiles().
- */
-native void CFakeLag_ClearAllPlayerLatencies();
-
-/**
  * @brief Check whether a client index can be targeted by Custom Fakelag.
  *
  * @param client	Client index to test.
@@ -152,15 +107,6 @@ native bool CFakeLag_IsClientSupported(int client);
 native int CFakeLag_GetProfiledClientCount();
 
 /**
- * @brief Get the number of active fake latency entries.
- *
- * @return		Number of active lagged clients currently tracked.
- *
- * Legacy alias for CFakeLag_GetProfiledClientCount().
- */
-native int CFakeLag_GetLaggedClientCount();
-
-/**
  * @brief Build a network profile value from lag and packet loss settings.
  *
  * @param lagMs				Artificial latency in milliseconds.
@@ -173,40 +119,6 @@ stock CFakeLagNetworkProfile CFakeLag_BuildNetworkProfile(float lagMs, int packe
 	profile.lagMs = lagMs;
 	profile.packetLossPercent = packetLossPercent;
 	return profile;
-}
-
-/**
- * @brief Read the current fakelag profile for a player.
- *
- * @param client	Client index of the player to inspect.
- * @param profile	Output profile struct.
- */
-stock void CFakeLag_GetPlayerProfile(int client, CFakeLagNetworkProfile profile)
-{
-	profile.lagMs = CFakeLag_GetPlayerLatency(client);
-	profile.packetLossPercent = CFakeLag_GetPlayerPacketLoss(client);
-}
-
-/**
- * @brief Apply a full fakelag profile to a player.
- *
- * @param client	Client index of the player to affect.
- * @param profile	Profile to apply.
- */
-stock void CFakeLag_ApplyPlayerProfile(int client, const CFakeLagNetworkProfile profile)
-{
-	CFakeLag_SetPlayerProfile(client, profile.lagMs, profile.packetLossPercent);
-}
-
-/**
- * @brief Clear the full fakelag profile for a player.
- *
- * @param client	Client index of the player to clear.
- */
-stock void CFakeLag_ClearPlayerProfile(int client)
-{
-	CFakeLag_ClearPlayerPacketLoss(client);
-	CFakeLag_ClearPlayerLatency(client);
 }
 
 /**
@@ -232,6 +144,17 @@ forward Action CFakeLag_OnSetPlayerLatency(int client, float oldLag, float &newL
  * @param reason	Reason for the change.
  */
 forward void CFakeLag_OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason);
+
+/**
+ * @brief Called after the extension changes packet loss simulation mode.
+ *
+ * Changing mode resets all active fakelag state before the new mode is
+ * adopted.
+ *
+ * @param oldMode	Previous packet loss simulation mode.
+ * @param newMode	New packet loss simulation mode.
+ */
+forward void CFakeLag_OnPacketLossModeChanged(CFakeLagPacketLossMode oldMode, CFakeLagPacketLossMode newMode);
 
 
 public Extension __ext_custom_fakelag =

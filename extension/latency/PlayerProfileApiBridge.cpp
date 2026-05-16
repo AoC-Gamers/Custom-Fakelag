@@ -1,11 +1,12 @@
-#include "PlayerLatencyApiBridge.h"
+#include "PlayerProfileApiBridge.h"
 
 namespace {
 constexpr int kLatencyForwardParamCount = 4;
 constexpr int kProfileForwardParamCount = 6;
+constexpr int kPacketLossModeForwardParamCount = 2;
 }
 
-bool PlayerLatencyApiBridge::Initialize()
+bool PlayerProfileApiBridge::Initialize()
 {
 	m_OnSetPlayerLatency = forwards->CreateForward(
 		"CFakeLag_OnSetPlayerLatency",
@@ -27,8 +28,15 @@ bool PlayerLatencyApiBridge::Initialize()
 		Param_Float,
 		Param_Cell,
 		Param_Cell);
+	m_OnPacketLossModeChanged = forwards->CreateForward(
+		"CFakeLag_OnPacketLossModeChanged",
+		ET_Ignore,
+		kPacketLossModeForwardParamCount,
+		nullptr,
+		Param_Cell,
+		Param_Cell);
 
-	if (m_OnSetPlayerLatency == nullptr || m_OnPlayerProfileChanged == nullptr) {
+	if (m_OnSetPlayerLatency == nullptr || m_OnPlayerProfileChanged == nullptr || m_OnPacketLossModeChanged == nullptr) {
 		Shutdown();
 		return false;
 	}
@@ -36,7 +44,7 @@ bool PlayerLatencyApiBridge::Initialize()
 	return true;
 }
 
-void PlayerLatencyApiBridge::Shutdown()
+void PlayerProfileApiBridge::Shutdown()
 {
 	if (m_OnSetPlayerLatency != nullptr) {
 		forwards->ReleaseForward(m_OnSetPlayerLatency);
@@ -47,9 +55,14 @@ void PlayerLatencyApiBridge::Shutdown()
 		forwards->ReleaseForward(m_OnPlayerProfileChanged);
 		m_OnPlayerProfileChanged = nullptr;
 	}
+
+	if (m_OnPacketLossModeChanged != nullptr) {
+		forwards->ReleaseForward(m_OnPacketLossModeChanged);
+		m_OnPacketLossModeChanged = nullptr;
+	}
 }
 
-bool PlayerLatencyApiBridge::OnSetPlayerLatency(int client, float oldLag, float* requestedLag, CFakeLagChangeReason reason)
+bool PlayerProfileApiBridge::OnSetPlayerLatency(int client, float oldLag, float* requestedLag, CFakeLagChangeReason reason)
 {
 	if (requestedLag == nullptr) {
 		return false;
@@ -68,7 +81,7 @@ bool PlayerLatencyApiBridge::OnSetPlayerLatency(int client, float oldLag, float*
 	return result < Pl_Handled;
 }
 
-void PlayerLatencyApiBridge::OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason)
+void PlayerProfileApiBridge::OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason)
 {
 	if (m_OnPlayerProfileChanged == nullptr || m_OnPlayerProfileChanged->GetFunctionCount() == 0) {
 		return;
@@ -81,4 +94,15 @@ void PlayerLatencyApiBridge::OnPlayerProfileChanged(int client, float oldLag, in
 	m_OnPlayerProfileChanged->PushCell(newPacketLossPercent);
 	m_OnPlayerProfileChanged->PushCell(static_cast<cell_t>(reason));
 	m_OnPlayerProfileChanged->Execute();
+}
+
+void PlayerProfileApiBridge::OnPacketLossModeChanged(CFakeLagPacketLossMode oldMode, CFakeLagPacketLossMode newMode) const
+{
+	if (m_OnPacketLossModeChanged == nullptr || m_OnPacketLossModeChanged->GetFunctionCount() == 0) {
+		return;
+	}
+
+	m_OnPacketLossModeChanged->PushCell(static_cast<cell_t>(oldMode));
+	m_OnPacketLossModeChanged->PushCell(static_cast<cell_t>(newMode));
+	m_OnPacketLossModeChanged->Execute();
 }

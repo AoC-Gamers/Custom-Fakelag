@@ -22,11 +22,13 @@ ConVar		  g_CvarLossTargetSpanMs		  = null;
 ConVar		  g_CvarLossAddedFloorMs		  = null;
 ConVar		  g_CvarLossAddedSpanMs			  = null;
 ConVar		  g_CvarLossMaxPercent			  = null;
+ConVar		  g_CvarDefaultPacketLossMode	  = null;
 bool		  g_ForgetLatencyOnNextClear[MAXPLAYERS + 1];
 Handle		  g_LatencySamplingTimer	  = null;
 GlobalForward g_FwdOnSetPlayerLatency	  = null;
 GlobalForward g_FwdOnPlayerProfileChanged = null;
 GlobalForward g_FwdOnPluginEnd			  = null;
+GlobalForward g_FwdOnPacketLossModeChanged = null;
 
 #include "player_fakelag/latency.sp"
 #include "player_fakelag/helpers.sp"
@@ -45,6 +47,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int errMax)
 	g_FwdOnSetPlayerLatency		= new GlobalForward("PlayerFakelag_OnSetPlayerLatency", ET_Hook, Param_Cell, Param_Float, Param_FloatByRef, Param_Cell);
 	g_FwdOnPlayerProfileChanged = new GlobalForward("PlayerFakelag_OnPlayerProfileChanged", ET_Ignore, Param_Cell, Param_Float, Param_Cell, Param_Float, Param_Cell, Param_Cell);
 	g_FwdOnPluginEnd			= new GlobalForward("PlayerFakelag_OnPluginEnd", ET_Ignore);
+	g_FwdOnPacketLossModeChanged = new GlobalForward("PlayerFakelag_OnPacketLossModeChanged", ET_Ignore, Param_Cell, Param_Cell);
 
 	RegPluginLibrary("player_fakelag");
 
@@ -56,7 +59,7 @@ public Plugin myinfo =
 	name		= "Per-Player Fakelag",
 	author		= "ProdigySim, lechuga",
 	description = "Admin commands for the Custom Fakelag extension",
-	version		= "1.1",
+	version		= "2.0.0",
 	url			= "https://github.com/AoC-Gamers/L4D2_Custom_Fakelag"
 };
 
@@ -84,10 +87,12 @@ public void OnPluginStart()
 	g_CvarLossAddedFloorMs			= CreateConVar("sm_fakelag_loss_added_floor_ms", "25.0", "Minimum added fakelag before artificial packet loss starts contributing.", FCVAR_NOTIFY, true, 0.0);
 	g_CvarLossAddedSpanMs			= CreateConVar("sm_fakelag_loss_added_span_ms", "35.0", "Added fakelag span used to scale artificial packet loss for fakelag balancing.", FCVAR_NOTIFY, true, 1.0);
 	g_CvarLossMaxPercent			= CreateConVar("sm_fakelag_loss_max_percent", "2", "Maximum artificial packet loss percent applied by fakelag balancing.", FCVAR_NOTIFY, true, 0.0, true, 100.0);
+	g_CvarDefaultPacketLossMode		= CreateConVar("sm_fakelag_loss_mode_default", "0", "Default packet loss simulation mode applied by player_fakelag on config execution. 0 = Bernoulli uniforme, 1 = Gilbert-Elliott.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_CvarSampleWindow.AddChangeHook(FakelagOnSamplingSettingsChanged);
 	g_CvarSampleInterval.AddChangeHook(FakelagOnSamplingSettingsChanged);
 
 	FakelagStartLatencySampling();
+	AutoExecConfig(true, "player_fakelag");
 	
 	RegAdminCmd("sm_fakelag", FakeLagCmd, ADMFLAG_CONFIG, "Set fake lag for a player; use 0 to clear");
 	RegAdminCmd("sm_fakelag_balance", BalanceLagCmd, ADMFLAG_CONFIG, "Balance fake lag using a required mode: global or pairs");
@@ -99,6 +104,11 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_fakelag_status", StatusLagCmd, "Show your fake lag status or, with admin access, another player's status");
 	RegConsoleCmd("sm_fakelag_compare", CompareLagCmd, "Compare your measured latency with another player, or compare two players");
 	RegConsoleCmd("sm_fakelag_vote", BalanceLagVoteCmd, "Start a fake lag balance vote using a required mode: global or pairs");
+}
+
+public void OnConfigsExecuted()
+{
+	FakelagApplyDefaultPacketLossMode();
 }
 
 public void OnPluginEnd()
@@ -117,6 +127,22 @@ public void OnPluginEnd()
 	g_FakeLagBalanceVote = null;
 	g_BalanceVoteMode	 = 0;
 	FakelagStopLatencySampling();
+
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		if (!IsHumanInGame(client))
+		{
+			continue;
+		}
+
+		if (!FakelagHasNetworkProfile(client))
+		{
+			continue;
+		}
+
+		CPrintToChat(client, "%t %t", "Tag", "TargetSelfCleared");
+	}
+
 	CFakeLag_ResetState();
 	delete g_PlayerLatencyByAccountId;
 	g_PlayerLatencyByAccountId = null;
@@ -134,6 +160,7 @@ public void OnPluginEnd()
 	g_CvarLossAddedFloorMs			= null;
 	g_CvarLossAddedSpanMs			= null;
 	g_CvarLossMaxPercent			= null;
+	g_CvarDefaultPacketLossMode		= null;
 
 	delete g_FwdOnSetPlayerLatency;
 	g_FwdOnSetPlayerLatency = null;
@@ -143,6 +170,35 @@ public void OnPluginEnd()
 
 	delete g_FwdOnPluginEnd;
 	g_FwdOnPluginEnd = null;
+
+	delete g_FwdOnPacketLossModeChanged;
+	g_FwdOnPacketLossModeChanged = null;
+}
+
+public void CFakeLag_OnPacketLossModeChanged(CFakeLagPacketLossMode oldMode, CFakeLagPacketLossMode newMode)
+{
+	if (g_FwdOnPacketLossModeChanged != null)
+	{
+		Call_StartForward(g_FwdOnPacketLossModeChanged);
+		Call_PushCell(view_as<int>(oldMode));
+		Call_PushCell(view_as<int>(newMode));
+		Call_Finish();
+	}
+
+	char oldModeName[32];
+	char newModeName[32];
+
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		if (!IsHumanInGame(client))
+		{
+			continue;
+		}
+
+		FakelagGetPacketLossModeName(client, oldMode, oldModeName, sizeof(oldModeName));
+		FakelagGetPacketLossModeName(client, newMode, newModeName, sizeof(newModeName));
+		CPrintToChat(client, "%t %t", "Tag", "PacketLossModeChanged", oldModeName, newModeName);
+	}
 }
 
 public void OnClientPostAdminCheck(int client)
@@ -185,7 +241,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 	if (FakelagIsSupportedBalanceTeam(oldTeam) && !FakelagIsSupportedBalanceTeam(newTeam))
 	{
-		if (CFakeLag_HasPlayerLatency(client))
+		if (FakelagHasNetworkProfile(client))
 		{
 			FakelagClearNetworkProfile(client);
 		}
@@ -345,7 +401,7 @@ public Action FakeLagCmd(int client, int args)
 
 	if (lagAmount == 0)
 	{
-		if (!CFakeLag_HasPlayerLatency(target))
+		if (!FakelagHasNetworkProfile(target))
 		{
 			CReplyToCommand(client, "%t %t", "TagConsole", "PlayerNotLagged", target);
 			return Plugin_Handled;
@@ -353,13 +409,13 @@ public Action FakeLagCmd(int client, int args)
 
 		g_ForgetLatencyOnNextClear[target] = true;
 		FakelagClearNetworkProfile(target);
-		CPrintToChat(client, "%t %t", "Tag", "ClearedOnPlayer", target);
 		if (target == client)
 		{
 			CPrintToChat(target, "%t %t", "Tag", "TargetSelfCleared");
 		}
 		else
 		{
+			CPrintToChat(client, "%t %t", "Tag", "ClearedOnPlayer", target);
 			CPrintToChat(target, "%t %t", "Tag", "TargetClearedByAdmin", client);
 		}
 		return Plugin_Handled;
@@ -376,13 +432,13 @@ public Action FakeLagCmd(int client, int args)
 	int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, addedLagMs, targetPingMs);
 
 	FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(addedLagMs, packetLossPercent));
-	CPrintToChat(client, "%t %t", "Tag", "SetOnPlayer", lagAmount, target);
 	if (target == client)
 	{
 		CPrintToChat(target, "%t %t", "Tag", "TargetSelfAdjusted", lagAmount);
 	}
 	else
 	{
+		CPrintToChat(client, "%t %t", "Tag", "SetOnPlayer", lagAmount, target);
 		CPrintToChat(target, "%t %t", "Tag", "TargetAdjustedByAdmin", client, lagAmount);
 	}
 	return Plugin_Handled;
@@ -442,7 +498,7 @@ public Action ClearLagCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if (!CFakeLag_HasPlayerLatency(target))
+	if (!FakelagHasNetworkProfile(target))
 	{
 		CReplyToCommand(client, "%t %t", "TagConsole", "PlayerNotLagged", target);
 		return Plugin_Handled;
@@ -450,7 +506,7 @@ public Action ClearLagCmd(int client, int args)
 
 	g_ForgetLatencyOnNextClear[target] = true;
 	FakelagClearNetworkProfile(target);
-	if (target == client && !canTargetOthers)
+	if (target == client)
 	{
 		CPrintToChat(client, "%t %t", "Tag", "TargetSelfCleared");
 		CReplyToCommand(client, "%t %t", "TagConsole", "TargetSelfCleared");
@@ -516,14 +572,14 @@ public Action ClearAllLagCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	int laggedClients = CFakeLag_GetLaggedClientCount();
+	int laggedClients = FakelagGetActiveProfileCount();
 	if (laggedClients <= 0)
 	{
 		CReplyToCommand(client, "%t %t", "TagConsole", "NoEntriesToClear");
 		return Plugin_Handled;
 	}
 
-	CFakeLag_ClearAllPlayerLatencies();
+	CFakeLag_ClearAllPlayerProfiles();
 	g_PlayerLatencyByAccountId.Clear();
 	g_PlayerPacketLossByAccountId.Clear();
 	g_PlayerDisconnectedByAccountId.Clear();
@@ -538,7 +594,7 @@ public Action PrintLagCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	int laggedClients = CFakeLag_GetLaggedClientCount();
+	int laggedClients = FakelagGetActiveProfileCount();
 	if (laggedClients <= 0)
 	{
 		CReplyToCommand(client, "%t %t", "TagConsole", "NoPlayersLagged");
@@ -550,9 +606,9 @@ public Action PrintLagCmd(int client, int args)
 
 	for (int i = 1; i <= MaxClients; i++)
 	{
-		if (IsClientInGame(i) && !IsFakeClient(i) && CFakeLag_HasPlayerLatency(i))
+		if (IsClientInGame(i) && !IsFakeClient(i) && FakelagHasNetworkProfile(i))
 		{
-			CReplyToCommand(client, "%t %t", "TagConsole", "PlayerEntry", i, CFakeLag_GetPlayerLatency(i));
+			CReplyToCommand(client, "%t %t", "TagConsole", "PlayerEntry", i, FakelagGetAppliedLagMs(i));
 		}
 	}
 

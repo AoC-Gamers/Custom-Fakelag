@@ -132,6 +132,24 @@
 		"es"        "{teamcolor}%N{default} restablecio tus ms modificados."
 	}
 
+	"PacketLossModeBernoulli"
+	{
+		"en"        "Bernoulli uniforme"
+		"es"        "Bernoulli uniforme"
+	}
+
+	"PacketLossModeGilbertElliott"
+	{
+		"en"        "Gilbert-Elliott"
+		"es"        "Gilbert-Elliott"
+	}
+
+	"PacketLossModeChanged"
+	{
+		"en"        "Packet loss mode changed from {lightgreen}%s{default} to {lightgreen}%s{default}. All active fakelag profiles were reset."
+		"es"        "El modo de packet loss cambio de {lightgreen}%s{default} a {lightgreen}%s{default}. Todos los perfiles activos de fakelag fueron restablecidos."
+	}
+
 	"TargetSelfAdjusted"
 	{
 		"en"        "Your modified ms are now {green}%d ms{default}."
@@ -182,14 +200,14 @@
 
 	"BalanceConsoleTitle"
 	{
-		"en"        "Balance against %N with ping x̅ %.1fms (raw %.1fms)."
-		"es"        "Balance contra %N con ping x̅ de %.1fms (raw %.1fms)."
+		"en"        "Balance against\n%s with ping x̅ %.1fms (raw %.1fms)."
+		"es"        "Balance contra\n%s con ping x̅ de %.1fms (raw %.1fms)."
 	}
 
 	"BalanceConsoleTitleByAdmin"
 	{
-		"en"        "%N started a global balance against %N with ping x̅ %.1fms (raw %.1fms)."
-		"es"        "%N inicio un balance global contra %N con ping x̅ de %.1fms (raw %.1fms)."
+		"en"        "%s started a global balance against\n%s with ping x̅ %.1fms (raw %.1fms)."
+		"es"        "%s inicio un balance global contra\n%s con ping x̅ de %.1fms (raw %.1fms)."
 	}
 
 	"BalanceTableColumns"
@@ -204,10 +222,16 @@
 		"es"        "Survivor       |     Avg |     Raw | Infected       |     Avg |     Raw | Resultado"
 	}
 
-	"BalanceTableLegend"
+	"BalanceTableLegendAvg"
 	{
-		"en"        "Avg = estimated net_graph ping | Raw = measured base ping before fakelag"
-		"es"        "Avg = ping estimado de net_graph | Raw = ping base medido antes del fakelag"
+		"en"        "Avg = estimated net_graph ping"
+		"es"        "Avg = ping estimado de net_graph"
+	}
+
+	"BalanceTableLegendRaw"
+	{
+		"en"        "Raw = measured base ping before fakelag"
+		"es"        "Raw = ping base medido antes del fakelag"
 	}
 
 	"BalanceTableActionSame"
@@ -264,6 +288,12 @@
 		"es"        "Tus ms se balancearian con {teamcolor}%N{default} y se ajustarian en {green}+%.1f ms{default}."
 	}
 
+	"PairBalancePreviewTargetUnchanged"
+	{
+		"en"        "Your ms would be balanced with {teamcolor}%N{default} and would require no adjustment."
+		"es"        "Tus ms se balancearian con {teamcolor}%N{default} y no requeririan ajuste."
+	}
+
 	"PairBalancePreviewTargetAdjustedByAdmin"
 	{
 		"en"        "{teamcolor}%N{default} would balance your ms with {teamcolor}%N{default} and adjust them by {green}+%.1f ms{default}."
@@ -274,6 +304,12 @@
 	{
 		"en"        "Your ms were balanced with {teamcolor}%N{default} and adjusted to {green}+%.1f ms{default}."
 		"es"        "Se balanceo tus ms con {teamcolor}%N{default} y se ajustaron a {green}+%.1f ms{default}."
+	}
+
+	"PairBalanceTargetUnchanged"
+	{
+		"en"        "Your ms were balanced with {teamcolor}%N{default} and required no adjustment."
+		"es"        "Se balanceo tus ms con {teamcolor}%N{default} y no requirieron ajuste."
 	}
 
 	"DetailsSentToConsole"
@@ -296,8 +332,8 @@
 
 	"PairBalanceConsoleTitleByAdmin"
 	{
-		"en"        "%N started a pair balance across %d survivor/infected pair(s)."
-		"es"        "%N inicio un balance por pares en %d pareja(s) survivor/infected."
+		"en"        "%s started a pair balance across %d survivor/infected pair(s)."
+		"es"        "%s inicio un balance por pares en %d pareja(s) survivor/infected."
 	}
 
 	"PairBalanceConsolePair"

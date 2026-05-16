@@ -18,10 +18,10 @@ Tambien deja constancia de una pasada concreta de verificacion hecha sobre:
 
 - `extension/extension.h`
 - `extension/extension.cpp`
-- `extension/latency/PlayerLatencyService.h`
-- `extension/latency/PlayerLatencyService.cpp`
-- `extension/latency/PlayerLatencyApiBridge.h`
-- `extension/latency/PlayerLatencyApiBridge.cpp`
+- `extension/latency/PlayerProfileService.h`
+- `extension/latency/PlayerProfileService.cpp`
+- `extension/latency/PlayerProfileApiBridge.h`
+- `extension/latency/PlayerProfileApiBridge.cpp`
 
 Estas piezas trabajan mayormente con interfaces publicas de SourceMod o del
 engine, sin depender de layouts binarios fragiles.

@@ -15,10 +15,10 @@ enum class ClientEligibility {
 	FakeClient
 };
 
-class IPlayerLatencyHooks
+class IPlayerProfileHooks
 {
 public:
-	virtual ~IPlayerLatencyHooks() = default;
+	virtual ~IPlayerProfileHooks() = default;
 	virtual bool OnSetPlayerLatency(ClientIndex client, LagMilliseconds oldLag, LagMilliseconds* requestedLag, CFakeLagChangeReason reason) = 0;
 	virtual void OnPlayerProfileChanged(ClientIndex client, LagMilliseconds oldLag, PacketLossPercent oldPacketLossPercent, LagMilliseconds newLag, PacketLossPercent newPacketLossPercent, CFakeLagChangeReason reason) = 0;
 };
@@ -31,11 +31,11 @@ public:
 	virtual ClientIndex GetMaxClients() const = 0;
 };
 
-class PlayerLatencyService
+class PlayerProfileService
 {
 private:
 	PlayerLagManager* m_LagManager;
-	IPlayerLatencyHooks* m_Hooks;
+	IPlayerProfileHooks* m_Hooks;
 	const IClientRegistry* m_ClientRegistry;
 
 	bool ApplyPlayerLatencyChange(ClientIndex client, LagMilliseconds lagTime, CFakeLagChangeReason reason, bool allowPreForward);
@@ -43,7 +43,7 @@ private:
 	void NotifyPlayerProfileChanged(ClientIndex client, LagMilliseconds oldLag, PacketLossPercent oldPacketLossPercent, LagMilliseconds newLag, PacketLossPercent newPacketLossPercent, CFakeLagChangeReason reason) const;
 
 public:
-	PlayerLatencyService(PlayerLagManager* lagManager, IPlayerLatencyHooks* hooks, const IClientRegistry* clientRegistry)
+	PlayerProfileService(PlayerLagManager* lagManager, IPlayerProfileHooks* hooks, const IClientRegistry* clientRegistry)
 		: m_LagManager(lagManager),
 		  m_Hooks(hooks),
 		  m_ClientRegistry(clientRegistry) {}

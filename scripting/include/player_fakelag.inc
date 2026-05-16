@@ -72,6 +72,17 @@ forward void PlayerFakelag_OnPlayerProfileChanged(int client, float oldLag, int 
  */
 forward void PlayerFakelag_OnPluginEnd();
 
+/**
+ * @brief Called after the packet loss simulation mode changes.
+ *
+ * Changing mode resets all active fakelag state before the new mode is
+ * adopted.
+ *
+ * @param oldMode	Previous packet loss simulation mode.
+ * @param newMode	New packet loss simulation mode.
+ */
+forward void PlayerFakelag_OnPacketLossModeChanged(CFakeLagPacketLossMode oldMode, CFakeLagPacketLossMode newMode);
+
 public SharedPlugin __pl_player_fakelag =
 {
 	name = "player_fakelag",
