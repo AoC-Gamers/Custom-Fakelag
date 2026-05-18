@@ -247,11 +247,16 @@ de modelo de pérdida y resetea el estado activo.
 
 ## Packet Loss Modes
 
-La extensión expone la ConVar:
+La extensión expone las siguientes ConVars:
 
 ```text
 sm_custom_fakelag_loss_mode
+sm_custom_fakelag_debug
+sm_custom_fakelag_debug_hold_interval
+sm_custom_fakelag_detour_mode
 ```
+
+### `sm_custom_fakelag_loss_mode`
 
 Valores:
 
@@ -276,6 +281,54 @@ sm_fakelag_loss_mode_default
 Ese valor se aplica en `OnConfigsExecuted()` desde el autoexec del plugin
 (`cfg/sourcemod/player_fakelag.cfg`), por lo que es la forma recomendada de
 fijar el modo persistente del servidor.
+
+### `sm_custom_fakelag_debug`
+
+Valores:
+
+- `0`: desactivado
+- `1`: activa logging de diagnóstico seguro para producción
+
+Cuando está activa, la extensión registra eventos internos relevantes como:
+
+- activación y desactivación del detour;
+- sockets con perfiles activos detectados por primera vez;
+- paquetes retenidos por lag o packet loss;
+- fallos al restaurar paquetes encolados;
+- fallos al resolver `netadr`.
+
+No está pensada para loggear cada paquete. Su objetivo es ayudar a diagnosticar
+congelones o comportamiento extraño sin volver ruidoso el servidor.
+
+### `sm_custom_fakelag_debug_hold_interval`
+
+Valor por defecto:
+
+- `5.0`
+
+Define el intervalo mínimo, en segundos, entre logs repetidos de paquetes
+retenidos para un mismo socket. Sirve para limitar spam cuando hay actividad de
+red alta.
+
+### `sm_custom_fakelag_detour_mode`
+
+Valores:
+
+- `0`: `lazy/on-demand`
+- `1`: `always-on`
+
+En modo `0`, la extensión no mantiene detoureado `NET_LagPacket` todo el
+tiempo. El detour se activa solo cuando existe al menos un perfil activo y se
+desactiva cuando ya no queda ninguno.
+
+En modo `1`, la extensión vuelve al comportamiento anterior y deja el detour
+activo mientras esté cargada.
+
+Para producción, el modo recomendado es:
+
+```text
+sm_custom_fakelag_detour_mode 0
+```
 
 ## Plugin `player_fakelag`
 
