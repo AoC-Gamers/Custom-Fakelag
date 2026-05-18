@@ -1,8 +1,29 @@
 #include "PlayerProfileService.h"
+#include "../extension.h"
 #include "../NET_LagPacket_Detour.h"
 
 namespace {
 constexpr float kNoLag = 0.0f;
+
+void SyncLagDetourState(const PlayerLagManager* lagManager)
+{
+	if (CFakeLag_IsAlwaysOnDetourMode()) {
+		LagDetour_Enable();
+		return;
+	}
+
+	if (lagManager == nullptr) {
+		LagDetour_Disable();
+		return;
+	}
+
+	if (lagManager->GetLagCount() > 0) {
+		LagDetour_Enable();
+		return;
+	}
+
+	LagDetour_Disable();
+}
 }
 
 bool PlayerProfileService::TryGetSupportedClient(int client, IGamePlayer** player) const
@@ -57,6 +78,7 @@ void PlayerProfileService::OnClientDisconnecting(int client)
 	m_LagManager->ClearPlayerLag(client);
 	m_LagManager->ClearPlayerPacketLoss(client);
 	LagDetour_ClearPacketLossState();
+	SyncLagDetourState(m_LagManager);
 	NotifyPlayerProfileChanged(client, oldLag, oldPacketLossPercent, kNoLag, 0, CFakeLagChangeReason::Disconnect);
 }
 
@@ -137,6 +159,7 @@ void PlayerProfileService::ClearAllPlayerProfiles()
 	}
 
 	LagDetour_ClearPacketLossState();
+	SyncLagDetourState(m_LagManager);
 }
 
 void PlayerProfileService::ClearAllPlayerLatencies()
@@ -206,6 +229,7 @@ bool PlayerProfileService::ApplyPlayerLatencyChange(ClientIndex client, LagMilli
 
 	const int oldPacketLossPercent = m_LagManager->GetPlayerPacketLoss(client);
 	m_LagManager->SetPlayerLag(client, requestedLag);
+	SyncLagDetourState(m_LagManager);
 	NotifyPlayerProfileChanged(client, oldLag, oldPacketLossPercent, requestedLag, oldPacketLossPercent, reason);
 	return true;
 }
@@ -240,6 +264,7 @@ bool PlayerProfileService::ApplyPlayerProfileChange(ClientIndex client, LagMilli
 
 	m_LagManager->SetPlayerLag(client, requestedLag);
 	m_LagManager->SetPlayerPacketLoss(client, packetLossPercent);
+	SyncLagDetourState(m_LagManager);
 	NotifyPlayerProfileChanged(client, oldLag, oldPacketLossPercent, requestedLag, packetLossPercent, reason);
 	return true;
 }

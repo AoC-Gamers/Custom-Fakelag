@@ -24,6 +24,8 @@ private:
 	const PlayerLagManager* m_LagManager;
 	LagSystem* m_LagSystem;
 	mutable ke::HashMap<dumb_netadr_t, bool, NetAdrHashPolicy_s> m_BadStateByAddress;
+	mutable double m_LastHoldLogBySocket[kMaxSockets] = {};
+	mutable bool m_HasLoggedProfiledSocket[kMaxSockets] = {};
 
 	LagMilliseconds GetPacketLagMs(const _netpacket_t& packet) const;
 	PacketLossPercent GetPacketLossPercent(const _netpacket_t& packet) const;
@@ -31,6 +33,8 @@ private:
 	CFakeLagPacketLossMode GetPacketLossMode() const;
 	bool ShouldDropPacketBernoulli(PacketLossPercent packetLossPercent) const;
 	bool ShouldDropPacketGilbertElliott(const dumb_netadr_t& netadr, PacketLossPercent packetLossPercent) const;
+	void MaybeLogActiveProfileSocket(const _netpacket_t& packet, LagMilliseconds lagTime, PacketLossPercent packetLossPercent) const;
+	void MaybeLogHeldPacket(const _netpacket_t& packet, LagMilliseconds lagTime, PacketLossPercent packetLossPercent, bool dueToPacketLoss) const;
 
 public:
 	LagPacketPolicy(const PlayerLagManager* lagManager, LagSystem* lagSystem)

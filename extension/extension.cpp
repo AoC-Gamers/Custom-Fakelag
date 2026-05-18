@@ -16,6 +16,36 @@ ConVar sm_custom_fakelag_loss_mode(
 	true,
 	1.0f);
 
+ConVar sm_custom_fakelag_debug(
+	"sm_custom_fakelag_debug",
+	"0",
+	FCVAR_NOTIFY,
+	"Enable production-safe debug logging for Custom Fakelag internals.",
+	true,
+	0.0f,
+	true,
+	1.0f);
+
+ConVar sm_custom_fakelag_debug_hold_interval(
+	"sm_custom_fakelag_debug_hold_interval",
+	"5.0",
+	FCVAR_NOTIFY,
+	"Minimum seconds between repeated Custom Fakelag hold logs per socket.",
+	true,
+	0.1f,
+	true,
+	60.0f);
+
+ConVar sm_custom_fakelag_detour_mode(
+	"sm_custom_fakelag_detour_mode",
+	"0",
+	FCVAR_NOTIFY,
+	"NET_LagPacket detour mode: 0 = lazy/on-demand, 1 = always on while extension is loaded.",
+	true,
+	0.0f,
+	true,
+	1.0f);
+
 CustomFakelag g_Sample;
 extern sp_nativeinfo_t g_CFakeLagNatives[];
 IGameConfig* g_pGameConf = nullptr;
@@ -32,9 +62,26 @@ void CloseGameConfig()
 }
 }
 
+bool CFakeLag_IsDebugEnabled()
+{
+	return sm_custom_fakelag_debug.GetBool();
+}
+
+float CFakeLag_GetDebugHoldInterval()
+{
+	return sm_custom_fakelag_debug_hold_interval.GetFloat();
+}
+
+bool CFakeLag_IsAlwaysOnDetourMode()
+{
+	return sm_custom_fakelag_detour_mode.GetInt() != 0;
+}
+
 void CustomFakelag::OnClientNetAdrResolutionFailed(int client)
 {
-	g_pSM->LogError(myself, "Failed to resolve network address for client index %d.", client);
+	if (CFakeLag_IsDebugEnabled()) {
+		g_pSM->LogMessage(myself, "[custom_fakelag] Failed to resolve network address for client index %d.", client);
+	}
 }
 
 void CustomFakelag::OnPlayerLagChanged(int client, const dumb_netadr_t& netadr, float lagTime)
@@ -138,6 +185,26 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 	g_pCVar = cvarIface;
 #endif
 	ConVar_Register(0, this);
+
+	if (CFakeLag_IsDebugEnabled()) {
+		g_pSM->LogMessage(
+			myself,
+			"[custom_fakelag] Loaded. net_time=%p loss_mode=%d debug_hold_interval=%.1f detour_on_load=0",
+			pNetTime,
+			sm_custom_fakelag_loss_mode.GetInt(),
+			CFakeLag_GetDebugHoldInterval());
+	}
+
+	if (CFakeLag_IsAlwaysOnDetourMode() && !LagDetour_Enable()) {
+		LagDetour_Shutdown();
+		delete m_LagManager;
+		m_LagManager = nullptr;
+		delete m_NetAdrResolver;
+		m_NetAdrResolver = nullptr;
+		CloseGameConfig();
+		ke::SafeSprintf(error, maxlen, "Could not enable NET_LagPacket detour in always-on mode.");
+		return false;
+	}
 
 	sharesys->AddNatives(myself, g_CFakeLagNatives);
 	sharesys->RegisterLibrary(myself, "custom_fakelag");

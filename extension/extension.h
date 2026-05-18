@@ -12,6 +12,15 @@ enum class CFakeLagPacketLossMode : int {
 	GilbertElliott = 1
 };
 
+extern ConVar sm_custom_fakelag_loss_mode;
+extern ConVar sm_custom_fakelag_debug;
+extern ConVar sm_custom_fakelag_debug_hold_interval;
+extern ConVar sm_custom_fakelag_detour_mode;
+
+bool CFakeLag_IsDebugEnabled();
+float CFakeLag_GetDebugHoldInterval();
+bool CFakeLag_IsAlwaysOnDetourMode();
+
 class CustomFakelag : public SDKExtension,
 					  public IConCommandBaseAccessor,
 					  public IClientListener,

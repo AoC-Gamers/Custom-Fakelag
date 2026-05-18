@@ -40,6 +40,19 @@ struct _netpacket_s
   bool stream;
   _netpacket_s* pNext;
 
+  _netpacket_s()
+    : from{},
+      source(0),
+      received(0.0),
+      data(nullptr),
+      message{},
+      size(0),
+      wiresize(0),
+      stream(false),
+      pNext(nullptr)
+  {
+  }
+
   void ResetRuntimeLinks()
   {
     pNext = nullptr;
@@ -81,18 +94,31 @@ struct _netpacket_s
     CopyPayloadFrom(src);
   }
 
-  void CopyToLivePacket(_netpacket_s* dest) const
+  bool CopyToLivePacket(_netpacket_s* dest) const
   {
     if (dest == nullptr) {
-      return;
+      return false;
+    }
+
+    unsigned char* liveData = dest->data;
+    const int liveCapacity = dest->message.m_nDataBytes > 0 ? dest->message.m_nDataBytes : dest->size;
+
+    if (size > 0) {
+      if (data == nullptr || liveData == nullptr || liveCapacity < size) {
+        return false;
+      }
     }
 
     dest->CopyMetadataFrom(*this);
-    dest->message.m_pData = dest->data;
+    dest->data = liveData;
+    dest->message.m_pData = liveData;
+    dest->message.m_nDataBytes = liveCapacity;
 
-    if (size > 0 && data != nullptr && dest->data != nullptr) {
+    if (size > 0) {
       std::memcpy(dest->data, data, size);
     }
+
+    return true;
   }
 
   _netpacket_s(const _netpacket_s& src)

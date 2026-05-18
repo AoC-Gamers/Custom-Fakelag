@@ -42,6 +42,11 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
   - `PlayerProfileService`
   - `PlayerProfileApiBridge`
   - `EngineClientNetAdrResolver`
+- Se agrego logging de diagnostico seguro para produccion en la extension, controlado por cvars:
+  - `sm_custom_fakelag_debug`
+  - `sm_custom_fakelag_debug_hold_interval`
+- Se agrego una base de tests standalone para validar la logica interna de colas y restauracion de paquetes sin depender del engine.
+- Se agregaron runners de tests standalone para Windows y Linux/WSL bajo `scripts/`.
 
 ### Cambiado
 - Se reorganizo el codigo nativo bajo `extension/`.
@@ -99,6 +104,12 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 - Se desacoplo `PlayerLagManager` del acceso directo a `IVEngineServer`, `playerhelpers` y el logging global del SDK.
 - Se corrigio y modernizo el flujo interno para que Windows y Linux compilen la misma base de codigo con el nuevo tooling.
 - Se modernizaron partes del codigo de la extension para mantener compatibilidad con el flujo de build actual.
+- Se actualizo el detour de `NET_LagPacket` para que opere en modo lazy/on-demand por defecto y solo se active cuando existan perfiles activos.
+- Se agrego la cvar `sm_custom_fakelag_detour_mode` para alternar entre detour lazy (`0`) y always-on (`1`).
+- Se endurecio la restauracion de paquetes encolados para validar capacidad del buffer live antes de copiar el payload y evitar corrupcion de memoria.
+- Se ampliaron los targets del `Makefile` con ejecucion de tests standalone:
+  - `make test-linux`
+  - `make test-windows`
 
 ### Eliminado
 - Se elimino `pkg/` y otras copias legacy del contenido empaquetado.

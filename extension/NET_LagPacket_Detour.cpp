@@ -42,16 +42,47 @@ bool LagDetour_Init(const PlayerLagManager* lagManager, const double* pNetTime)
 	s_LagManager = lagManager;
 	s_LagSystem = new LagSystem(pNetTime);
 	s_LagPacketPolicy = new LagPacketPolicy(s_LagManager, s_LagSystem);
-	if (!CreateNetLagPacketDetour()) {
-		LagDetour_Shutdown();
+	return true;
+}
+
+bool LagDetour_Enable()
+{
+	if (DLagPacket != nullptr) {
+		return true;
+	}
+
+	if (s_LagPacketPolicy == nullptr) {
 		return false;
 	}
-	return true;
+
+	const bool created = CreateNetLagPacketDetour();
+	if (created && CFakeLag_IsDebugEnabled()) {
+		g_pSM->LogMessage(myself, "[custom_fakelag] NET_LagPacket detour enabled.");
+	}
+
+	return created;
+}
+
+void LagDetour_Disable()
+{
+	if (DLagPacket == nullptr) {
+		return;
+	}
+
+	RemoveNetLagPacketDetour();
+	if (CFakeLag_IsDebugEnabled()) {
+		g_pSM->LogMessage(myself, "[custom_fakelag] NET_LagPacket detour disabled.");
+	}
+}
+
+bool LagDetour_IsEnabled()
+{
+	return DLagPacket != nullptr;
 }
 
 void LagDetour_Shutdown()
 {
-	RemoveNetLagPacketDetour();
+	LagDetour_Disable();
 	delete s_LagPacketPolicy;
 	s_LagPacketPolicy = nullptr;
 	delete s_LagSystem;

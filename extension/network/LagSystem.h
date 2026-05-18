@@ -16,6 +16,7 @@ struct PacketEarlier {
 class LagSystem {
 private:
 	ke::PriorityQueue<_netpacket_t, PacketEarlier> m_LagPackets[kMaxSockets];
+	size_t m_QueueDepths[kMaxSockets] = {};
 	const double* m_pNetTime;
 
 	double GetNetTime() const { return *m_pNetTime; }
@@ -29,6 +30,7 @@ public:
 
 	bool LagPacket(_netpacket_t* pPacket, float lagTime);
 	bool GetNextPacket(int socket, _netpacket_t* destPacket);
+	size_t GetQueueDepth(int socket) const { return IsValidSocket(socket) ? m_QueueDepths[socket] : 0; }
 };
 
 #endif // _CUSTOM_FAKELAG_LAG_SYSTEM_H_
