@@ -138,7 +138,7 @@ El workflow:
 
 - separa `deps`, `build` y `package` para `smx`
 - separa `deps`, `build` y `package` para `exts` por plataforma
-- usa `release-linux` y `release-windows` para fusionar `package-smx` con el paquete nativo correspondiente
+- usa `release-linux` y `release-windows` para ejecutar el empaquetado liviano y fusionar `package-smx` con el paquete nativo correspondiente
 - publica artifacts temporales y releases de canal
 
 Eso deja el ZIP de CI alineado con el mismo staging que se usa localmente y con responsabilidades mas claras por capa.

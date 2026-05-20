@@ -88,39 +88,7 @@ jobs:
           name: smx-build
           path: .build/plugins
           if-no-files-found: error
-          retention-days: 14
-
-  package-smx:
-    runs-on: ubuntu-22.04
-    needs: build-smx
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install Linux dependencies
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3 zip make
-
-      - name: Download SMX build tree
-        uses: actions/download-artifact@v8
-        with:
-          name: smx-build
-          path: .build/plugins
-
-      - name: Package SMX tree
-        shell: bash
-        run: make package-smx
-
-      - name: Upload SMX package tree
-        uses: actions/upload-artifact@v7
-        with:
-          name: package-smx
-          path: .build/package-smx
-          if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   deps-exts-linux:
     runs-on: ubuntu-22.04
@@ -195,39 +163,7 @@ jobs:
           name: exts-build-linux
           path: .build/linux-l4d2/package
           if-no-files-found: error
-          retention-days: 14
-
-  package-exts-linux:
-    runs-on: ubuntu-22.04
-    needs: build-exts-linux
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install Linux dependencies
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3 zip make
-
-      - name: Download Linux extension build tree
-        uses: actions/download-artifact@v8
-        with:
-          name: exts-build-linux
-          path: .build/linux-l4d2/package
-
-      - name: Package Linux extension tree
-        shell: bash
-        run: make package-exts-linux
-
-      - name: Upload Linux extension package tree
-        uses: actions/upload-artifact@v7
-        with:
-          name: package-exts-linux
-          path: .build/package-exts-linux
-          if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   deps-exts-windows:
     runs-on: windows-2022
@@ -298,42 +234,11 @@ jobs:
           name: exts-build-windows
           path: .build/windows-l4d2/package
           if-no-files-found: error
-          retention-days: 14
-
-  package-exts-windows:
-    runs-on: windows-2022
-    needs: build-exts-windows
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Download Windows extension build tree
-        uses: actions/download-artifact@v8
-        with:
-          name: exts-build-windows
-          path: .build/windows-l4d2/package
-
-      - name: Package Windows extension tree
-        shell: pwsh
-        run: make package-exts-windows
-
-      - name: Upload Windows extension package tree
-        uses: actions/upload-artifact@v7
-        with:
-          name: package-exts-windows
-          path: .build/package-exts-windows
-          if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   release-linux:
     runs-on: ubuntu-22.04
-    needs: [package-smx, package-exts-linux]
+    needs: [build-smx, build-exts-linux]
     outputs:
       basename: ${{ steps.meta.outputs.basename }}
       release-tag: ${{ steps.meta.outputs.release_tag }}
@@ -350,17 +255,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3 zip make
 
-      - name: Download SMX package tree
+      - name: Download SMX build tree
         uses: actions/download-artifact@v8
         with:
-          name: package-smx
-          path: .build/package-smx
+          name: smx-build
+          path: .build/plugins
 
-      - name: Download Linux extension package tree
+      - name: Download Linux extension build tree
         uses: actions/download-artifact@v8
         with:
-          name: package-exts-linux
-          path: .build/package-exts-linux
+          name: exts-build-linux
+          path: .build/linux-l4d2/package
 
       - name: Resolve Linux artifact metadata
         id: meta
@@ -387,6 +292,12 @@ jobs:
               ;;
           esac
 
+      - name: Package Linux trees
+        shell: bash
+        run: |
+          make package-smx
+          make package-exts-linux
+
       - name: Build Linux release archive
         shell: bash
         run: make release-linux LINUX_RELEASE_BASENAME="${{ steps.meta.outputs.basename }}"
@@ -401,7 +312,7 @@ jobs:
 
   release-windows:
     runs-on: windows-2022
-    needs: [package-smx, package-exts-windows]
+    needs: [build-smx, build-exts-windows]
     outputs:
       basename: ${{ steps.meta.outputs.basename }}
 
@@ -414,17 +325,17 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Download SMX package tree
+      - name: Download SMX build tree
         uses: actions/download-artifact@v8
         with:
-          name: package-smx
-          path: .build/package-smx
+          name: smx-build
+          path: .build/plugins
 
-      - name: Download Windows extension package tree
+      - name: Download Windows extension build tree
         uses: actions/download-artifact@v8
         with:
-          name: package-exts-windows
-          path: .build/package-exts-windows
+          name: exts-build-windows
+          path: .build/windows-l4d2/package
 
       - name: Resolve Windows artifact metadata
         id: meta
@@ -441,6 +352,12 @@ jobs:
               echo "basename=custom-fakelag-windows-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
               ;;
           esac
+
+      - name: Package Windows trees
+        shell: pwsh
+        run: |
+          make package-smx
+          make package-exts-windows
 
       - name: Build Windows release archive
         shell: pwsh
