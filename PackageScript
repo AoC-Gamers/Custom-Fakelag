@@ -1,65 +1,98 @@
 # vim: set ts=8 sts=2 sw=2 tw=99 et ft=python:
+import json
 import os
 
 # This is where the files will be output to
 # package is the default
 builder.SetBuildFolder('package')
 
-# Add any folders you need to this list
-folder_list = [
-  'addons/sourcemod/extensions',
-  'addons/sourcemod/plugins',
-  'addons/sourcemod/scripting',
-  'addons/sourcemod/scripting/player_fakelag',
-  'addons/sourcemod/scripting/include',
-  'addons/sourcemod/translations',
-  'addons/sourcemod/gamedata',
-]
-
-# Create the distribution folder hierarchy.
 folder_map = {}
-for folder in folder_list:
-  norm_folder = os.path.normpath(folder)
-  folder_map[folder] = builder.AddFolder(norm_folder)
 
-# Do all straight-up file copies from the source tree.
-def CopyFiles(src, dest, files):
-  if not dest:
-    dest = src
-  dest_entry = folder_map[dest]
+
+def GetFolder(path):
+  norm_path = os.path.normpath(path)
+  if norm_path not in folder_map:
+    folder_map[norm_path] = builder.AddFolder(norm_path)
+  return folder_map[norm_path]
+
+
+manifest_path = os.path.join(builder.sourcePath, 'plugin-package-map.json')
+with open(manifest_path, 'r', encoding='utf-8') as f:
+  manifest = json.load(f)
+
+build_manifest = manifest.get('build', {})
+artifact_manifest = manifest.get('artifact', {}).get('addons', {}).get('sourcemod', {})
+
+
+def AddCopy(source_path, dest_path):
+  builder.AddCopy(source_path, GetFolder(dest_path))
+
+
+def CopySelectedFiles(src_root, dest_root, files):
   for source_file in files:
-    source_path = os.path.join(builder.sourcePath, src, source_file)
-    builder.AddCopy(source_path, dest_entry)
+    source_path = os.path.join(builder.sourcePath, src_root, source_file)
+    relative_parent = os.path.dirname(source_file)
+    destination_root = os.path.join(dest_root, relative_parent) if relative_parent else dest_root
+    AddCopy(source_path, destination_root)
 
-CopyFiles('scripting/include', 'addons/sourcemod/scripting/include',
-  [ 'custom_fakelag.inc',
-    'player_fakelag.inc', ]
-)
 
-CopyFiles('gamedata', 'addons/sourcemod/gamedata',
-  [ 'custom_fakelag.games.txt', ]
-)
+def CopySelectedDirs(src_root, dest_root, dirs):
+  for source_dir in dirs:
+    source_path = os.path.join(builder.sourcePath, src_root, source_dir)
+    for dirpath, _, filenames in os.walk(source_path):
+      rel_dir = os.path.relpath(dirpath, os.path.join(builder.sourcePath, src_root))
+      destination_root = os.path.join(dest_root, rel_dir) if rel_dir != '.' else dest_root
+      for filename in filenames:
+        AddCopy(os.path.join(dirpath, filename), destination_root)
 
-CopyFiles('translations', 'addons/sourcemod/translations',
-  [ 'player_fakelag.phrases.txt', ]
-)
 
-CopyFiles('scripting', 'addons/sourcemod/scripting',
-  [ 'player_fakelag.sp', ]
-)
+def CopyAllChildren(src_root, dest_root):
+  source_path = os.path.join(builder.sourcePath, src_root)
+  for dirpath, _, filenames in os.walk(source_path):
+    rel_dir = os.path.relpath(dirpath, source_path)
+    destination_root = os.path.join(dest_root, rel_dir) if rel_dir != '.' else dest_root
+    for filename in filenames:
+      AddCopy(os.path.join(dirpath, filename), destination_root)
 
-CopyFiles('scripting/player_fakelag', 'addons/sourcemod/scripting/player_fakelag',
-  [ 'latency.sp',
-    'helpers.sp',
-    'balance.sp',
-    'vote.sp',
-    'natives.sp', ]
-)
+
+def CopyManifestSection(section, src_root, dest_root):
+  if section.get('all', False):
+    CopyAllChildren(src_root, dest_root)
+  if 'files' in section:
+    CopySelectedFiles(src_root, dest_root, section['files'])
+  if 'dirs' in section:
+    CopySelectedDirs(src_root, dest_root, section['dirs'])
+  for key, value in section.items():
+    if key in ('all', 'files', 'dirs'):
+      continue
+    if isinstance(value, dict):
+      CopyManifestSection(value, os.path.join(src_root, key), os.path.join(dest_root, key))
+
+
+CopyManifestSection(artifact_manifest.get('scripting', {}), 'scripting', 'addons/sourcemod/scripting')
+CopyManifestSection(artifact_manifest.get('translations', {}), 'translations', 'addons/sourcemod/translations')
+CopyManifestSection(artifact_manifest.get('gamedata', {}), 'gamedata', 'addons/sourcemod/gamedata')
 
 # Copy binaries.
-for cxx_task in Extension.extensions:
-  builder.AddCopy(cxx_task.binary, folder_map['addons/sourcemod/extensions'])
+plugin_buckets = build_manifest.get('plugins', {})
+extension_buckets = build_manifest.get('extensions', {})
 
-player_fakelag_binary = os.path.join(builder.buildPath, 'player_fakelag.smx')
-if os.path.exists(player_fakelag_binary):
-  builder.AddCopy(player_fakelag_binary, folder_map['addons/sourcemod/plugins'])
+for cxx_task in Extension.extensions:
+  extension_name = os.path.basename(cxx_task.binary)
+  extension_stem = extension_name.split('.ext', 1)[0]
+  destination_root = 'addons/sourcemod/extensions'
+  for bucket, extensions in extension_buckets.items():
+    if extension_stem in extensions:
+      if bucket != 'root':
+        destination_root = os.path.join(destination_root, bucket)
+      break
+  builder.AddCopy(cxx_task.binary, GetFolder(destination_root))
+
+for bucket, plugins in plugin_buckets.items():
+  destination_root = 'addons/sourcemod/plugins'
+  if bucket != 'root':
+    destination_root = os.path.join(destination_root, bucket)
+  for plugin_stem in plugins:
+    plugin_binary = os.path.join(builder.buildPath, '%s.smx' % plugin_stem)
+    if os.path.exists(plugin_binary):
+      builder.AddCopy(plugin_binary, GetFolder(destination_root))

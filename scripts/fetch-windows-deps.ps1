@@ -34,11 +34,9 @@ Import-DotEnv (Join-Path $root ".env")
 $depsDir = if ($env:DEPS_DIR) { $env:DEPS_DIR } else { Join-Path $root ".deps" }
 $hl2sdkDir = if ($env:HL2SDK_DIR) { $env:HL2SDK_DIR } else { Join-Path $depsDir "hl2sdk-l4d2" }
 $sourcemodDir = if ($env:SOURCEMOD_DIR) { $env:SOURCEMOD_DIR } else { Join-Path $depsDir "sourcemod-1.12" }
-$sourcemodPackageDir = if ($env:SOURCEMOD_PACKAGE_DIR) { $env:SOURCEMOD_PACKAGE_DIR } else { Join-Path $depsDir "sourcemod-package" }
 $mmsourceDir = if ($env:MMSOURCE_DIR) { $env:MMSOURCE_DIR } else { Join-Path $depsDir "mmsource-1.12" }
 $ambuildDir = if ($env:AMBUILD_DIR) { $env:AMBUILD_DIR } else { Join-Path $depsDir "ambuild" }
 $venvDir = if ($env:VENV_DIR) { $env:VENV_DIR } else { Join-Path $depsDir ".venv-windows" }
-$sourcemodLatestWindowsUrl = if ($env:SOURCEMOD_LATEST_WINDOWS_URL) { $env:SOURCEMOD_LATEST_WINDOWS_URL } else { "https://sm.alliedmods.net/smdrop/1.12/sourcemod-latest-windows" }
 
 function Clone-OrUpdate {
   param(
@@ -78,15 +76,6 @@ Clone-OrUpdate "https://github.com/alliedmodders/ambuild.git" $ambuildDir "maste
 Sync-SubmodulesIfPresent $sourcemodDir
 Sync-SubmodulesIfPresent $mmsourceDir
 
-Remove-Item -Recurse -Force $sourcemodPackageDir -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force $sourcemodPackageDir | Out-Null
-$smPackageZip = Join-Path $depsDir "sourcemod-latest-windows.zip"
-$smPackageName = (Invoke-WebRequest -Uri $sourcemodLatestWindowsUrl).Content.Trim()
-$smPackageUrl = "https://sm.alliedmods.net/smdrop/1.12/$smPackageName"
-Invoke-WebRequest -Uri $smPackageUrl -OutFile $smPackageZip
-Expand-Archive -Path $smPackageZip -DestinationPath $sourcemodPackageDir -Force
-Remove-Item $smPackageZip -Force
-
 if (-not (Test-Path $venvDir)) {
   python -m venv $venvDir
 }
@@ -104,7 +93,6 @@ Write-Host "ROOT_DIR=$root"
 Write-Host "DEPS_DIR=$depsDir"
 Write-Host "HL2SDK_DIR=$hl2sdkDir"
 Write-Host "SOURCEMOD_DIR=$sourcemodDir"
-Write-Host "SOURCEMOD_PACKAGE_DIR=$sourcemodPackageDir"
 Write-Host "MMSOURCE_DIR=$mmsourceDir"
 Write-Host "AMBUILD_DIR=$ambuildDir"
 Write-Host "VENV_DIR=$venvDir"
