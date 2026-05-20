@@ -42,7 +42,7 @@ jobs:
         id: deps-cache-restore
         uses: actions/cache/restore@v5
         with:
-          path: .deps
+          path: .deps/smx
           key: ${{ steps.cache-key.outputs.key }}
 
       - name: Fetch plugin build dependencies
@@ -54,7 +54,7 @@ jobs:
         if: steps.deps-cache-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
-          path: .deps
+          path: .deps/smx
           key: ${{ steps.cache-key.outputs.key }}
 
   build-smx:
@@ -74,7 +74,7 @@ jobs:
       - name: Restore dependency cache
         uses: actions/cache/restore@v5
         with:
-          path: .deps
+          path: .deps/smx
           key: ${{ needs.deps-smx.outputs.cache-key }}
           fail-on-cache-miss: true
 
@@ -148,7 +148,7 @@ jobs:
         id: deps-cache-restore
         uses: actions/cache/restore@v5
         with:
-          path: .deps
+          path: .deps/exts-linux
           key: ${{ steps.cache-key.outputs.key }}
 
       - name: Fetch Linux extension dependencies
@@ -160,7 +160,7 @@ jobs:
         if: steps.deps-cache-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
-          path: .deps
+          path: .deps/exts-linux
           key: ${{ steps.cache-key.outputs.key }}
 
   build-exts-linux:
@@ -181,7 +181,7 @@ jobs:
       - name: Restore dependency cache
         uses: actions/cache/restore@v5
         with:
-          path: .deps
+          path: .deps/exts-linux
           key: ${{ needs.deps-exts-linux.outputs.cache-key }}
           fail-on-cache-miss: true
 
@@ -253,7 +253,7 @@ jobs:
         id: deps-cache-restore
         uses: actions/cache/restore@v5
         with:
-          path: .deps
+          path: .deps/exts-windows
           key: ${{ steps.cache-key.outputs.key }}
 
       - name: Fetch Windows extension dependencies
@@ -265,7 +265,7 @@ jobs:
         if: steps.deps-cache-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
-          path: .deps
+          path: .deps/exts-windows
           key: ${{ steps.cache-key.outputs.key }}
 
   build-exts-windows:
@@ -284,7 +284,7 @@ jobs:
       - name: Restore dependency cache
         uses: actions/cache/restore@v5
         with:
-          path: .deps
+          path: .deps/exts-windows
           key: ${{ needs.deps-exts-windows.outputs.cache-key }}
           fail-on-cache-miss: true
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import platform
 import shutil
 import tarfile
@@ -24,10 +25,11 @@ def main() -> int:
     parser.add_argument("--root", default=".", help="Repository root")
     parser.add_argument("--version", default="1.12", help="SourceMod version branch")
     parser.add_argument("--platform", choices=("windows", "linux"), help="Override detected platform")
+    parser.add_argument("--deps-dir", help="Override dependency root")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
-    deps_dir = root / ".deps"
+    deps_dir = Path(args.deps_dir).resolve() if args.deps_dir else Path(os.environ.get("DEPS_DIR", root / ".deps")).resolve()
     package_dir = deps_dir / "sourcemod-package"
     package_platform = args.platform or detect_platform()
     archive_suffix = "zip" if package_platform == "windows" else "tar.gz"

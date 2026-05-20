@@ -2,6 +2,9 @@ SHELL := /usr/bin/env bash
 
 ROOT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 DEPS_DIR ?= $(ROOT_DIR)/.deps
+SMX_DEPS_DIR ?= $(DEPS_DIR)/smx
+EXTS_LINUX_DEPS_DIR ?= $(DEPS_DIR)/exts-linux
+EXTS_WINDOWS_DEPS_DIR ?= $(DEPS_DIR)/exts-windows
 SMX_BUILD_DIR ?= $(ROOT_DIR)/.build/plugins
 LINUX_BUILD_DIR ?= $(ROOT_DIR)/.build/linux-l4d2
 WINDOWS_BUILD_DIR ?= $(ROOT_DIR)/.build/windows-l4d2
@@ -46,22 +49,22 @@ help:
 		'  make clean-windows         Remove Windows build outputs'
 
 deps-smx:
-	$(PYTHON) ./scripts/fetch-plugin-deps.py --root .
+	DEPS_DIR="$(SMX_DEPS_DIR)" $(PYTHON) ./scripts/fetch-plugin-deps.py --root .
 
 deps-exts-linux:
-	bash ./scripts/fetch-linux-deps.sh
+	DEPS_DIR="$(EXTS_LINUX_DEPS_DIR)" bash ./scripts/fetch-linux-deps.sh
 
 deps-exts-windows:
-	pwsh -File ./scripts/fetch-windows-deps.ps1
+	DEPS_DIR="$(EXTS_WINDOWS_DEPS_DIR)" pwsh -File ./scripts/fetch-windows-deps.ps1
 
 build-smx:
-	$(PYTHON) ./scripts/build-plugins.py --root . --output-root "$(SMX_BUILD_DIR)"
+	DEPS_DIR="$(SMX_DEPS_DIR)" $(PYTHON) ./scripts/build-plugins.py --root . --output-root "$(SMX_BUILD_DIR)"
 
 build-exts-linux:
-	bash ./scripts/build-linux-l4d2.sh
+	DEPS_DIR="$(EXTS_LINUX_DEPS_DIR)" bash ./scripts/build-linux-l4d2.sh
 
 build-exts-windows:
-	pwsh -File ./scripts/build-windows-l4d2.ps1
+	DEPS_DIR="$(EXTS_WINDOWS_DEPS_DIR)" pwsh -File ./scripts/build-windows-l4d2.ps1
 
 package-smx:
 	$(PYTHON) ./scripts/copy-tree.py --source "$(SMX_BUILD_DIR)" --output "$(SMX_PACKAGE_DIR)"

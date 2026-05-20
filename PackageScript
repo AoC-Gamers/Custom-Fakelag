@@ -76,16 +76,24 @@ CopyManifestSection(artifact_manifest.get('gamedata', {}), 'gamedata', 'addons/s
 # Copy binaries.
 plugin_buckets = build_manifest.get('plugins', {})
 extension_buckets = build_manifest.get('extensions', {})
+extension_records = []
 
-for cxx_task in Extension.extensions:
-  extension_name = os.path.basename(cxx_task.binary)
-  extension_stem = extension_name.split('.ext', 1)[0]
+for bucket, extensions in extension_buckets.items():
+  for extension_stem in extensions:
+    extension_records.append((bucket, extension_stem))
+
+if len(extension_records) != len(Extension.extensions):
+  raise Exception(
+    'build.extensions declares {0} entries, but AMBuild produced {1} extension tasks.'.format(
+      len(extension_records),
+      len(Extension.extensions),
+    )
+  )
+
+for cxx_task, (bucket, extension_stem) in zip(Extension.extensions, extension_records):
   destination_root = 'addons/sourcemod/extensions'
-  for bucket, extensions in extension_buckets.items():
-    if extension_stem in extensions:
-      if bucket != 'root':
-        destination_root = os.path.join(destination_root, bucket)
-      break
+  if bucket != 'root':
+    destination_root = os.path.join(destination_root, bucket)
   builder.AddCopy(cxx_task.binary, GetFolder(destination_root))
 
 for bucket, plugins in plugin_buckets.items():

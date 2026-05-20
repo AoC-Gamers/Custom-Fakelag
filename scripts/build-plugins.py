@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -9,7 +10,8 @@ from pathlib import Path
 
 
 def detect_spcomp(root: Path) -> Path:
-    scripting_dir = root / ".deps" / "sourcemod-package" / "addons" / "sourcemod" / "scripting"
+    deps_dir = Path(os.environ.get("DEPS_DIR", root / ".deps")).resolve()
+    scripting_dir = deps_dir / "sourcemod-package" / "addons" / "sourcemod" / "scripting"
     candidates = [
         scripting_dir / "spcomp.exe",
         scripting_dir / "spcomp",

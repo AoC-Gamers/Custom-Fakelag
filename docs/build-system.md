@@ -103,6 +103,14 @@ La separacion operativa es:
 
 `deps-exts-*` ya no resuelven el compilador de SourcePawn. Solo preparan el toolchain nativo de la extension.
 
+En CI, las dependencias quedan separadas por path:
+
+- `.deps/smx`
+- `.deps/exts-linux`
+- `.deps/exts-windows`
+
+Eso evita mezclar caches del compilador SourcePawn con caches del toolchain nativo.
+
 Los binarios compilados quedan en:
 
 - `addons/sourcemod/plugins/...`
