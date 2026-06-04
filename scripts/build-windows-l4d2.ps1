@@ -35,33 +35,13 @@ $depsDir = if ($env:DEPS_DIR) { $env:DEPS_DIR } else { Join-Path $root ".deps" }
 $buildDir = if ($env:BUILD_DIR) { $env:BUILD_DIR } else { Join-Path $root ".build\windows-l4d2" }
 $hl2sdkDir = if ($env:HL2SDK_DIR) { $env:HL2SDK_DIR } else { Join-Path $depsDir "hl2sdk-l4d2" }
 $sourcemodDir = if ($env:SOURCEMOD_DIR) { $env:SOURCEMOD_DIR } else { Join-Path $depsDir "sourcemod-1.12" }
-$sourcemodPackageDir = if ($env:SOURCEMOD_PACKAGE_DIR) { $env:SOURCEMOD_PACKAGE_DIR } else { Join-Path $depsDir "sourcemod-package" }
 $mmsourceDir = if ($env:MMSOURCE_DIR) { $env:MMSOURCE_DIR } else { Join-Path $depsDir "mmsource-1.12" }
 $venvDir = if ($env:VENV_DIR) { $env:VENV_DIR } else { Join-Path $depsDir ".venv-windows" }
 $configureScript = if ($env:CONFIGURE_SCRIPT) { $env:CONFIGURE_SCRIPT } else { Join-Path $root "configure.py" }
-$playerFakelagSource = if ($env:PLAYER_FAKELAG_SOURCE) { $env:PLAYER_FAKELAG_SOURCE } else { Join-Path $root "scripting\player_fakelag.sp" }
+$manifestPath = if ($env:MANIFEST_PATH) { $env:MANIFEST_PATH } else { Join-Path $root "plugin-package-map.json" }
 
 $venvPython = Join-Path $venvDir "Scripts\python.exe"
 $venvAmbuild = Join-Path $venvDir "Scripts\ambuild.exe"
-
-function Find-SourcePawnCompiler {
-  param([string]$ScriptingDir)
-
-  $candidates = @(
-    (Join-Path $ScriptingDir "spcomp.exe"),
-    (Join-Path $ScriptingDir "spcomp"),
-    (Join-Path $ScriptingDir "spcomp64.exe"),
-    (Join-Path $ScriptingDir "spcomp64")
-  )
-
-  foreach ($candidate in $candidates) {
-    if (Test-Path $candidate) {
-      return $candidate
-    }
-  }
-
-  return $null
-}
 
 function Find-VsWhere {
   $candidates = @(
@@ -128,7 +108,7 @@ function Import-VcVarsEnvironment {
   }
 }
 
-foreach ($requiredDir in @($hl2sdkDir, $sourcemodDir, $sourcemodPackageDir, $mmsourceDir)) {
+foreach ($requiredDir in @($hl2sdkDir, $sourcemodDir, $mmsourceDir)) {
   if (-not (Test-Path $requiredDir)) {
     throw "Missing required directory: $requiredDir"
   }
@@ -141,6 +121,15 @@ if (-not (Test-Path $venvPython)) {
 if (-not (Test-Path $venvAmbuild)) {
   throw "Missing AMBuild in $venvDir. Run scripts/fetch-windows-deps.ps1 first."
 }
+
+$buildExtensionsJson = & $venvPython -c "import json,sys; m=json.load(open(sys.argv[1], encoding='utf-8')); [print(f'{bucket}|{ext}') for bucket, extensions in m.get('build', {}).get('extensions', {}).items() for ext in extensions]" $manifestPath
+$buildExtensionRecords = @($buildExtensionsJson | Where-Object { $_ })
+
+if ($buildExtensionRecords.Count -ne 1) {
+  throw "Expected exactly one extension in build.extensions, found $($buildExtensionRecords.Count)."
+}
+
+$extensionBucket, $extensionStem = $buildExtensionRecords[0].Split("|", 2)
 
 $cl = Get-Command cl.exe -ErrorAction SilentlyContinue
 if (-not $cl) {
@@ -179,34 +168,19 @@ finally {
 }
 
 $packageDir = Join-Path $buildDir "package\addons\sourcemod\extensions"
-$extBin = Get-ChildItem $packageDir -Filter "custom_fakelag.ext*.dll" | Select-Object -First 1 -ExpandProperty FullName
+$extBin = Get-ChildItem $packageDir -Filter "$extensionStem.ext*.dll" | Select-Object -First 1 -ExpandProperty FullName
 if (-not $extBin) {
-  throw "Build completed but no custom_fakelag extension binary was found in $packageDir."
+  throw "Build completed but no $extensionStem extension binary was found in $packageDir."
 }
 
-$canonicalExtBin = Join-Path $packageDir "custom_fakelag.ext.dll"
+$canonicalExtDir = if ($extensionBucket -eq "root") { $packageDir } else { Join-Path $packageDir $extensionBucket }
+New-Item -ItemType Directory -Force $canonicalExtDir | Out-Null
+$canonicalExtBin = Join-Path $canonicalExtDir "$extensionStem.ext.dll"
 if ($extBin -ne $canonicalExtBin) {
   Move-Item $extBin $canonicalExtBin -Force
   $extBin = $canonicalExtBin
 }
 
-$spcomp = Find-SourcePawnCompiler (Join-Path $sourcemodPackageDir "addons\sourcemod\scripting")
-$spIncludeDir = Join-Path $sourcemodPackageDir "addons\sourcemod\scripting\include"
-$pluginIncludeDir = Join-Path $root "scripting\include"
-$pluginOutputDir = Join-Path $buildDir "package\addons\sourcemod\plugins"
-$playerFakelagBinary = Join-Path $pluginOutputDir "player_fakelag.smx"
-
-if (-not (Test-Path $spcomp)) {
-  throw "Missing SourcePawn compiler in $(Join-Path $sourcemodPackageDir 'addons\sourcemod\scripting')"
-}
-
-New-Item -ItemType Directory -Force $pluginOutputDir | Out-Null
-& $spcomp $playerFakelagSource "-o$playerFakelagBinary" "-i$pluginIncludeDir" "-i$spIncludeDir"
-if ($LASTEXITCODE -ne 0) {
-  throw "spcomp failed while compiling $playerFakelagSource"
-}
-
 Write-Host "Build complete."
 Write-Host "BUILD_DIR=$buildDir"
 Write-Host "EXTENSION=$extBin"
-Write-Host "PLUGIN=$playerFakelagBinary"

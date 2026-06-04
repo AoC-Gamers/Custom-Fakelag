@@ -17,15 +17,25 @@ legacy de Visual Studio.
 
 ```bash
 make help
-make deps-linux
-make build-linux
+make deps-smx
+make deps-exts-linux
+make build-smx
+make build-exts-linux
+make package-smx
+make package-exts-linux
+make release-linux
 ```
 
 En Windows:
 
 ```powershell
-make deps-windows
-make build-windows
+make deps-smx
+make deps-exts-windows
+make build-smx
+make build-exts-windows
+make package-smx
+make package-exts-windows
+make release-windows
 ```
 
 ## Estructura relevante
@@ -51,6 +61,6 @@ make build-windows
 
 Antes de tocar logica de la extension:
 
-1. confirmar que `make build-linux` sigue compilando
+1. confirmar que `make build-smx` y `make build-exts-linux` siguen compilando
 2. si estas en Windows, confirmar que MSVC x86/x64 esta instalado
 3. revisar que el paquete final contenga extension, include, gamedata y plugin de ejemplo

@@ -1,0 +1,51 @@
+{
+  "build": {
+    "plugins": {
+      "root": [
+        "player_fakelag"
+      ]
+    },
+    "extensions": {
+      "root": [
+        "custom_fakelag"
+      ]
+    }
+  },
+  "artifact": {
+    "addons": {
+      "sourcemod": {
+        "plugins": {
+          "files": [
+            "player_fakelag.smx"
+          ]
+        },
+        "extensions": {
+          "files": [
+            "custom_fakelag.ext.dll",
+            "custom_fakelag.ext.so"
+          ]
+        },
+        "scripting": {
+          "files": [
+            "player_fakelag.sp"
+          ],
+          "dirs": [
+            "player_fakelag"
+          ],
+          "include": {
+            "files": [
+              "custom_fakelag.inc",
+              "player_fakelag.inc"
+            ]
+          }
+        },
+        "translations": {
+          "all": true
+        },
+        "gamedata": {
+          "all": true
+        }
+      }
+    }
+  }
+}
