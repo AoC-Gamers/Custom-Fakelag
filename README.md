@@ -796,3 +796,7 @@ El build Linux x86 admite GCC 15. Con GCC 14 o posterior se conserva `-Werror`
 y se degrada únicamente `template-id-cdtor`, emitida por los constructores
 antiguos del HL2SDK. La excepción no se aplica a Clang ni a versiones de GCC
 anteriores. El SDK y el código de la extensión conservan el resto de sus gates.
+
+La definicion `_stricmp=stricmp` coincide con el SDK L4D2 actual y evita una
+redefinicion fatal; `stricmp` sigue resolviendose a `strcasecmp`. El build se
+comprueba tambien con el SDK anterior, que no declara ese alias.

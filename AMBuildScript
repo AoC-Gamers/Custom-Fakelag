@@ -160,7 +160,7 @@ class ExtensionConfig(object):
   def configure_gcc(self, cxx):
     cxx.defines += [
       'stricmp=strcasecmp',
-      '_stricmp=strcasecmp',
+      '_stricmp=stricmp',
       '_snprintf=snprintf',
       '_vsnprintf=vsnprintf',
       'HAVE_STDINT_H',
@@ -345,7 +345,7 @@ class ExtensionConfig(object):
     if sdk.name in ['sdk2013', 'bms', 'pvkii'] and compiler.like('gcc'):
       # The 2013 SDK already has these in public/tier0/basetypes.h
       compiler.defines.remove('stricmp=strcasecmp')
-      compiler.defines.remove('_stricmp=strcasecmp')
+      compiler.defines.remove('_stricmp=stricmp')
       compiler.defines.remove('_snprintf=snprintf')
       compiler.defines.remove('_vsnprintf=vsnprintf')
 
