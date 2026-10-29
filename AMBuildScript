@@ -191,6 +191,10 @@ class ExtensionConfig(object):
 
     have_gcc = cxx.vendor == 'gcc'
     have_clang = cxx.vendor == 'clang'
+    # Older HL2SDK headers use constructor template-ids rejected by GCC 14+.
+    # Keep all other warnings fatal, including warnings in extension sources.
+    if have_gcc and cxx.version >= 'gcc-14':
+      cxx.cxxflags += ['-Wno-error=template-id-cdtor']
     if cxx.version >= 'clang-3.6':
       cxx.cxxflags += ['-Wno-inconsistent-missing-override']
     if have_clang or (cxx.version >= 'gcc-4.6'):

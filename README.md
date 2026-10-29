@@ -789,3 +789,10 @@ Ver:
 ```text
 docs/DEVELOPMENT.md
 ```
+
+## Compilación con Ubuntu 26.04
+
+El build Linux x86 admite GCC 15. Con GCC 14 o posterior se conserva `-Werror`
+y se degrada únicamente `template-id-cdtor`, emitida por los constructores
+antiguos del HL2SDK. La excepción no se aplica a Clang ni a versiones de GCC
+anteriores. El SDK y el código de la extensión conservan el resto de sus gates.
