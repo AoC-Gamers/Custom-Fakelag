@@ -800,3 +800,16 @@ anteriores. El SDK y el código de la extensión conservan el resto de sus gates
 La definicion `_stricmp=stricmp` coincide con el SDK L4D2 actual y evita una
 redefinicion fatal; `stricmp` sigue resolviendose a `strcasecmp`. El build se
 comprueba tambien con el SDK anterior, que no declara ese alias.
+
+Compatibilidad comprobada: ejecución en Ubuntu 26.04 amd64 con las bibliotecas
+i386 del motor L4D2 y compilación ELF32 con GCC/G++ 15.2.0 y multilib. El entorno
+verificado usa glibc 2.43, libstdc++6 y libgcc-s1 en ambas arquitecturas; sus
+paquetes de runtime proceden de GCC 16 y no cambian el compilador GCC 15 usado
+para generar el candidato. Python 3.14.4 y AMBuild conducen la compilación;
+SourceMod 1.12, Metamod 1.12 y HL2SDK L4D2 son dependencias de desarrollo.
+
+Los ZIP Linux publicados por CI se generan en Ubuntu 22.04 con GCC 11.4.0;
+son artefactos distintos de los candidatos compilados localmente con GCC 15.2.
+Ambos se validan como ELF32: compatibilidad de carga no acredita pruebas con
+jugadores ni establece esas versiones como mínimos del producto. Registrar el
+commit de cada SDK y los SHA256 del ZIP al repetir una validación.
