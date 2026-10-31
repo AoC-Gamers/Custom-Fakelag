@@ -160,7 +160,7 @@ class ExtensionConfig(object):
   def configure_gcc(self, cxx):
     cxx.defines += [
       'stricmp=strcasecmp',
-      '_stricmp=strcasecmp',
+      '_stricmp=stricmp',
       '_snprintf=snprintf',
       '_vsnprintf=vsnprintf',
       'HAVE_STDINT_H',
@@ -191,6 +191,10 @@ class ExtensionConfig(object):
 
     have_gcc = cxx.vendor == 'gcc'
     have_clang = cxx.vendor == 'clang'
+    # Older HL2SDK headers use constructor template-ids rejected by GCC 14+.
+    # Keep all other warnings fatal, including warnings in extension sources.
+    if have_gcc and cxx.version >= 'gcc-14':
+      cxx.cxxflags += ['-Wno-error=template-id-cdtor']
     if cxx.version >= 'clang-3.6':
       cxx.cxxflags += ['-Wno-inconsistent-missing-override']
     if have_clang or (cxx.version >= 'gcc-4.6'):
@@ -341,7 +345,7 @@ class ExtensionConfig(object):
     if sdk.name in ['sdk2013', 'bms', 'pvkii'] and compiler.like('gcc'):
       # The 2013 SDK already has these in public/tier0/basetypes.h
       compiler.defines.remove('stricmp=strcasecmp')
-      compiler.defines.remove('_stricmp=strcasecmp')
+      compiler.defines.remove('_stricmp=stricmp')
       compiler.defines.remove('_snprintf=snprintf')
       compiler.defines.remove('_vsnprintf=vsnprintf')
 

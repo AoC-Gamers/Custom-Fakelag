@@ -22,7 +22,7 @@ g++ \
   -DGNUC \
   -DCOMPILER_GCC \
   -Dstricmp=strcasecmp \
-  -D_stricmp=strcasecmp \
+  -D_stricmp=stricmp \
   -D_snprintf=snprintf \
   -D_vsnprintf=vsnprintf \
   -DHAVE_STDINT_H \
