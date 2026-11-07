@@ -233,23 +233,19 @@ public void OnClientDisconnect(int client)
 
 public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
-	if (event.GetBool("isbot"))
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	if (client <= 0 || !CFakeLag_IsClientSupported(client))
 	{
 		return;
 	}
 
 	if (event.GetBool("disconnect"))
 	{
-		int disconnectingClient = GetClientOfUserId(event.GetInt("userid"));
-		if (disconnectingClient > 0)
-		{
-			FakelagSetDisconnectedState(disconnectingClient, true);
-		}
+		FakelagSetDisconnectedState(client, true);
 		return;
 	}
 
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (client <= 0 || !IsClientInGame(client))
+	if (!IsClientInGame(client))
 	{
 		return;
 	}

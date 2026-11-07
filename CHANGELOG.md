@@ -4,6 +4,9 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 
 ## [Unreleased]
 
+### Corregido
+- Se valida el cliente real en `player_team` antes de consultar o limpiar perfiles, evitando excepciones de la extension cuando un bot no esta marcado como tal en el evento.
+
 ### Agregado
 - Se agrego una API low-level en `custom_fakelag.inc` para:
   - asignar fake lag por jugador
