@@ -1,5 +1,5 @@
 """Mount existing immutable L4D2 assets by hardlink into an isolated Windows server.
-Binaries/addons/config and writable navigation/cache files are never linked.
+Binaries/addons/config, spray logos and writable navigation/cache files are never linked.
 Download the Windows binaries/bootstrap from Steam first; this script downloads nothing.
 """
 import argparse,json,os,shutil
@@ -19,6 +19,12 @@ for game in games:
   target=d/f.relative_to(s)
   if not target.resolve().is_relative_to(dst):p.error('Asset destination escapes private server')
   target.parent.mkdir(parents=True,exist_ok=True)
+  # Spray files can be written by a client/server session. Break only the
+  # private directory entry when upgrading an older hardlinked instance.
+  if f.relative_to(s).parts[:3] == ('materials','vgui','logos'):
+   if target.exists() and os.path.samefile(f,target):target.unlink()
+   if not target.exists():shutil.copy2(f,target)
+   continue
   if not target.exists():os.link(f,target)
   if os.path.samefile(f,target):rows.append({'source':str(f),'destination':str(target),'bytes':f.stat().st_size,'mtime_ns':f.stat().st_mtime_ns})
  for f in (s/'maps').glob('*.nav'):
