@@ -1,5 +1,8 @@
 // Built only with CUSTOM_FAKELAG_ENGINE_HARNESS=1. Never packaged in normal builds.
 // Isolated SRCDS driver for real UDP connectionless traffic, not Steam clients.
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
 #include "../extension/extension.h"
 #include "../extension/NET_LagPacket_Detour.h"
 #include "../extension/network/LagSystem.h"

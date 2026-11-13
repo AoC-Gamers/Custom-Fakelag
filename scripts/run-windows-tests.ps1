@@ -78,7 +78,9 @@ if (-not $cl) {
     Import-VcVarsEnvironment $vcvarsall
 }
 
-& cl /std:c++17 /EHsc /nologo /W3 /Od /Zi /DUNIT_TEST /Fe:$TestExe $TestSource $LagSystemSource (Join-Path $Root "extension\network\L4D2PacketAdapter.cpp") (Join-Path $Root "extension\network\LagPacketPolicy.cpp") (Join-Path $Root "extension\latency\PlayerLagManager.cpp") (Join-Path $Root "extension\latency\PlayerProfileService.cpp") @IncludeArgs
+$instrumentation = @()
+if ($env:CUSTOM_FAKELAG_ASAN -eq '1') { $instrumentation += '/fsanitize=address' }
+& cl @instrumentation /std:c++17 /EHsc /nologo /W3 /Od /Zi /DUNIT_TEST /Fe:$TestExe $TestSource $LagSystemSource (Join-Path $Root "extension\network\L4D2PacketAdapter.cpp") (Join-Path $Root "extension\network\LagPacketPolicy.cpp") (Join-Path $Root "extension\latency\PlayerLagManager.cpp") (Join-Path $Root "extension\latency\PlayerProfileService.cpp") @IncludeArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to compile tests."
 }

@@ -145,7 +145,12 @@ if (-not $cl) {
   }
 }
 
-Remove-Item -Recurse -Force $buildDir -ErrorAction SilentlyContinue
+$buildDir = [IO.Path]::GetFullPath($buildDir)
+$allowedBuildRoot = [IO.Path]::GetFullPath((Join-Path $root '.build')) + [IO.Path]::DirectorySeparatorChar
+if (-not $buildDir.StartsWith($allowedBuildRoot, [StringComparison]::OrdinalIgnoreCase)) {
+  throw "Build directory must be inside $allowedBuildRoot (refusing recursive removal of $buildDir)."
+}
+if (Test-Path -LiteralPath $buildDir) { Remove-Item -LiteralPath $buildDir -Recurse -Force }
 New-Item -ItemType Directory -Force $buildDir | Out-Null
 
 Push-Location $buildDir
@@ -157,11 +162,14 @@ try {
     --sm-path $sourcemodDir `
     --enable-optimize
 
+  if ($LASTEXITCODE -ne 0) { throw "AMBuild configure failed with exit code $LASTEXITCODE." }
+
   if (-not (Test-Path ".\.ambuild2\vars")) {
     throw "AMBuild configure did not produce .ambuild2\vars."
   }
 
   & $venvAmbuild
+  if ($LASTEXITCODE -ne 0) { throw "AMBuild failed with exit code $LASTEXITCODE." }
 }
 finally {
   Pop-Location
