@@ -33,12 +33,13 @@ void Snapshot(const char* stage)
     size_t pending = 0, bytes = 0, lossStates = 0;
     PacketCounters counters;
     LagDetour_TestSnapshot(pending, bytes, lossStates, counters);
-    g_pSM->LogMessage(myself, "[engine_probe] stage=%s enabled=%d pending=%u bytes=%u loss_states=%u dispatched=%llu mean_hold_ms=%.3f loss=%llu restore_failed=%llu lifecycle=%llu invalid=%llu",
+    g_pSM->LogMessage(myself, "[engine_probe] stage=%s enabled=%d pending=%u bytes=%u loss_states=%u dispatched=%llu mean_hold_ms=%.3f loss=%llu restore_failed=%llu lifecycle=%llu invalid=%llu saturation=%llu",
         stage, LagDetour_IsEnabled(), unsigned(pending), unsigned(bytes), unsigned(lossStates),
         static_cast<unsigned long long>(counters.dispatched),
         counters.dispatched ? counters.totalHoldSeconds * 1000 / counters.dispatched : 0.0,
         static_cast<unsigned long long>(counters.requestedLoss), static_cast<unsigned long long>(counters.restoreFailed),
-        static_cast<unsigned long long>(counters.lifecycle), static_cast<unsigned long long>(counters.invalidPacket));
+        static_cast<unsigned long long>(counters.lifecycle), static_cast<unsigned long long>(counters.invalidPacket),
+        static_cast<unsigned long long>(counters.saturation));
 }
 }
 CON_COMMAND(cf_probe_profile, "TEST ONLY: port latency_ms loss_percent for loopback UDP traffic")
@@ -75,4 +76,14 @@ CON_COMMAND(cf_probe_reset, "TEST ONLY: exercise the extension reset entry point
 CON_COMMAND(cf_probe_status, "TEST ONLY: observe queue and hook counters")
 {
     Snapshot("status");
+}
+
+CON_COMMAND(cf_probe_edit, "TEST ONLY: edit current synthetic profile without replacing the queue")
+{
+    if (args.ArgC() != 3 || !manager) return;
+    const float lag = std::strtof(args.Arg(1), nullptr);
+    const int loss = std::atoi(args.Arg(2));
+    if (!ValidLatency(lag) || loss < 0 || loss > 100) return;
+    if (!manager->SetPlayerProfile(1, lag, loss)) return;
+    Snapshot("edit");
 }

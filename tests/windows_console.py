@@ -39,7 +39,7 @@ class WindowsConsole:
         info.dwFlags = subprocess.STARTF_USESHOWWINDOW
         info.wShowWindow = 0
         self.process = subprocess.Popen(argv, cwd=cwd, startupinfo=info,
-                                        creationflags=subprocess.CREATE_NEW_CONSOLE)
+                                        creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_BREAKAWAY_FROM_JOB)
         self.input = None
         try:
             self.kernel.FreeConsole()  # Detach only this driver process.
@@ -62,6 +62,30 @@ class WindowsConsole:
     def command(self, text):
         if '\n' in text or '\r' in text or self.process.poll() is not None:
             raise RuntimeError('Invalid command or test process already exited')
+        # SRCDS recreates its console during bootstrap. Refresh the attachment
+        # and input handle instead of retaining the launcher's stale buffer.
+        self.kernel.FreeConsole()
+        if not self.kernel.AttachConsole(self.process.pid):
+            raise ctypes.WinError(ctypes.get_last_error())
+        if self.input:
+            self.kernel.CloseHandle(self.input)
+        self.input = self.kernel.CreateFileW('CONIN$', 0xC0000000, 3, None, 3, 0, None)
+        if self.input == ctypes.c_void_p(-1).value:
+            self.input = None
+            raise ctypes.WinError(ctypes.get_last_error())
+        # A recreated SRCDS console can enable QuickEdit and pause the server.
+        # Disable selection and hide only this owned console window.
+        mode = w.DWORD()
+        self.kernel.GetConsoleMode.argtypes = [w.HANDLE, ctypes.POINTER(w.DWORD)]
+        self.kernel.SetConsoleMode.argtypes = [w.HANDLE, w.DWORD]
+        if self.kernel.GetConsoleMode(self.input, ctypes.byref(mode)):
+            self.kernel.SetConsoleMode(self.input, (mode.value | 0x80) & ~0x40)
+        self.kernel.GetConsoleWindow.restype = w.HWND
+        window = self.kernel.GetConsoleWindow()
+        user = ctypes.WinDLL('user32', use_last_error=True)
+        user.PostMessageW.argtypes = [w.HWND, w.UINT, w.WPARAM, w.LPARAM]
+        user.ShowWindow.argtypes = [w.HWND, ctypes.c_int]
+        user.ShowWindow(window, 0)
         records = []
         for character in text + '\r':
             for down in (True, False):
@@ -76,6 +100,33 @@ class WindowsConsole:
             raise ctypes.WinError(ctypes.get_last_error())
         if written.value != len(records):
             raise RuntimeError('Partial console input write')
+
+    def read_output(self):
+        class Coord(ctypes.Structure):
+            _fields_ = [('x', ctypes.c_short), ('y', ctypes.c_short)]
+        class Rect(ctypes.Structure):
+            _fields_ = [('l', ctypes.c_short), ('t', ctypes.c_short), ('r', ctypes.c_short), ('b', ctypes.c_short)]
+        class Info(ctypes.Structure):
+            _fields_ = [('size', Coord), ('cursor', Coord), ('attr', w.WORD), ('window', Rect), ('max', Coord)]
+        self.kernel.FreeConsole()
+        if not self.kernel.AttachConsole(self.process.pid):
+            return 'Console unavailable'
+        handle = self.kernel.CreateFileW('CONOUT$', 0x80000000, 3, None, 3, 0, None)
+        try:
+            info = Info()
+            self.kernel.GetConsoleScreenBufferInfo.argtypes = [w.HANDLE, ctypes.POINTER(Info)]
+            if not self.kernel.GetConsoleScreenBufferInfo(handle, ctypes.byref(info)):
+                return 'Console info unavailable'
+            start = max(0, info.cursor.y - 100)
+            length = min(20000, (info.size.y-start)*info.size.x)
+            buffer = ctypes.create_unicode_buffer(length)
+            read = w.DWORD()
+            self.kernel.ReadConsoleOutputCharacterW.argtypes = [w.HANDLE, w.LPWSTR, w.DWORD, w.DWORD, ctypes.POINTER(w.DWORD)]
+            self.kernel.ReadConsoleOutputCharacterW(handle, buffer, length, start << 16, ctypes.byref(read))
+            text = buffer[:read.value].replace(chr(0), ' ')
+            return '\n'.join(text[i:i+info.size.x].rstrip() for i in range(0,len(text),info.size.x))
+        finally:
+            self.kernel.CloseHandle(handle)
 
     def close(self):
         if self.process.poll() is None:

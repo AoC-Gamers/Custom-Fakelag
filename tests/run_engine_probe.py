@@ -6,6 +6,7 @@ This tests connectionless UDP input; it does not assert successful game login.
 import argparse
 import atexit
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -22,6 +23,7 @@ parser.add_argument('--source-port', type=int, default=28025)
 parser.add_argument('--server-port', type=int, default=27025)
 parser.add_argument('--extension-id', type=int, default=2)
 parser.add_argument('--change-map', action='store_true')
+parser.add_argument('--unload-sourcemod-id', type=int, help='Private test Metamod plugin ID for ordered teardown')
 args = parser.parse_args()
 results = []
 console = None
@@ -33,14 +35,15 @@ if args.srcds:
     if not args.log.resolve().is_relative_to(args.game.resolve()):
         parser.error('Native test log must be inside the private gamedir')
     executable = args.srcds.resolve(strict=True)
-    console = WindowsConsole([str(executable), '-console', '-insecure', '-ip', '127.0.0.1',
-                              '-port', str(args.server_port), '-game', str(args.game.resolve()),
-                              '+map', 'c1m1_hotel'], str(executable.parent))
+    console = WindowsConsole([str(executable), '-console', '-condebug', '-insecure', '-ip', '127.0.0.1',
+                              '-port', str(args.server_port), '-game', os.path.relpath(args.game.resolve(), executable.parent),
+                              '+map', 'c1m1_hotel', '+cf_probe_status'], str(executable.parent))
     atexit.register(console.close)
 
 def command(text):
     if console:
         console.command(text)
+        time.sleep(.1)  # SRCDS consumes one console line per frame.
         return
     subprocess.run(['docker', 'exec', args.container, 'sh', '-c',
                     'printf "%s\\n" "$1" > /proc/1/fd/0', 'sh', text], check=True)
@@ -53,26 +56,34 @@ def wait_for(pattern, offset, timeout=20):
         if match:
             return match
         time.sleep(.1)
+    if console:
+        args.output.with_suffix('.console.txt').write_text(console.read_output(), encoding='utf-8')
     raise RuntimeError('Timed out: ' + pattern)
 
 def snapshot(stage='status', cmd='cf_probe_status'):
     offset = len(args.log.read_text(errors='replace')) if args.log.exists() else 0
     command(cmd)
-    match = wait_for(r'\[engine_probe\] stage=' + stage + r' (.*)', offset)
+    try:
+        match = wait_for(r'\[engine_probe\] stage=' + stage + r' (.*)', offset, timeout=3)
+    except RuntimeError:
+        if cmd != 'cf_probe_status':
+            raise
+        command(cmd)  # Read-only retry; never repeat a mutation.
+        match = wait_for(r'\[engine_probe\] stage=' + stage + r' (.*)', offset, timeout=10)
     fields = dict(re.findall(r'(\w+)=([0-9.]+)', match[1]))
     return {name: float(value) if '.' in value else int(value) for name, value in fields.items()}
 
 def profile(lag, loss):
     return snapshot('profile', f'cf_probe_profile {args.source_port} {lag} {loss}')
 
-def send(count):
+def send(count, interval=.03):
     if console:
         import socket
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.bind(('127.0.0.1', args.source_port))
             for _ in range(count):
                 sock.sendto(b'\xff' * 4 + b'getchallenge steam\n', ('127.0.0.1', args.server_port))
-                time.sleep(.03)
+                time.sleep(interval)
         return
     # Real socket data traverses NET_ReceiveDatagram and the real detour.
     code = '''import socket,time,sys
@@ -92,9 +103,71 @@ def check(name, state, **expected):
     print(json.dumps(results[-1]), flush=True)
 
 if console:
-    wait_for('Packet adapter initialized', launch_log_offset, timeout=60)
+    deadline = time.monotonic() + 60
+    while True:
+        command('cf_probe_status')
+        try:
+            wait_for(r'\[engine_probe\] stage=status', launch_log_offset, timeout=1)
+            break
+        except RuntimeError:
+            if time.monotonic() >= deadline:
+                raise
 command("sm_custom_fakelag_loss_mode 0")
 snapshot()
+# Additional Windows real-engine checks, with incoming hold measured by net_time.
+if console:
+    import socket
+    # Connectionless challenge reply proves the original path with no profiles.
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as baseline:
+        baseline.bind(('127.0.0.1', args.source_port))
+        baseline.settimeout(2)
+        started = time.perf_counter()
+        baseline.sendto(b'\xff' * 4 + b'getchallenge steam\n', ('127.0.0.1', args.server_port))
+        try:
+            reply, _ = baseline.recvfrom(4096)
+            baseline_ms = (time.perf_counter() - started) * 1000
+        except TimeoutError:
+            reply, baseline_ms = b'', None
+    state = snapshot()
+    check('no-profiles-no-queue', state, enabled=0, pending=0, bytes=0, dispatched=0)
+    results[-1]['challenge_rtt_ms'] = baseline_ms
+    results[-1]['challenge_reply_observed'] = bool(reply)
+    for lag in (50, 300):
+        profile(lag, 0)
+        send(12)
+        time.sleep(lag / 1000 + .15)
+        state = snapshot()
+        check(f'latency-{lag}ms', state, dispatched=12, loss=0, pending=0, restore_failed=0, invalid=0)
+        if not lag <= state['mean_hold_ms'] < lag + 180:
+            raise AssertionError(('hold bound', lag, state))
+    for mode, name in ((0, 'bernoulli'), (1, 'ge')):
+        command(f'sm_custom_fakelag_loss_mode {mode}')
+        for loss in (0, 50, 100):
+            profile(1, loss)
+            send(400, .003)
+            time.sleep(.2)
+            state = snapshot()
+            check(f'{name}-loss-{loss}-400', state, pending=0, saturation=0, invalid=0, restore_failed=0)
+            if state['dispatched'] + state['loss'] != 400:
+                raise AssertionError(('UDP accounting', state))
+            if loss in (0, 100) and state['loss'] != loss * 4:
+                raise AssertionError(('loss endpoint', state))
+            if loss == 50 and not 100 < state['loss'] < 300:
+                raise AssertionError(('intermediate loss outside broad correlated bound', state))
+    command('sm_custom_fakelag_loss_mode 0')
+    profile(10000, 0)
+    send(300, .003)
+    time.sleep(.2)  # Drain the final UDP receive batch before accounting.
+    check('session-limit-bounded', snapshot(), pending=256, bytes=256*23, saturation=44, dispatched=0)
+    check('reset-after-saturation', snapshot('reset', 'cf_probe_reset'), pending=0, bytes=0, lifecycle=256)
+    check('reset-idempotent', snapshot('reset', 'cf_probe_reset'), pending=0, bytes=0, lifecycle=256)
+    profile(5000, 0)
+    send(4)
+    check('pending-before-profile-edit', snapshot(), pending=4)
+    check('edit-invalidates-generation', snapshot('edit', 'cf_probe_edit 50 0'), pending=0, bytes=0, lifecycle=4)
+    send(4)
+    time.sleep(.15)
+    check('only-new-generation-dispatched', snapshot(), pending=0, dispatched=4, lifecycle=4)
 profile(120, 0)
 send(6)
 time.sleep(.4)
@@ -158,4 +231,15 @@ send(3)
 time.sleep(.4)
 check('dispatch-after-unload-reload', snapshot(), dispatched=3, pending=0, restore_failed=0, invalid=0)
 snapshot('clear', 'cf_probe_clear')
-args.output.write_text(json.dumps({'kind': 'SRCDS real connectionless UDP; synthetic profile identity', 'results': results}, indent=2) + '\n')
+evidence = {'kind': 'SRCDS real connectionless UDP; synthetic profile identity', 'results': results}
+if console:
+    if args.unload_sourcemod_id is not None:
+        command(f'meta unload {args.unload_sourcemod_id}')
+        time.sleep(.3)
+    console.close()
+    evidence['process_exit_code'] = console.process.returncode
+    evidence['teardown_status'] = 'passed' if console.process.returncode == 0 else 'failed'
+args.output.write_text(json.dumps(evidence, indent=2) + '\n')
+
+if console and console.process.returncode != 0:
+    raise SystemExit('Functional checks finished; native server teardown failed (see JSON).')
