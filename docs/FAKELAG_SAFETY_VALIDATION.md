@@ -1,5 +1,10 @@
 # Custom-Fakelag: cambios y validación
 
+> Informe histórico de la primera entrega (`9ab5632`). El estado actual,
+> incluido el adaptador Linux y las pruebas posteriores en SRCDS, está en
+> [integración del motor](ENGINE_INTEGRATION_VALIDATION.md). Las referencias a
+> bloqueo total y ausencia de build Windows describen aquella entrega.
+
 Fecha: 2026-11-13 (America/Santiago). Rama local: `codex/fakelag-safety`.
 Estado: correcciones independientes implementadas y probadas; **integración ABI
 pendiente y activación bloqueada**. No se desplegó ni publicó esta rama.

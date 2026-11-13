@@ -4,6 +4,20 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 
 ## [Unreleased]
 
+### Integración del motor
+- Adaptador real para el ELF Linux x86 identificado de L4D2 2.2.4.3: identidad
+  comprobada, capacidad física verificada y reconstrucción del lector por el
+  caller del motor. Otros módulos y Windows siguen rechazando activación.
+- Resultado de servicio separado en aplicado, sin cambios, veto y error; Handled
+  y Stop cancelan normalmente sin excepción nativa ni notificación de éxito.
+- Retirada comprobada del detour: protección fallida no escribe ni libera la
+  infraestructura activa; reset/modos propagan fallos. Descarga irrecuperable
+  usa fail-stop porque SourceMod no ofrece veto desde su callback de unload.
+- 17 checks en SRCDS Linux con UDP real y perfil sintético, además de regresiones
+  con sanitizers. Gameplay y reconexión Steam reales siguen pendientes.
+- CI Linux, Windows y SourcePawn de 2ce01ff y 8bad69f registrado como success,
+  separado de ABI y pruebas en servidor. Véase docs/ENGINE_INTEGRATION_VALIDATION.md.
+
 ### Corregido
 - Doble liberación al asignar paquetes propietarios; reemplazada después por una
   vista del motor sin propiedad y una cola con payload movible no copiable.
@@ -19,11 +33,11 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
   no pueden repoblar perfiles durante una mutación o limpieza.
 
 ### Compatibilidad pendiente
-- Se retira la interpretación de offsets textuales como certificación ABI.
-  Sin adaptador respaldado por binarios identificados, el detour rechaza activar
-  perfiles. Linux x86 compila, pero este build no debe desplegarse para fake lag.
-- Windows y el runtime real de ambas plataformas siguen pendientes. Gamedata y
-  la API pública SourcePawn conservan sus declaraciones.
+- Los offsets textuales antiguos no certifican ABI. Linux dispone ahora de un
+  adaptador respaldado por el módulo identificado; nuevos binarios requieren
+  revisión y aceptación. Windows sigue pendiente de binario y runtime.
+- La aceptación con jugadores reales sigue pendiente. Gamedata y la API pública
+  SourcePawn conservan sus declaraciones.
 
 ### Validación
 - Regresiones con ASan/UBSan, reproducción aislada del commit de referencia,

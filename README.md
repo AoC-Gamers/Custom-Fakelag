@@ -1,10 +1,10 @@
 # Custom Fakelag
 
-> Estado de esta rama: activación del detour bloqueada hasta validar el ABI del
-> motor y completar el adaptador de paquetes. Los perfiles fallan explícitamente;
-> este build no aplica fake lag en servidores. Véase
-> [validación SDK/runtime](docs/SDK_RUNTIME_REFERENCES.md) e
-> [informe de cambios y pruebas](docs/FAKELAG_SAFETY_VALIDATION.md).
+> El adaptador real está habilitado para el motor Linux x86 identificado por
+> build ID `b152439170af081a0d31fc357364a4cd4caa56ac` (L4D2 2.2.4.3).
+> Windows y otros módulos mantienen rechazo controlado. Hay pruebas en SRCDS
+> con UDP connectionless; la aceptación con jugadores reales sigue pendiente.
+> Véase [integración y matriz de evidencia](docs/ENGINE_INTEGRATION_VALIDATION.md).
 
 Extensión de SourceMod para aplicar fake lag por jugador en **Left 4 Dead 2**.
 

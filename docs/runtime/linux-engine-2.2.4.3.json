@@ -35,7 +35,8 @@
     "allocation_bytes": "0x37ab8",
     "header_bytes": 8,
     "payload_capacity": "0x37ab0",
-    "allocation_at": "NET_ProcessSocket+0x10a",
+    "allocation_size_at": "0x1b757a",
+    "allocation_call_at": "0x1b7581",
     "buffer_passed_at": "0x1b75a9",
     "reader_start_at": "0x1b7424",
     "newdata_false_call_at": "0x1b745b"
