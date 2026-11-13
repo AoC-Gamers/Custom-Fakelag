@@ -70,8 +70,10 @@ Remove-Item Env:CUSTOM_FAKELAG_ASAN
 ## Repetición de aceptación en SRCDS Windows
 
 La evidencia anterior de 32 checks UDP y 17 API sigue correspondiendo a la revisión
-previa, que imponía el orden de carga. Este cambio no se presenta como una nueva
-prueba con Left4DHooks activo: falta repetirla en la PC Windows.
+previa, que imponía el orden de carga. La repetición posterior con proveedor activo,
+ambos órdenes y cliente real se documenta por separado en
+[aceptación de orden de carga](WINDOWS_LOAD_ORDER_VALIDATION.md); no se atribuye
+retroactivamente a aquella entrega.
 
 En la instancia privada ya preparada, usando el build normal actualizado:
 

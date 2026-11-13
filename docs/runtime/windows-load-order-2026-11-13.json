@@ -1,0 +1,2049 @@
+{
+  "date": "2026-11-13",
+  "branch": "test/windows-load-order",
+  "initial_sha": "c5a75790c5d177b8ae751c1d73bdaf3e7571575d",
+  "initial_worktree": "clean",
+  "production_source_sha": "9c7debcf334ef534d715449b828e0c6d5fa67853",
+  "validation_tools_sha": "3cb8c41b6edeedd8a5358ae07e60ea07a55ce03b",
+  "delivery_commit": "Exact final documentation commit is recorded in external REVISION_FINAL.json and bundle branch ref",
+  "origin_develop_at_fetch": "9c7debcf334ef534d715449b828e0c6d5fa67853",
+  "versions": {
+    "windows": "11 / 10.0.26300",
+    "msvc_x86": "19.44.35230.0 / tools 14.44.35207",
+    "vs": "2022 Build Tools 17.14.45",
+    "sdk": "10.0.26100.0",
+    "sourcemod": "1.12.0.7260",
+    "metamod": "1.12.0-dev+1229",
+    "dhooks": "1.12.0.7260",
+    "left4dhooks": "1.175",
+    "left4dhooks_source": "7672bdefc4e03a693ae7fdc06e470df41b4cc069"
+  },
+  "engine": {
+    "version": "2.2.4.3",
+    "exe_build": 10097,
+    "steam_build": "23990100",
+    "architecture": "PE32 I386",
+    "sha256": "8a6d468059394bf4cfce32f11dcba12ef45de88da1373084d5a2916d0bf7ba86",
+    "loaded_final_path": "D:/SteamLibrary/steamapps/common/Left 4 Dead 2 Dedicated Server/bin/engine.dll"
+  },
+  "artifacts": {
+    "normal": {
+      "path": "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\Custom-Fakelag\\.build\\windows-l4d2\\package\\addons\\sourcemod\\extensions\\custom_fakelag.ext.dll",
+      "sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+      "bytes": 357376,
+      "cf_probe_commands": []
+    },
+    "observer": {
+      "path": "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\Custom-Fakelag\\.build\\windows-load-order-harness\\package\\addons\\sourcemod\\extensions\\custom_fakelag.ext.dll",
+      "sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+      "bytes": 360960,
+      "cf_probe_commands": [
+        "cf_probe_clear",
+        "cf_probe_edit",
+        "cf_probe_profile",
+        "cf_probe_reset",
+        "cf_probe_status"
+      ]
+    },
+    "api_test": {
+      "path": "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\Custom-Fakelag\\.build\\windows_public_api_load_order.smx",
+      "sha256": "cc4e371e9d5eed17d48b6ab206fdd4cd62fc0ed5fe347a0db35daa5ae5e98f1d",
+      "bytes": 7444
+    },
+    "left4dhooks": {
+      "path": "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\windows-srcds\\left4dead2\\addons\\sourcemod\\plugins\\left4dhooks.smx",
+      "sha256": "a5097583f718a58b249bec7aa2f7d019b03a9d70bb148dc4dbdc4646b43a1105",
+      "bytes": 176994
+    },
+    "dhooks": {
+      "path": "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\windows-srcds\\left4dead2\\addons\\sourcemod\\extensions\\dhooks.ext.dll",
+      "sha256": "f2e44969b84f6b0c090187074f9eb9dcf46b8491a282838760f64add34bfdcb3",
+      "bytes": 976896
+    },
+    "dedicated_steam_runtime": {
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Left 4 Dead 2 Dedicated Server\\bin\\steamclient.dll",
+      "sha256": "b593058386086c3c1feecf9a9228f43872419bcb5ab7e45662cfbf7a9fe6993f",
+      "bytes": 19382632
+    }
+  },
+  "isolated_tests": {
+    "portable_msvc_exit": 0,
+    "sdk_build_only_exit": 0,
+    "sdk_asan_exit": 0,
+    "sdk_asan_pass_checks": 39,
+    "unknown_file_exit": 4,
+    "unknown_file_expected_exit": 4,
+    "engine_DllMain_executed": false,
+    "disk_engine_hash_preserved": true,
+    "console_selftest_exit": 0
+  },
+  "functional_acceptance": "passed for exact engine with real Steam client; shutdown is separate",
+  "first_order": {
+    "pid": 10216,
+    "provider_plugin_id": 14,
+    "dhooks_extension_id": 8,
+    "normal_active_cycles": [
+      {
+        "time": 1794592542.471016,
+        "pid": 10216,
+        "command": "sm exts unload 10",
+        "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+        "profile_before": {
+          "human": "1",
+          "count": "1",
+          "has_profile": "1"
+        },
+        "counters_before": null,
+        "module_absent_after": true,
+        "lag_after": {
+          "address": 1576704928,
+          "bytes": "558bec51578b"
+        },
+        "fill_after": {
+          "address": 1576090800,
+          "bytes": "e955c316fe57",
+          "target": 1544028170,
+          "query_bytes": 48,
+          "state": 4096,
+          "protect": 64,
+          "region_base": 1544028160,
+          "region_bytes": 65536,
+          "target_outside_engine": true
+        }
+      },
+      {
+        "time": 1794592585.5009358,
+        "pid": 10216,
+        "command": "sm exts unload 11",
+        "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+        "profile_before": {
+          "human": "1",
+          "count": "1",
+          "has_profile": "1"
+        },
+        "counters_before": null,
+        "module_absent_after": true,
+        "lag_after": {
+          "address": 1576704928,
+          "bytes": "558bec51578b"
+        },
+        "fill_after": {
+          "address": 1576090800,
+          "bytes": "e955c316fe57",
+          "target": 1544028170,
+          "query_bytes": 48,
+          "state": 4096,
+          "protect": 64,
+          "region_base": 1544028160,
+          "region_bytes": 65536,
+          "target_outside_engine": true
+        }
+      },
+      {
+        "time": 1794592610.1286633,
+        "pid": 10216,
+        "command": "sm exts unload 11",
+        "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+        "profile_before": {
+          "human": "1",
+          "count": "1",
+          "has_profile": "1"
+        },
+        "counters_before": null,
+        "module_absent_after": true,
+        "lag_after": {
+          "address": 1576704928,
+          "bytes": "558bec51578b"
+        },
+        "fill_after": {
+          "address": 1576090800,
+          "bytes": "e955c316fe57",
+          "target": 1544028170,
+          "query_bytes": 48,
+          "state": 4096,
+          "protect": 64,
+          "region_base": 1544028160,
+          "region_bytes": 65536,
+          "target_outside_engine": true
+        }
+      }
+    ],
+    "observer_active_cycles": [
+      {
+        "time": 1794592672.6091921,
+        "pid": 10216,
+        "command": "sm exts unload 11",
+        "build_sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+        "profile_before": {
+          "human": "1",
+          "count": "1",
+          "has_profile": "1"
+        },
+        "counters_before": {
+          "enabled": "1",
+          "pending": "73",
+          "bytes": "3358",
+          "loss_states": "0"
+        },
+        "module_absent_after": true,
+        "lag_after": {
+          "address": 1576704928,
+          "bytes": "558bec51578b"
+        },
+        "fill_after": {
+          "address": 1576090800,
+          "bytes": "e955c316fe57",
+          "target": 1544028170,
+          "query_bytes": 48,
+          "state": 4096,
+          "protect": 64,
+          "region_base": 1544028160,
+          "region_bytes": 65536,
+          "target_outside_engine": true
+        }
+      },
+      {
+        "time": 1794592707.9668345,
+        "pid": 10216,
+        "command": "sm exts unload 11",
+        "build_sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+        "profile_before": {
+          "human": "1",
+          "count": "1",
+          "has_profile": "1"
+        },
+        "counters_before": {
+          "enabled": "1",
+          "pending": "73",
+          "bytes": "3358",
+          "loss_states": "0"
+        },
+        "module_absent_after": true,
+        "lag_after": {
+          "address": 1576704928,
+          "bytes": "558bec51578b"
+        },
+        "fill_after": {
+          "address": 1576090800,
+          "bytes": "e955c316fe57",
+          "target": 1544028170,
+          "query_bytes": 48,
+          "state": 4096,
+          "protect": 64,
+          "region_base": 1544028160,
+          "region_bytes": 65536,
+          "target_outside_engine": true
+        }
+      },
+      {
+        "time": 1794592736.0899084,
+        "pid": 10216,
+        "command": "sm exts unload 11",
+        "build_sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+        "profile_before": {
+          "human": "1",
+          "count": "1",
+          "has_profile": "1"
+        },
+        "counters_before": {
+          "enabled": "1",
+          "pending": "71",
+          "bytes": "3266",
+          "loss_states": "0"
+        },
+        "module_absent_after": true,
+        "lag_after": {
+          "address": 1576704928,
+          "bytes": "558bec51578b"
+        },
+        "fill_after": {
+          "address": 1576090800,
+          "bytes": "e955c316fe57",
+          "target": 1544028170,
+          "query_bytes": 48,
+          "state": 4096,
+          "protect": 64,
+          "region_base": 1544028160,
+          "region_bytes": 65536,
+          "target_outside_engine": true
+        }
+      }
+    ],
+    "fill_bytes": [
+      "e955c316fe57"
+    ],
+    "provider_removed_or_paused": false
+  },
+  "reverse_order": {
+    "pid": 21292,
+    "provider_plugin_id": 17,
+    "normal_active_cycles": [
+      {
+        "time": 1794594223.814249,
+        "pid": 21292,
+        "command": "sm exts unload 3",
+        "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+        "profile_before": {
+          "human": "1",
+          "count": "1",
+          "has_profile": "1"
+        },
+        "counters_before": null,
+        "module_absent_after": true,
+        "lag_after": {
+          "address": 1805360032,
+          "bytes": "558bec51578b"
+        },
+        "fill_after": {
+          "address": 1804745904,
+          "bytes": "e955c32eff57",
+          "target": 1791033354,
+          "query_bytes": 48,
+          "state": 4096,
+          "protect": 64,
+          "region_base": 1791033344,
+          "region_bytes": 65536,
+          "target_outside_engine": true
+        }
+      },
+      {
+        "time": 1794594455.0066848,
+        "pid": 21292,
+        "command": "sm exts unload 11",
+        "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+        "profile_before": {
+          "human": "1",
+          "count": "1",
+          "has_profile": "1"
+        },
+        "counters_before": null,
+        "module_absent_after": true,
+        "lag_after": {
+          "address": 1805360032,
+          "bytes": "558bec51578b"
+        },
+        "fill_after": {
+          "address": 1804745904,
+          "bytes": "e955c32eff57",
+          "target": 1791033354,
+          "query_bytes": 48,
+          "state": 4096,
+          "protect": 64,
+          "region_base": 1791033344,
+          "region_bytes": 65536,
+          "target_outside_engine": true
+        }
+      }
+    ],
+    "observer_active_cycles": [
+      {
+        "time": 1794594387.8352041,
+        "pid": 21292,
+        "command": "sm exts unload 11",
+        "build_sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+        "profile_before": {
+          "human": "1",
+          "count": "1",
+          "has_profile": "1"
+        },
+        "counters_before": {
+          "enabled": "1",
+          "pending": "72",
+          "bytes": "3024",
+          "loss_states": "0"
+        },
+        "module_absent_after": true,
+        "lag_after": {
+          "address": 1805360032,
+          "bytes": "558bec51578b"
+        },
+        "fill_after": {
+          "address": 1804745904,
+          "bytes": "e955c32eff57",
+          "target": 1791033354,
+          "query_bytes": 48,
+          "state": 4096,
+          "protect": 64,
+          "region_base": 1791033344,
+          "region_bytes": 65536,
+          "target_outside_engine": true
+        }
+      }
+    ],
+    "fill_before_provider": "558bec535657",
+    "fill_after_provider": [
+      "e955c32eff57"
+    ],
+    "provider_removed_or_paused": false,
+    "map": "c1m1_hotel -> c1m2_streets",
+    "pending_before_map": 75,
+    "bytes_before_map": 5486,
+    "after_map": {
+      "profiles": 0,
+      "pending": 0,
+      "bytes": 0,
+      "loss_states": 0,
+      "lifecycle": 98
+    },
+    "client_returned_with_previous_profile": false,
+    "normal_reload_and_api_after_map": "passed"
+  },
+  "api_runs": [
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    },
+    {
+      "checks": 17,
+      "failures": 0
+    }
+  ],
+  "api_checks_total": 289,
+  "api_failures_total": 0,
+  "reconnect": {
+    "pid": 10216,
+    "old_userid": 2,
+    "new_userid": 7,
+    "slot": 1,
+    "method": "kickid on real client with active 5000 ms delay; normal persistence plugin unloaded",
+    "observed_pending_before": 47,
+    "after_disconnect": {
+      "profiles": 0,
+      "pending": 0,
+      "bytes": 0,
+      "lifecycle": 96
+    },
+    "new_session_profile": 0,
+    "rechecked_after_seconds": 6
+  },
+  "sessions": [
+    {
+      "source": "load-order-first2.jsonl",
+      "pid": 10216,
+      "launch": {
+        "pid": 10216,
+        "state": "started",
+        "time": 1794592474.0247965
+      },
+      "exit": {
+        "pid": 10216,
+        "state": "stopped",
+        "exit_code": 3221226505
+      },
+      "patched_fill_observations": 212,
+      "distinct_patched_fill_bytes": [
+        "e955c316fe57"
+      ],
+      "unloads": [
+        {
+          "time": 1794592542.471016,
+          "pid": 10216,
+          "command": "sm exts unload 10",
+          "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+          "profile_before": {
+            "human": "1",
+            "count": "1",
+            "has_profile": "1"
+          },
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1576704928,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1576090800,
+            "bytes": "e955c316fe57",
+            "target": 1544028170,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1544028160,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794592585.5009358,
+          "pid": 10216,
+          "command": "sm exts unload 11",
+          "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+          "profile_before": {
+            "human": "1",
+            "count": "1",
+            "has_profile": "1"
+          },
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1576704928,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1576090800,
+            "bytes": "e955c316fe57",
+            "target": 1544028170,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1544028160,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794592610.1286633,
+          "pid": 10216,
+          "command": "sm exts unload 11",
+          "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+          "profile_before": {
+            "human": "1",
+            "count": "1",
+            "has_profile": "1"
+          },
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1576704928,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1576090800,
+            "bytes": "e955c316fe57",
+            "target": 1544028170,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1544028160,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794592623.1698291,
+          "pid": 10216,
+          "command": "sm exts unload 11",
+          "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+          "profile_before": null,
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1576704928,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1576090800,
+            "bytes": "e955c316fe57",
+            "target": 1544028170,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1544028160,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794592672.6091921,
+          "pid": 10216,
+          "command": "sm exts unload 11",
+          "build_sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+          "profile_before": {
+            "human": "1",
+            "count": "1",
+            "has_profile": "1"
+          },
+          "counters_before": {
+            "enabled": "1",
+            "pending": "73",
+            "bytes": "3358",
+            "loss_states": "0"
+          },
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1576704928,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1576090800,
+            "bytes": "e955c316fe57",
+            "target": 1544028170,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1544028160,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794592707.9668345,
+          "pid": 10216,
+          "command": "sm exts unload 11",
+          "build_sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+          "profile_before": {
+            "human": "1",
+            "count": "1",
+            "has_profile": "1"
+          },
+          "counters_before": {
+            "enabled": "1",
+            "pending": "73",
+            "bytes": "3358",
+            "loss_states": "0"
+          },
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1576704928,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1576090800,
+            "bytes": "e955c316fe57",
+            "target": 1544028170,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1544028160,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794592736.0899084,
+          "pid": 10216,
+          "command": "sm exts unload 11",
+          "build_sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+          "profile_before": {
+            "human": "1",
+            "count": "1",
+            "has_profile": "1"
+          },
+          "counters_before": {
+            "enabled": "1",
+            "pending": "71",
+            "bytes": "3266",
+            "loss_states": "0"
+          },
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1576704928,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1576090800,
+            "bytes": "e955c316fe57",
+            "target": 1544028170,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1544028160,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794592901.1248927,
+          "pid": 10216,
+          "command": "sm exts unload 11",
+          "build_sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+          "profile_before": null,
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1576704928,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1576090800,
+            "bytes": "e955c316fe57",
+            "target": 1544028170,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1544028160,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        }
+      ]
+    },
+    {
+      "source": "load-order-local-runtime.jsonl",
+      "pid": 21292,
+      "launch": {
+        "pid": 21292,
+        "state": "started",
+        "time": 1794594145.205154,
+        "launch_mode": "direct",
+        "child_environment": {
+          "SteamAppId": "550",
+          "SteamGameId": "222860",
+          "SteamOverlayGameId": "222860",
+          "SteamClientLaunch": "1"
+        },
+        "srcds": "D:\\SteamLibrary\\steamapps\\common\\Left 4 Dead 2 Dedicated Server\\srcds.exe",
+        "game": "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\windows-srcds\\left4dead2"
+      },
+      "exit": {
+        "pid": 21292,
+        "state": "stopped",
+        "exit_code": 3221225477
+      },
+      "patched_fill_observations": 130,
+      "distinct_patched_fill_bytes": [
+        "e955c32eff57"
+      ],
+      "unloads": [
+        {
+          "time": 1794594223.814249,
+          "pid": 21292,
+          "command": "sm exts unload 3",
+          "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+          "profile_before": {
+            "human": "1",
+            "count": "1",
+            "has_profile": "1"
+          },
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1805360032,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1804745904,
+            "bytes": "e955c32eff57",
+            "target": 1791033354,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1791033344,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794594247.5189164,
+          "pid": 21292,
+          "command": "sm exts unload 11",
+          "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+          "profile_before": null,
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1805360032,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1804745904,
+            "bytes": "e955c32eff57",
+            "target": 1791033354,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1791033344,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794594387.8352041,
+          "pid": 21292,
+          "command": "sm exts unload 11",
+          "build_sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+          "profile_before": {
+            "human": "1",
+            "count": "1",
+            "has_profile": "1"
+          },
+          "counters_before": {
+            "enabled": "1",
+            "pending": "72",
+            "bytes": "3024",
+            "loss_states": "0"
+          },
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1805360032,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1804745904,
+            "bytes": "e955c32eff57",
+            "target": 1791033354,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1791033344,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794594394.2179973,
+          "pid": 21292,
+          "command": "sm exts unload 11",
+          "build_sha256": "a4c24e0343333fa7f9a4d798735d407823219206677a217df796ecca8d554f04",
+          "profile_before": {
+            "human": "1",
+            "count": "0",
+            "has_profile": "0"
+          },
+          "counters_before": {
+            "enabled": "0",
+            "pending": "0",
+            "bytes": "0",
+            "loss_states": "0"
+          },
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1805360032,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1804745904,
+            "bytes": "e955c32eff57",
+            "target": 1791033354,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1791033344,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794594455.0066848,
+          "pid": 21292,
+          "command": "sm exts unload 11",
+          "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+          "profile_before": {
+            "human": "1",
+            "count": "1",
+            "has_profile": "1"
+          },
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1805360032,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1804745904,
+            "bytes": "e955c32eff57",
+            "target": 1791033354,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1791033344,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794594497.201718,
+          "pid": 21292,
+          "command": "sm exts unload 11",
+          "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+          "profile_before": null,
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1805360032,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1804745904,
+            "bytes": "e955c32eff57",
+            "target": 1791033354,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1791033344,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        }
+      ]
+    },
+    {
+      "source": "load-order-launcher-smoke.jsonl",
+      "pid": 28596,
+      "launch": {
+        "pid": 28596,
+        "state": "started",
+        "time": 1794594514.7331514,
+        "launch_mode": "direct",
+        "child_environment": {
+          "SteamAppId": "550",
+          "SteamGameId": "222860",
+          "SteamOverlayGameId": "222860",
+          "SteamClientLaunch": "1"
+        },
+        "srcds": "D:\\SteamLibrary\\steamapps\\common\\Left 4 Dead 2 Dedicated Server\\srcds.exe",
+        "game": "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\windows-srcds\\left4dead2"
+      },
+      "exit": {
+        "pid": 28596,
+        "state": "stopped",
+        "exit_code": 0
+      },
+      "patched_fill_observations": 12,
+      "distinct_patched_fill_bytes": [
+        "e955c32eff57"
+      ],
+      "unloads": [
+        {
+          "time": 1794594538.5998504,
+          "pid": 28596,
+          "command": "sm exts unload 3",
+          "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+          "profile_before": null,
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1805360032,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1804745904,
+            "bytes": "e955c32eff57",
+            "target": 1791033354,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1791033344,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        },
+        {
+          "time": 1794594568.3855712,
+          "pid": 28596,
+          "command": "sm exts unload 10",
+          "build_sha256": "3e062b7047baad8551c5bd384fa18f9727735418ad917f60a04d155589165a73",
+          "profile_before": null,
+          "counters_before": null,
+          "module_absent_after": true,
+          "lag_after": {
+            "address": 1805360032,
+            "bytes": "558bec51578b"
+          },
+          "fill_after": {
+            "address": 1804745904,
+            "bytes": "e955c32eff57",
+            "target": 1791033354,
+            "query_bytes": 48,
+            "state": 4096,
+            "protect": 64,
+            "region_base": 1791033344,
+            "region_bytes": 65536,
+            "target_outside_engine": true
+          }
+        }
+      ]
+    },
+    {
+      "source": "load-order-vanilla.jsonl",
+      "pid": 30552,
+      "launch": {
+        "pid": 30552,
+        "state": "started",
+        "time": 1794594585.7787886,
+        "launch_mode": "direct",
+        "child_environment": {
+          "SteamAppId": "550",
+          "SteamGameId": "222860",
+          "SteamOverlayGameId": "222860",
+          "SteamClientLaunch": "1"
+        },
+        "srcds": "D:\\SteamLibrary\\steamapps\\common\\Left 4 Dead 2 Dedicated Server\\srcds.exe",
+        "game": "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\windows-srcds\\left4dead2"
+      },
+      "exit": {
+        "pid": 30552,
+        "state": "stopped",
+        "exit_code": 0
+      },
+      "patched_fill_observations": 0,
+      "distinct_patched_fill_bytes": [],
+      "unloads": []
+    }
+  ],
+  "packet_counter_observations": [
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "4",
+      "bytes": "184",
+      "loss_states": "0",
+      "dispatched": "91",
+      "mean_hold_ms": "137.667",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "2",
+      "bytes": "92",
+      "loss_states": "0",
+      "dispatched": "133",
+      "mean_hold_ms": "137.743",
+      "loss": "48",
+      "restore_failed": "0",
+      "lifecycle": "4",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "4",
+      "bytes": "184",
+      "loss_states": "1",
+      "dispatched": "178",
+      "mean_hold_ms": "137.790",
+      "loss": "92",
+      "restore_failed": "0",
+      "lifecycle": "6",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "1",
+      "dispatched": "178",
+      "mean_hold_ms": "137.790",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "10",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "12",
+      "bytes": "552",
+      "loss_states": "0",
+      "dispatched": "178",
+      "mean_hold_ms": "137.790",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "10",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "178",
+      "mean_hold_ms": "137.790",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "22",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "178",
+      "mean_hold_ms": "137.790",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "22",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "178",
+      "mean_hold_ms": "137.790",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "22",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "52",
+      "bytes": "2392",
+      "loss_states": "0",
+      "dispatched": "178",
+      "mean_hold_ms": "137.790",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "22",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "73",
+      "bytes": "3358",
+      "loss_states": "0",
+      "dispatched": "178",
+      "mean_hold_ms": "137.790",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "22",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "4",
+      "bytes": "184",
+      "loss_states": "0",
+      "dispatched": "89",
+      "mean_hold_ms": "137.730",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "2",
+      "bytes": "92",
+      "loss_states": "0",
+      "dispatched": "131",
+      "mean_hold_ms": "137.728",
+      "loss": "48",
+      "restore_failed": "0",
+      "lifecycle": "4",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "4",
+      "bytes": "184",
+      "loss_states": "1",
+      "dispatched": "177",
+      "mean_hold_ms": "137.774",
+      "loss": "92",
+      "restore_failed": "0",
+      "lifecycle": "6",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "1",
+      "dispatched": "177",
+      "mean_hold_ms": "137.774",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "10",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "11",
+      "bytes": "506",
+      "loss_states": "0",
+      "dispatched": "177",
+      "mean_hold_ms": "137.774",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "10",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "177",
+      "mean_hold_ms": "137.774",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "21",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "177",
+      "mean_hold_ms": "137.774",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "21",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "52",
+      "bytes": "2392",
+      "loss_states": "0",
+      "dispatched": "177",
+      "mean_hold_ms": "137.774",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "21",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "73",
+      "bytes": "3358",
+      "loss_states": "0",
+      "dispatched": "177",
+      "mean_hold_ms": "137.774",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "21",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "4",
+      "bytes": "184",
+      "loss_states": "0",
+      "dispatched": "89",
+      "mean_hold_ms": "137.660",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "2",
+      "bytes": "92",
+      "loss_states": "0",
+      "dispatched": "131",
+      "mean_hold_ms": "137.725",
+      "loss": "48",
+      "restore_failed": "0",
+      "lifecycle": "4",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "5",
+      "bytes": "230",
+      "loss_states": "1",
+      "dispatched": "176",
+      "mean_hold_ms": "137.770",
+      "loss": "92",
+      "restore_failed": "0",
+      "lifecycle": "6",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "1",
+      "dispatched": "176",
+      "mean_hold_ms": "137.770",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "11",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "15",
+      "bytes": "690",
+      "loss_states": "0",
+      "dispatched": "176",
+      "mean_hold_ms": "137.770",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "11",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "176",
+      "mean_hold_ms": "137.770",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "26",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "176",
+      "mean_hold_ms": "137.770",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "26",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "51",
+      "bytes": "2346",
+      "loss_states": "0",
+      "dispatched": "176",
+      "mean_hold_ms": "137.770",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "26",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "71",
+      "bytes": "3266",
+      "loss_states": "0",
+      "dispatched": "176",
+      "mean_hold_ms": "137.770",
+      "loss": "125",
+      "restore_failed": "0",
+      "lifecycle": "26",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "5",
+      "bytes": "230",
+      "loss_states": "0",
+      "dispatched": "87",
+      "mean_hold_ms": "137.647",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "2",
+      "bytes": "92",
+      "loss_states": "0",
+      "dispatched": "129",
+      "mean_hold_ms": "137.731",
+      "loss": "49",
+      "restore_failed": "0",
+      "lifecycle": "5",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "1",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "99",
+      "restore_failed": "0",
+      "lifecycle": "7",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "1",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "7",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "15",
+      "bytes": "690",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "7",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "22",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "22",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "34",
+      "bytes": "1608",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "22",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "47",
+      "bytes": "2220",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "22",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "96",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "96",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "96",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "96",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "96",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "96",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "96",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "96",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "172",
+      "mean_hold_ms": "137.696",
+      "loss": "132",
+      "restore_failed": "0",
+      "lifecycle": "96",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "54",
+      "bytes": "4046",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "75",
+      "bytes": "5486",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "98",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "98",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "98",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "98",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "98",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "4",
+      "bytes": "168",
+      "loss_states": "0",
+      "dispatched": "88",
+      "mean_hold_ms": "137.289",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "98",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "130",
+      "mean_hold_ms": "137.402",
+      "loss": "48",
+      "restore_failed": "0",
+      "lifecycle": "102",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "4",
+      "bytes": "168",
+      "loss_states": "1",
+      "dispatched": "173",
+      "mean_hold_ms": "137.498",
+      "loss": "92",
+      "restore_failed": "0",
+      "lifecycle": "102",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "1",
+      "dispatched": "173",
+      "mean_hold_ms": "137.498",
+      "loss": "121",
+      "restore_failed": "0",
+      "lifecycle": "106",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "15",
+      "bytes": "630",
+      "loss_states": "0",
+      "dispatched": "173",
+      "mean_hold_ms": "137.498",
+      "loss": "121",
+      "restore_failed": "0",
+      "lifecycle": "106",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "173",
+      "mean_hold_ms": "137.498",
+      "loss": "121",
+      "restore_failed": "0",
+      "lifecycle": "121",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "51",
+      "bytes": "2142",
+      "loss_states": "0",
+      "dispatched": "173",
+      "mean_hold_ms": "137.498",
+      "loss": "121",
+      "restore_failed": "0",
+      "lifecycle": "121",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "1",
+      "pending": "72",
+      "bytes": "3024",
+      "loss_states": "0",
+      "dispatched": "173",
+      "mean_hold_ms": "137.498",
+      "loss": "121",
+      "restore_failed": "0",
+      "lifecycle": "121",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    },
+    {
+      "enabled": "0",
+      "pending": "0",
+      "bytes": "0",
+      "loss_states": "0",
+      "dispatched": "0",
+      "mean_hold_ms": "0.000",
+      "loss": "0",
+      "restore_failed": "0",
+      "lifecycle": "0",
+      "invalid": "0",
+      "saturation": "0"
+    }
+  ],
+  "shutdown": {
+    "pid_10216": {
+      "exit_code": 3221226505,
+      "hex": "0xc0000409",
+      "status": "failed"
+    },
+    "pid_21292": {
+      "exit_code": 3221225477,
+      "hex": "0xc0000005",
+      "status": "failed"
+    },
+    "cold_normal_pid_28596": {
+      "exit_code": 0,
+      "status": "passed"
+    },
+    "vanilla_pid_30552": {
+      "exit_code": 0,
+      "status": "passed"
+    },
+    "root_cause": "unresolved; fresh idle vanilla and normal smoke did not reproduce the human-session shutdown fault"
+  },
+  "runtime_selection": {
+    "original": "C:\\Program Files (x86)\\Steam\\steamclient.dll",
+    "temporary": "D:\\SteamLibrary\\steamapps\\common\\Left 4 Dead 2 Dedicated Server\\bin\\steamclient.dll",
+    "loaded": "D:\\SteamLibrary\\steamapps\\common\\Left 4 Dead 2 Dedicated Server\\bin\\steamclient.dll",
+    "restored": "C:\\Program Files (x86)\\Steam\\steamclient.dll",
+    "time": "2026-11-13T15:22:25.3102805-03:00"
+  },
+  "resources": {
+    "old_inventory_differences": [
+      {
+        "source": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Left 4 Dead 2\\left4dead2\\materials\\vgui\\logos\\spray_stencil_coach_01.vmt",
+        "old_bytes": 121,
+        "now_bytes": 121,
+        "old_mtime": 1794583429986393400,
+        "now_mtime": 1794593938174597900,
+        "sha256": "b074d90b61d9725025e299a15d0e10e385a0ef0f466d40f9ba4a5d21911d2863"
+      },
+      {
+        "source": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Left 4 Dead 2\\left4dead2\\materials\\vgui\\logos\\spray_stencil_coach_01.vtf",
+        "old_bytes": 22104,
+        "now_bytes": 22104,
+        "old_mtime": 1794583429986393400,
+        "now_mtime": 1794593938174597900,
+        "sha256": "5be29339a60449ec3c9def9f481c2e8c6780652584c28162ab22aa2e42656b81"
+      }
+    ],
+    "current_linked_files": 57807,
+    "current_linked_bytes": 13440077380,
+    "current_inventory_changed": 0,
+    "private_logos": [
+      "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\windows-srcds\\left4dead2\\materials\\vgui\\logos\\spray_stencil_coach_01.vmt",
+      "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\windows-srcds\\left4dead2\\materials\\vgui\\logos\\spray_stencil_coach_01.vtf"
+    ]
+  },
+  "final_state": {
+    "srcds_processes": 0,
+    "installed_build": "normal",
+    "acceptance_plugin": "disabled",
+    "metamod_vdf": "restored",
+    "left4dhooks_and_player_fakelag": "enabled on disk; process stopped",
+    "SteamClientDll_registry_value": "restored",
+    "real_client_closed_by_agent": false
+  }
+}

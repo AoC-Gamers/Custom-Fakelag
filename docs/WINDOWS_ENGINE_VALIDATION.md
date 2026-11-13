@@ -225,8 +225,9 @@ modifica cinco bytes en RVA 0x133cb0 (`CBaseServer::FillServerInfo`). La recarga
 registrada entonces retiró player_fakelag y Left4DHooks antes de reinicializar.
 Esa restricción se corrigió después mediante la [excepción acotada de carga](WINDOWS_LOAD_ORDER.md),
 sin cambiar los checks de identidad ni admitir modificaciones del contrato de
-paquetes. La repetición de SRCDS con Left4DHooks permaneciendo activo sigue
-pendiente; no se atribuye retroactivamente a los resultados de esta entrega.
+paquetes. La repetición posterior de SRCDS con Left4DHooks permaneciendo activo
+está en [la aceptación de orden de carga](WINDOWS_LOAD_ORDER_VALIDATION.md);
+no se atribuye retroactivamente a los resultados de esta entrega.
 
 Los primeros WER mostraban SourceMod durante LdrShutdownProcess. CDB
 10.0.29680.1004 capturó una primera AV en server.dll durante un quit después de
