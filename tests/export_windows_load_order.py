@@ -9,7 +9,9 @@ import json
 from pathlib import Path
 import re
 
-def redact(text):
+def redact(text, names=()):
+    for name in names:
+        text = text.replace(name, '[PLAYER]')
     # Remove whole identity events, including names, rather than just SteamIDs.
     lines = []
     for line in text.splitlines():
@@ -39,8 +41,18 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--session', type=Path, action='append', required=True)
     p.add_argument('--sm-log', type=Path, required=True)
+    p.add_argument('--identity-log', type=Path, help='Private console log used only to discover names to redact')
     p.add_argument('--output', type=Path, required=True)
     a = p.parse_args(); a.output.mkdir(parents=True, exist_ok=True)
+    identity_text = a.identity_log.read_text(encoding='utf-8', errors='replace') if a.identity_log else ''
+    # Include raw session output: names can also occur without an adjacent SteamID,
+    # for example FinishClientPutInServer and a status row wrapped across lines.
+    for path in a.session:
+        identity_text += '\n'.join(json.loads(s).get('console', '')
+                                   for s in path.read_text(encoding='utf-8').splitlines())
+    names = set(re.findall(r'"([^"<>\r\n]+)<\d+><STEAM_', identity_text))
+    names.update(re.findall(r'^#\s+\d+\s+\d+\s+"([^"\r\n]+)"', identity_text, re.M))
+    names.update(re.findall(r'FinishClientPutInServer (.+?)\(\d+\):', identity_text))
     sessions = []
     for path in a.session:
         rows = [json.loads(s) for s in path.read_text(encoding='utf-8').splitlines()]
@@ -65,17 +77,17 @@ def main():
             'unloads': unloads})
         exported = []
         for row in rows:
-            if 'console' in row: row['console'] = redact(row['console'])
+            if 'console' in row: row['console'] = redact(row['console'], names)
             exported.append(json.dumps(row))
         (a.output / path.name).write_text('\n'.join(exported) + '\n', encoding='utf-8')
     (a.output / 'session-summary.json').write_text(json.dumps(sessions, indent=2), encoding='utf-8')
     text = a.sm_log.read_text(encoding='utf-8', errors='replace')
     # Only today's new load-order run; prior acceptance logs are separate artifacts.
     lines = [line for line in text.splitlines() if re.search(r' - (?:1[4-9]|2[0-3]):', line)]
-    (a.output / 'sourcemod.log').write_text(redact('\n'.join(lines)) + '\n', encoding='utf-8')
+    (a.output / 'sourcemod.log').write_text(redact('\n'.join(lines), names) + '\n', encoding='utf-8')
     events = [line for line in lines if '[windows_api]' in line or '[engine_probe]' in line or
               'Packet adapter accepted:' in line or 'Mapchange' in line]
-    (a.output / 'functional-events.log').write_text(redact('\n'.join(events)) + '\n', encoding='utf-8')
+    (a.output / 'functional-events.log').write_text(redact('\n'.join(events), names) + '\n', encoding='utf-8')
     print(json.dumps([{'pid': s['pid'], 'unloads': len(s['unloads']),
                        'fill_variants': len(s['distinct_patched_fill_bytes'])} for s in sessions]))
 

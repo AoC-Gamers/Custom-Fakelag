@@ -14,7 +14,7 @@ DLL probadas. No había correcciones locales que descartar. El fetch usó HTTPS
 con puerto 443 para evitar la regla global que convierte HTTPS en SSH; no se
 cambió la configuración Git del usuario.
 
-Los cambios de pruebas, observación y aislamiento terminan en
+Las herramientas usadas para las pruebas runtime se fijaron en
 `3cb8c41b6edeedd8a5358ae07e60ea07a55ce03b`. El commit final de documentación y la
 rama exacta entregada se registran en `REVISION_FINAL.json` junto al bundle;
 así no se intenta incluir el hash de un commit dentro de su propio contenido.
