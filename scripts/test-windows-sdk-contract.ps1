@@ -30,4 +30,3 @@ try {
   & .\windows_sdk_contract.exe ([IO.Path]::GetFullPath($EnginePath))
   if ($LASTEXITCODE) { throw "SDK contract tests failed: $LASTEXITCODE" }
 } finally { Pop-Location }
-

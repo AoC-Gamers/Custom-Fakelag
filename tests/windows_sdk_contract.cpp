@@ -105,4 +105,3 @@ int wmain(int argc, wchar_t** argv)
     FreeLibrary(module);
     return failures ? 1 : 0;
 }
-
