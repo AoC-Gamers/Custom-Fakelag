@@ -143,40 +143,18 @@ Entonces:
 
 ### Relacion entre porcentaje objetivo y transiciones
 
-La implementacion fija:
+Para `0 < p < 1`, la implementación usa:
 
-- una probabilidad de salida de `B` llamada `b`
-- una probabilidad de entrada a `B` llamada `a`
+- `a = p / 2`
+- `b = (1 - p) / 2`
+- primero transiciona; luego descarta si el nuevo estado es `B`
 
-Actualmente:
-
-- `b = 0.5`
-
-Lo que implica una longitud media de rafaga en `B` de:
-
-- `E[L_B] = 1 / b = 2 paquetes`
-
-Luego ajusta `a` para aproximar la tasa promedio objetivo `p`.
-
-En una cadena de dos estados, la probabilidad estacionaria de estar en `B` es:
-
-- `pi_B = a / (a + b)`
-
-Como en esta variante:
-
-- `loss(G) = 0`
-- `loss(B) = 1`
-
-entonces la tasa media de perdida es:
-
-- `p = pi_B = a / (a + b)`
-
-Despejando:
-
-- `a = p * b / (1 - p)`
-
-Esa es exactamente la idea que usa la extension, solo que en base entera para
-trabajar con randoms discretos.
+Por tanto `pi_B = a/(a+b) = p`, `E[L_B] = 1/b = 2/(1-p)` y
+`rho(k) = (1-a-b)^k = 0.5^k`. Al entrar en `B` se descarta; al salir se entrega.
+0 % siempre entrega y deja estado bueno; 100 % siempre descarta.
+No hay división por `1-p` en el algoritmo ni probabilidades saturadas.
+Mantener ráfagas de dos paquetes para todo porcentaje sería incompatible con
+las transiciones acotadas; a porcentajes altos las ráfagas crecen.
 
 ### Propiedad principal
 
@@ -186,7 +164,7 @@ Eso implica:
 
 - si un paquete se acaba de perder, la probabilidad de perder el siguiente
   aumenta
-- aparecen rafagas cortas
+- aparecen ráfagas correlacionadas
 - existe autocorrelacion temporal positiva
 
 ### Consecuencia practica
@@ -225,9 +203,9 @@ En Gilbert-Elliott:
 
 - si el proceso entra en `B`, la longitud esperada de la rafaga es `1 / b`
 
-Con `b = 0.5`:
+Con `p = 0.02`, `b = 0.49`:
 
-- la longitud media es `2 paquetes`
+- la longitud media es aproximadamente `2.0408 paquetes`
 
 ### Correlacion
 
@@ -265,42 +243,15 @@ distintos dentro de la misma sesion.
 
 ### Parametros efectivos del modo Gilbert-Elliott
 
-La implementacion actual usa:
+Se muestrea con `mt19937` propio y uniformes en `[0,1)`; no se modifica el
+PRNG global del motor. Se parte de `G` por generación de conexión y se limpia
+su estado al cambiar/eliminar el perfil, desconectar o resetear. No se exponen
+parámetros independientes de ráfaga. La tasa es estacionaria; una ventana corta
+puede diferir del objetivo por correlación y por el estado inicial.
 
-- una base discreta de probabilidad `10000`
-- `b = 5000 / 10000 = 0.5`
-
-Y calcula `a` a partir del `%` objetivo:
-
-- `a ~= (p * b) / (1 - p)`
-
-en forma entera y discretizada.
-
-### Efecto de esa parametrizacion
-
-Con `b = 0.5`:
-
-- las rafagas malas son cortas
-- el modo sigue siendo conservador
-- el modelo no busca emular una red rota, sino introducir una leve estructura
-  temporal en la perdida
-
-## Limitaciones matematicas de la implementacion actual
-
-La implementacion actual no es un Gilbert-Elliott general completo.
-
-Simplificaciones actuales:
-
-- `loss(G) = 0`
-- `loss(B) = 100%`
-- `b` es fijo
-- solo `a` varia con el `%`
-
-Eso significa:
-
-- el control sobre la forma de las rafagas es limitado
-- no se exponen parametros separados para `a` y `b`
-- no se modelan estados intermedios de mala calidad con perdida parcial en `B`
+Las pruebas usan 2 000 000 de paquetes por porcentaje y semillas fijas;
+[el informe](FAKELAG_SAFETY_VALIDATION.md) registra resultados y tolerancias.
+La ejecución en el motor permanece bloqueada hasta validar el adaptador ABI.
 
 ## Interpretacion operativa
 
@@ -345,7 +296,7 @@ observada a nivel de paquetes.
 - proceso con memoria
 - cadena de Markov de dos estados
 - misma tasa media aproximada
-- rafagas cortas por construccion
+- ráfagas de media `2/(1-p)`, crecientes con el porcentaje
 
 ## Nota final
 

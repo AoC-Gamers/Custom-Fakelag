@@ -1,5 +1,11 @@
 # Custom Fakelag
 
+> Estado de esta rama: activación del detour bloqueada hasta validar el ABI del
+> motor y completar el adaptador de paquetes. Los perfiles fallan explícitamente;
+> este build no aplica fake lag en servidores. Véase
+> [validación SDK/runtime](docs/SDK_RUNTIME_REFERENCES.md) e
+> [informe de cambios y pruebas](docs/FAKELAG_SAFETY_VALIDATION.md).
+
 Extensión de SourceMod para aplicar fake lag por jugador en **Left 4 Dead 2**.
 
 El proyecto permite agregar latencia artificial a jugadores humanos específicos,

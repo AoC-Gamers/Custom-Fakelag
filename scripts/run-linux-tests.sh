@@ -10,8 +10,11 @@ TEST_BIN="$BUILD_DIR/custom_fakelag_tests"
 DEPS_DIR="${DEPS_DIR:-$ROOT/.deps/exts-linux}"
 mkdir -p "$BUILD_DIR"
 extra_flags=()
+if [[ "${TEST_ARCH:-native}" == 32 ]]; then
+  extra_flags+=(-m32)
+fi
 if [[ "${SANITIZE:-0}" == 1 ]]; then
-  extra_flags=(-fsanitize=address,undefined -fno-omit-frame-pointer)
+  extra_flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer)
 fi
 
 ${CXX:-g++} "${extra_flags[@]}" \

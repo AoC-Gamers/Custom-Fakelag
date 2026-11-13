@@ -5,6 +5,31 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 ## [Unreleased]
 
 ### Corregido
+- Doble liberación al asignar paquetes propietarios; reemplazada después por una
+  vista del motor sin propiedad y una cola con payload movible no copiable.
+- Gilbert-Elliott calibrado en 0–100 %, con transición antes de descarte, tasa
+  estacionaria exacta y ráfagas compatibles con porcentajes altos.
+- Reset total e individual, desconexión, reutilización de slot, cambio de mapa,
+  edición de perfiles y desactivación limpian paquetes y modelo de pérdida.
+- Latencias no finitas/fuera de 0–10000 ms y resultados inválidos de forwards se
+  rechazan; resolución/activación fallidas no crean perfiles ni notifican éxito.
+- Colas limitadas por sesión y globalmente, contadores separados por causa,
+  restauración fallida sin reintentos y orden estable por sesión/socket.
+- Natives y ConVars de modo comparten callbacks de reset; forwards reentrantes
+  no pueden repoblar perfiles durante una mutación o limpieza.
+
+### Compatibilidad pendiente
+- Se retira la interpretación de offsets textuales como certificación ABI.
+  Sin adaptador respaldado por binarios identificados, el detour rechaza activar
+  perfiles. Linux x86 compila, pero este build no debe desplegarse para fake lag.
+- Windows y el runtime real de ambas plataformas siguen pendientes. Gamedata y
+  la API pública SourcePawn conservan sus declaraciones.
+
+### Validación
+- Regresiones con ASan/UBSan, reproducción aislada del commit de referencia,
+  scripts de pruebas con rutas de dependencias corregidas y checks en CI.
+
+### Corregido previamente
 - Se valida el cliente real en `player_team` antes de consultar o limpiar perfiles, evitando excepciones de la extension cuando un bot no esta marcado como tal en el evento.
 
 ### Agregado

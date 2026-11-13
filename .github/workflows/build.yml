@@ -153,6 +153,10 @@ jobs:
           key: ${{ needs.deps-exts-linux.outputs.cache-key }}
           fail-on-cache-miss: true
 
+      - name: Run Linux regression tests with sanitizers
+        shell: bash
+        run: TEST_ARCH=32 SANITIZE=1 make test-exts-linux
+
       - name: Build Linux extension package
         shell: bash
         run: make build-exts-linux
@@ -223,6 +227,10 @@ jobs:
           path: .deps/exts-windows
           key: ${{ needs.deps-exts-windows.outputs.cache-key }}
           fail-on-cache-miss: true
+
+      - name: Run Windows regression tests
+        shell: pwsh
+        run: make test-exts-windows
 
       - name: Build Windows extension package
         shell: pwsh
