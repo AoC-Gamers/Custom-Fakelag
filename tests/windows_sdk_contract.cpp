@@ -28,6 +28,16 @@ int wmain(int argc, wchar_t** argv)
     Check(!adapter.Initialize(lag, &foreignTime), "foreign time refused");
     const bool identified = adapter.Initialize(lag, time); Check(identified, adapter.Diagnostic());
     if (!adapter.IsRuntimeValidated()) return 4;
+    auto* dosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
+    auto* peHeader = reinterpret_cast<IMAGE_NT_HEADERS32*>(base + dosHeader->e_lfanew);
+    DWORD headerProtection;
+    VirtualProtect(peHeader, sizeof(*peHeader), PAGE_READWRITE, &headerProtection);
+    const WORD previousMachine = peHeader->FileHeader.Machine;
+    peHeader->FileHeader.Machine = IMAGE_FILE_MACHINE_AMD64;
+    Check(!adapter.Initialize(lag, time), "incompatible loaded architecture header refused");
+    peHeader->FileHeader.Machine = previousMachine;
+    VirtualProtect(peHeader, sizeof(*peHeader), headerProtection, &headerProtection);
+    Check(adapter.Initialize(lag, time), "restored exact headers accepted");
     const double previousTime = *time;
     *time = std::numeric_limits<double>::quiet_NaN();
     Check(!adapter.Initialize(lag, time) && !adapter.IsRuntimeValidated(), "nonfinite engine clock refused");
@@ -127,6 +137,33 @@ int wmain(int argc, wchar_t** argv)
         VirtualProtect(callback, 64, PAGE_READWRITE, &callbackProtect);
         Check(!adapter.Initialize(lag, time), "non-executable callback refused");
         VirtualProtect(callback, 64, callbackProtect, &callbackProtect);
+        for (DWORD protection : {DWORD(PAGE_NOACCESS), DWORD(PAGE_EXECUTE)}) {
+            DWORD previous;
+            VirtualProtect(callback, 64, protection, &previous);
+            Check(!adapter.Initialize(lag, time), "unreadable or inaccessible callback refused");
+            VirtualProtect(callback, 64, previous, &previous);
+        }
+        for (uintptr_t target : {uintptr_t(0), reinterpret_cast<uintptr_t>(fillEntry),
+                                 reinterpret_cast<uintptr_t>(code), uintptr_t(1)}) {
+            const uint32_t relative = static_cast<uint32_t>(target) -
+                static_cast<uint32_t>(reinterpret_cast<uintptr_t>(fillEntry) + 5);
+            std::memcpy(fillEntry + 1, &relative, sizeof(relative));
+            Check(!adapter.Initialize(lag, time), "null loop internal or invalid callback refused");
+        }
+        std::memcpy(fillEntry, installedJump.data(), installedJump.size());
+        for (uintptr_t rva : {uintptr_t(WindowsEngineCode::FillServerInfoRva - 1),
+                              uintptr_t(WindowsEngineCode::FillServerInfoRva + 5),
+                              uintptr_t(0x1c9d6c), uintptr_t(0x1cd660), uintptr_t(0x290a30)}) {
+            auto* byte = base + rva;
+            DWORD protection;
+            VirtualProtect(byte, 1, PAGE_EXECUTE_READWRITE, &protection);
+            const unsigned char original = *byte; *byte ^= 1;
+            Check(!adapter.Initialize(lag, time) && *byte == (original ^ 1) &&
+                  !std::memcmp(fillEntry, installedJump.data(), installedJump.size()),
+                  "adjacent packet reader or clock change refused without writes");
+            *byte = original;
+            VirtualProtect(byte, 1, protection, &protection);
+        }
         DWORD hookProtect;
         VirtualProtect(code, 1, PAGE_EXECUTE_READWRITE, &hookProtect);
         *code ^= 1;
