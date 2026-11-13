@@ -14,6 +14,56 @@ import os
 from pathlib import Path
 import time
 from windows_console import WindowsConsole
+from datetime import datetime
+
+class OwnedSteamProcess:
+    """Adopt only a new dedicated process matching our saved launch receipt."""
+    def __init__(self, pid, expected_path, receipt):
+        self.pid = pid
+        self.k = C.WinDLL('kernel32', use_last_error=True)
+        self.k.OpenProcess.argtypes = [W.DWORD, W.BOOL, W.DWORD]
+        self.k.OpenProcess.restype = W.HANDLE
+        self.k.GetExitCodeProcess.argtypes = [W.HANDLE, C.POINTER(W.DWORD)]
+        self.k.WaitForSingleObject.argtypes = [W.HANDLE, W.DWORD]
+        self.k.TerminateProcess.argtypes = [W.HANDLE, W.UINT]
+        self.handle = self.k.OpenProcess(0x101001, False, pid)
+        if not self.handle: raise C.WinError(C.get_last_error())
+        self.k.QueryFullProcessImageNameW.argtypes = [W.HANDLE, W.DWORD, W.LPWSTR, C.POINTER(W.DWORD)]
+        text = C.create_unicode_buffer(32768); size = W.DWORD(len(text))
+        if not self.k.QueryFullProcessImageNameW(self.handle, 0, text, C.byref(size)):
+            raise C.WinError(C.get_last_error())
+        if Path(text.value).resolve() != expected_path.resolve(): raise RuntimeError('Owned executable mismatch')
+        times = [W.FILETIME() for _ in range(4)]
+        self.k.GetProcessTimes.argtypes = [W.HANDLE] + [C.POINTER(W.FILETIME)] * 4
+        if not self.k.GetProcessTimes(self.handle, *(C.byref(t) for t in times)):
+            raise C.WinError(C.get_last_error())
+        created = ((times[0].dwHighDateTime << 32) | times[0].dwLowDateTime) / 1e7 - 11644473600
+        if created < datetime.fromisoformat(receipt['started_utc']).timestamp():
+            raise RuntimeError('Refusing a process predating the owned Steam launch')
+    def poll(self):
+        code = W.DWORD()
+        if not self.k.GetExitCodeProcess(self.handle, C.byref(code)): raise C.WinError(C.get_last_error())
+        return None if code.value == 259 else code.value
+    def wait(self, timeout):
+        if self.k.WaitForSingleObject(self.handle, int(timeout * 1000)) != 0:
+            import subprocess
+            raise subprocess.TimeoutExpired(str(self.pid), timeout)
+        return self.poll()
+    def terminate(self): self.k.TerminateProcess(self.handle, 1)
+
+def attach_owned(process):
+    c = WindowsConsole.__new__(WindowsConsole)
+    c.kernel = C.WinDLL('kernel32', use_last_error=True)
+    c.kernel.CreateFileW.argtypes = [W.LPCWSTR, W.DWORD, W.DWORD, W.LPVOID, W.DWORD, W.DWORD, W.HANDLE]
+    c.kernel.CreateFileW.restype = W.HANDLE
+    from windows_console import InputRecord
+    c.kernel.WriteConsoleInputW.argtypes = [W.HANDLE, C.POINTER(InputRecord), W.DWORD, C.POINTER(W.DWORD)]
+    c.kernel.CloseHandle.argtypes = [W.HANDLE]
+    c.kernel.AttachConsole.argtypes = [W.DWORD]
+    c.process = process; c.input = None
+    c.kernel.FreeConsole()
+    if not c.kernel.AttachConsole(process.pid): raise C.WinError(C.get_last_error())
+    return c
 
 class Module(C.Structure):
     _fields_ = [('size', W.DWORD), ('id', W.DWORD), ('pid', W.DWORD),
@@ -80,16 +130,30 @@ def observe(pid):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--srcds', type=Path, required=True)
+    p.add_argument('--game', type=Path, help='Marked private gamedir; defaults to executable sibling left4dead2')
     p.add_argument('--commands', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--ip', required=True)
+    p.add_argument('--owned-pid', type=int, help='New process created by our recorded Steam app launch')
+    p.add_argument('--launch-receipt', type=Path)
     a = p.parse_args()
     root = a.srcds.resolve().parent
-    if not (root / 'left4dead2/.custom-fakelag-isolated').is_file(): p.error('Private marker required')
+    game = (a.game or root / 'left4dead2').resolve()
+    if not (game / '.custom-fakelag-isolated').is_file(): p.error('Private marker required')
     if a.commands.exists() and a.commands.read_text(encoding='utf-8').strip(): p.error('Commands must start empty')
     a.commands.touch()
-    c = WindowsConsole([str(a.srcds.resolve()), '-console', '-condebug', '-insecure',
-                        '-ip', a.ip, '-port', '27025', '-game', 'left4dead2', '+map', 'c1m1_hotel'], str(root))
+    # Distinguish the dedicated tool from the desktop game in Steam tracking.
+    # The game's auth AppId must remain 550 (222860 rejects real client tickets).
+    # Never edit global env, registry or the desktop client's files.
+    environment = dict(os.environ, SteamAppId='550', SteamGameId='222860',
+                       SteamOverlayGameId='222860', SteamClientLaunch='1')
+    game_argument = os.path.relpath(game, root) if game.drive.lower() == root.drive.lower() else str(game)
+    if a.owned_pid:
+        if not a.launch_receipt: p.error('Owned Steam process requires its launch receipt')
+        c = attach_owned(OwnedSteamProcess(a.owned_pid, a.srcds, json.loads(a.launch_receipt.read_text(encoding='utf-8'))))
+    else:
+        c = WindowsConsole([str(a.srcds.resolve()), '-console', '-condebug', '-insecure',
+                            '-ip', a.ip, '-port', '27025', '-game', game_argument, '+map', 'c1m1_hotel'], str(root), env=environment)
     def record(command):
         row = {'pid': c.process.pid, 'time': time.time(), 'command': command,
                'console': c.read_output()}
@@ -99,7 +163,11 @@ def main():
     offset = 0
     try:
         with a.output.open('w', encoding='utf-8') as f:
-            f.write(json.dumps({'pid': c.process.pid, 'state': 'started', 'time': time.time()}) + '\n')
+            f.write(json.dumps({'pid': c.process.pid, 'state': 'started', 'time': time.time(),
+                                'launch_mode': 'owned Steam app launch' if a.owned_pid else 'direct',
+                                'child_environment': None if a.owned_pid else {k: environment[k] for k in
+                                    ('SteamAppId', 'SteamGameId', 'SteamOverlayGameId', 'SteamClientLaunch')},
+                                'srcds': str(a.srcds.resolve()), 'game': str(game)}) + '\n')
         while c.process.poll() is None:
             commands = a.commands.read_text(encoding='utf-8')
             pending = commands[offset:]; offset = len(commands)

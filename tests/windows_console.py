@@ -24,7 +24,7 @@ class InputRecord(ctypes.Structure):
 
 
 class WindowsConsole:
-    def __init__(self, argv, cwd):
+    def __init__(self, argv, cwd, env=None):
         if os.name != 'nt':
             raise RuntimeError('Windows console transport requires native Windows')
         self.kernel = ctypes.WinDLL('kernel32', use_last_error=True)
@@ -38,7 +38,7 @@ class WindowsConsole:
         info = subprocess.STARTUPINFO()
         info.dwFlags = subprocess.STARTF_USESHOWWINDOW
         info.wShowWindow = 0
-        self.process = subprocess.Popen(argv, cwd=cwd, startupinfo=info,
+        self.process = subprocess.Popen(argv, cwd=cwd, env=env, startupinfo=info,
                                         creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_BREAKAWAY_FROM_JOB)
         self.input = None
         try:
