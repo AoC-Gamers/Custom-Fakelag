@@ -1,4 +1,5 @@
 #include "PlayerProfileApiBridge.h"
+#include <vector>
 
 namespace {
 constexpr int kLatencyForwardParamCount = 4;
@@ -72,13 +73,43 @@ LatencyForwardResult PlayerProfileApiBridge::OnSetPlayerLatency(int client, floa
 		return LatencyForwardResult::Continue;
 	}
 
-	cell_t result = 0;
-	m_OnSetPlayerLatency->PushCell(client);
-	m_OnSetPlayerLatency->PushFloat(oldLag);
-	m_OnSetPlayerLatency->PushFloatByRef(requestedLag);
-	m_OnSetPlayerLatency->PushCell(static_cast<cell_t>(reason));
-	const int error = m_OnSetPlayerLatency->Execute(&result);
-	return ClassifyLatencyForwardResult(error, result);
+    // SourceMod CForward::Execute reports SP_ERROR_NONE even if a listener
+    // throws. Call the named listeners individually so failures abort the
+    // transaction. Snapshot stable handles/serials, never borrowed functions:
+    // callbacks may unload/reload other plugins while this list is executing.
+    struct Listener { Handle_t handle; unsigned int serial; };
+    std::vector<Listener> listeners;
+    IPluginIterator* iterator = plsys->GetPluginIterator();
+    for (; iterator->MorePlugins(); iterator->NextPlugin()) {
+        IPlugin* plugin = iterator->GetPlugin();
+        if (plugin->GetStatus() == Plugin_Running &&
+            plugin->GetRuntime()->GetFunctionByName("CFakeLag_OnSetPlayerLatency"))
+            listeners.push_back({plugin->GetMyHandle(), plugin->GetSerial()});
+    }
+    iterator->Release();
+    float candidate = *requestedLag;
+    cell_t highest = 0;
+    for (const auto& listener : listeners) {
+        HandleError handleError;
+        IPlugin* plugin = plsys->PluginFromHandle(listener.handle, &handleError);
+        if (!plugin || plugin->GetSerial() != listener.serial || plugin->GetStatus() != Plugin_Running) continue;
+        IPluginFunction* function = plugin->GetRuntime()->GetFunctionByName("CFakeLag_OnSetPlayerLatency");
+        if (!function) continue;
+        int error = function->PushCell(client);
+        if (!error) error = function->PushFloat(oldLag);
+        if (!error) error = function->PushFloatByRef(&candidate);
+        if (!error) error = function->PushCell(static_cast<cell_t>(reason));
+        if (error) { function->Cancel(); return LatencyForwardResult::Error; }
+        cell_t action = 0;
+        error = function->Execute(&action);
+        if (ClassifyLatencyForwardResult(error, action) == LatencyForwardResult::Error)
+            return LatencyForwardResult::Error;
+        if (action > highest) highest = action;
+        if (highest == 4) break; // Plugin_Stop: ET_Hook short-circuit semantics.
+    }
+    const auto result = ClassifyLatencyForwardResult(0, highest);
+    if (result == LatencyForwardResult::Continue) *requestedLag = candidate;
+    return result;
 }
 
 void PlayerProfileApiBridge::OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason)

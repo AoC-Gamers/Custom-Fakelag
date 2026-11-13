@@ -14,7 +14,7 @@ inline bool ProfileChangeSucceeded(ProfileChangeResult result) {
 }
 enum class LatencyForwardResult { Continue, Vetoed, Error };
 inline LatencyForwardResult ClassifyLatencyForwardResult(int executeError, int action) {
-    if (executeError != 0) return LatencyForwardResult::Error;
+    if (executeError != 0 || action < 0 || action == 2 || action > 4) return LatencyForwardResult::Error;
     return action >= 3 ? LatencyForwardResult::Vetoed : LatencyForwardResult::Continue;
 }
 

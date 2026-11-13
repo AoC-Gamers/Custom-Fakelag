@@ -190,6 +190,9 @@ void TestProfilesResetReconnectAndFailures()
     PlayerProfileService service(&manager, &hooks, &registry);
     activationWorks = true; enabled = alwaysOn = false;
     Expect(service.SetPlayerProfile(1, 0, 0) == ProfileChangeResult::Unchanged, "unchanged distinct from applied");
+    for (int action : {-1, 2, 5})
+        Expect(ClassifyLatencyForwardResult(0, action) == LatencyForwardResult::Error,
+               "invalid SourcePawn Actions are errors, not normal vetoes");
     const int beforeVeto = hooks.notifications;
     const int beforeActivation = activations;
     for (int action : {3, 4}) {
