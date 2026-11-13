@@ -13,3 +13,6 @@ void LagDetour_Shutdown();
 void LagDetour_ClearPacketLossState();
 
 #endif // _INCLUDE_CUSTOM_FAKELAG_LAGPACKET_DETOUR_H_
+
+void LagDetour_ClearAll();
+void LagDetour_ClearSession(SessionId session);

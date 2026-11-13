@@ -1,36 +1,54 @@
-#ifndef _CUSTOM_FAKELAG_LAG_SYSTEM_H_
-#define _CUSTOM_FAKELAG_LAG_SYSTEM_H_
-
-#include <amtl/am-priority-queue.h>
+#pragma once
 #include "net_structures.h"
+#include <vector>
+#include <cstddef>
+#include <cmath>
 
 static constexpr int kMaxSockets = 6;
-static constexpr double kMillisecondsToSeconds = 1000.0;
+static constexpr float kMaxLatencyMs = 10000.0f;
+inline bool ValidLatency(float lag) { return std::isfinite(lag) && lag >= 0 && lag <= kMaxLatencyMs; }
 
-struct PacketEarlier {
-	constexpr bool operator ()(const _netpacket_t& left, const _netpacket_t& right) const {
-		return left.received < right.received;
-	}
+struct QueueLimits {
+    size_t sessionPackets = 256;
+    size_t sessionBytes = 2 * 1024 * 1024;
+    size_t globalPackets = 4096;
+    size_t globalBytes = 32 * 1024 * 1024;
+    size_t packetBytes = 65536;
 };
-
+struct PacketCounters {
+    uint64_t requestedLoss = 0;
+    uint64_t saturation = 0;
+    uint64_t restoreFailed = 0;
+    uint64_t lifecycle = 0;
+    uint64_t invalidPacket = 0;
+};
+enum class EnqueueResult { Queued, Saturated, Invalid };
+struct PacketLater {
+    bool operator()(const QueuedPacket& a, const QueuedPacket& b) const {
+        return a.releaseAt.value > b.releaseAt.value ||
+            (a.releaseAt.value == b.releaseAt.value && a.sequence > b.sequence);
+    }
+};
 class LagSystem {
-private:
-	ke::PriorityQueue<_netpacket_t, PacketEarlier> m_LagPackets[kMaxSockets];
-	size_t m_QueueDepths[kMaxSockets] = {};
-	const double* m_pNetTime;
-
-	double GetNetTime() const { return *m_pNetTime; }
-	bool IsValidSocket(int socket) const { return socket >= 0 && socket < kMaxSockets; }
-	bool HasReadyPacket(int socket) const;
-
+    std::vector<QueuedPacket> m_Packets[kMaxSockets];
+    const double* m_NetTime;
+    const EnginePacketAdapter* m_Adapter;
+    QueueLimits m_Limits;
+    size_t m_Bytes = 0;
+    size_t m_Count = 0;
+    uint64_t m_Sequence = 0;
+    PacketCounters m_Counters;
+    bool ValidSocket(int socket) const { return socket >= 0 && socket < kMaxSockets; }
 public:
-	explicit LagSystem(const double* pNetTime) : m_pNetTime(pNetTime) {
-		assert(pNetTime != nullptr);
-	}
-
-	bool LagPacket(_netpacket_t* pPacket, float lagTime);
-	bool GetNextPacket(int socket, _netpacket_t* destPacket);
-	size_t GetQueueDepth(int socket) const { return IsValidSocket(socket) ? m_QueueDepths[socket] : 0; }
+    LagSystem(const double* time, const EnginePacketAdapter* adapter, QueueLimits limits = {})
+        : m_NetTime(time), m_Adapter(adapter), m_Limits(limits) {}
+    EnqueueResult LagPacket(const _netpacket_t* packet, Milliseconds lag, SessionId session);
+    bool GetNextPacket(int socket, _netpacket_t* destination, size_t allocationCapacity);
+    void ClearAll();
+    void ClearSession(SessionId session);
+    size_t GetQueueDepth(int socket) const { return ValidSocket(socket) ? m_Packets[socket].size() : 0; }
+    size_t GetPendingCount() const { return m_Count; }
+    size_t GetRetainedBytes() const { return m_Bytes; }
+    const PacketCounters& Counters() const { return m_Counters; }
+    void CountRequestedLoss() { ++m_Counters.requestedLoss; }
 };
-
-#endif // _CUSTOM_FAKELAG_LAG_SYSTEM_H_

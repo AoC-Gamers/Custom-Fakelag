@@ -7,10 +7,7 @@
 #include "latency/PlayerProfileApiBridge.h"
 #include "latency/PlayerProfileService.h"
 
-enum class CFakeLagPacketLossMode : int {
-	BernoulliUniform = 0,
-	GilbertElliott = 1
-};
+#include "network/NetworkConfig.h"
 
 extern ConVar sm_custom_fakelag_loss_mode;
 extern ConVar sm_custom_fakelag_debug;
@@ -20,6 +17,7 @@ extern ConVar sm_custom_fakelag_detour_mode;
 bool CFakeLag_IsDebugEnabled();
 float CFakeLag_GetDebugHoldInterval();
 bool CFakeLag_IsAlwaysOnDetourMode();
+bool CFakeLag_IsModeChanging();
 
 class CustomFakelag : public SDKExtension,
 					  public IConCommandBaseAccessor,
@@ -28,22 +26,30 @@ class CustomFakelag : public SDKExtension,
 					  public IClientRegistry
 {
 private:
+	bool m_ChangingMode = false;
+	bool m_Loaded = false;
 	EngineClientNetAdrResolver* m_NetAdrResolver = nullptr;
 	PlayerLagManager* m_LagManager = nullptr;
 	PlayerProfileService* m_PlayerProfileService = nullptr;
 	PlayerProfileApiBridge* m_PlayerProfileApiBridge = nullptr;
 
+	void ReleaseResources();
 	void OnClientNetAdrResolutionFailed(int client) override;
+	void OnSessionInvalidated(SessionId session) override;
+	void OnLevelShutdown();
 	void OnPlayerLagChanged(int client, const dumb_netadr_t& netadr, float lagTime) override;
 	ClientEligibility GetClientEligibility(int client, IGamePlayer** player = nullptr) const override;
 	int GetMaxClients() const override;
 	bool RegisterConCommandBase(ConCommandBase* pVar) override;
 
 public:
-	void SetPlayerProfile(int client, float lagTime, int packetLossPercent);
+	bool SetPlayerProfile(int client, float lagTime, int packetLossPercent);
 	bool GetPlayerProfile(int client, float& lagTime, int& packetLossPercent) const;
 	bool HasPlayerProfile(int client) const;
-	void ClearPlayerProfile(int client);
+	bool ClearPlayerProfile(int client);
+	bool IsModeChanging() const { return m_ChangingMode; }
+	void OnLossModeChanged(int oldMode);
+	void OnDetourModeChanged();
 	void SetPacketLossMode(CFakeLagPacketLossMode mode);
 	CFakeLagPacketLossMode GetPacketLossMode() const;
 	void ClearAllPlayerProfiles();
@@ -57,6 +63,7 @@ public:
 	void SDK_OnUnload() override;
 	void SDK_OnAllLoaded() override;
 	void OnClientDisconnecting(int client) override;
+	void OnClientConnected(int client) override;
 public:
 #if defined SMEXT_CONF_METAMOD
 	//virtual bool SDK_OnMetamodLoad(ISmmAPI *ismm, char *error, size_t maxlen, bool late);

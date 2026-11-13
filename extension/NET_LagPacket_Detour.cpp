@@ -4,6 +4,7 @@
 
 CDetour* DLagPacket = nullptr;
 
+static EnginePacketAdapter s_EngineAdapter; // No runtime ABI has been certified.
 static const PlayerLagManager* s_LagManager = nullptr;
 static LagSystem* s_LagSystem = nullptr;
 static LagPacketPolicy* s_LagPacketPolicy = nullptr;
@@ -11,11 +12,12 @@ static LagPacketPolicy* s_LagPacketPolicy = nullptr;
 DETOUR_DECL_STATIC2(NET_LagPacket, bool, bool, newdata, _netpacket_t*, packet)
 {
 	if (packet == nullptr || s_LagPacketPolicy == nullptr) {
-		return false;
+		return DETOUR_STATIC_CALL(NET_LagPacket)(newdata, packet);
 	}
 
 	const auto result = s_LagPacketPolicy->HandlePacket(newdata, packet);
-	return result.ShouldDispatch();
+	return result.state == PacketDispatchState::Bypass
+		? DETOUR_STATIC_CALL(NET_LagPacket)(newdata, packet) : result.ShouldDispatch();
 }
 
 bool CreateNetLagPacketDetour()
@@ -25,7 +27,12 @@ bool CreateNetLagPacketDetour()
 		g_pSM->LogError(myself, "NET_LagPacket detour could not be initialized.");
 		return false;
 	}
-	DLagPacket->EnableDetour();
+	if (!DLagPacket->EnableDetour()) {
+		g_pSM->LogError(myself, "NET_LagPacket detour activation failed: memory protection could not be changed.");
+		DLagPacket->Destroy();
+		DLagPacket = nullptr;
+		return false;
+	}
 	return true;
 }
 
@@ -39,14 +46,19 @@ void RemoveNetLagPacketDetour()
 
 bool LagDetour_Init(const PlayerLagManager* lagManager, const double* pNetTime)
 {
+	if (!lagManager || !pNetTime) return false;
 	s_LagManager = lagManager;
-	s_LagSystem = new LagSystem(pNetTime);
-	s_LagPacketPolicy = new LagPacketPolicy(s_LagManager, s_LagSystem);
+	s_LagSystem = new LagSystem(pNetTime, &s_EngineAdapter);
+	s_LagPacketPolicy = new LagPacketPolicy(s_LagManager, s_LagSystem, &s_EngineAdapter);
 	return true;
 }
 
 bool LagDetour_Enable()
 {
+	if (!s_EngineAdapter.IsRuntimeValidated()) {
+		g_pSM->LogError(myself, "[custom_fakelag] Activation refused: engine ABI, reader reconstruction and destination capacity are unverified. See docs/SDK_RUNTIME_REFERENCES.md.");
+		return false;
+	}
 	if (DLagPacket != nullptr) {
 		return true;
 	}
@@ -65,6 +77,7 @@ bool LagDetour_Enable()
 
 void LagDetour_Disable()
 {
+	LagDetour_ClearAll();
 	if (DLagPacket == nullptr) {
 		return;
 	}
@@ -95,4 +108,15 @@ void LagDetour_ClearPacketLossState()
 	if (s_LagPacketPolicy != nullptr) {
 		s_LagPacketPolicy->ClearPacketLossState();
 	}
+}
+
+void LagDetour_ClearAll()
+{
+    if (s_LagSystem) s_LagSystem->ClearAll();
+    LagDetour_ClearPacketLossState();
+}
+void LagDetour_ClearSession(SessionId session)
+{
+    if (s_LagSystem) s_LagSystem->ClearSession(session);
+    if (s_LagPacketPolicy) s_LagPacketPolicy->ClearSession(session);
 }

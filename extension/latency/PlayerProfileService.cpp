@@ -1,28 +1,35 @@
 #include "PlayerProfileService.h"
-#include "../extension.h"
+
 #include "../NET_LagPacket_Detour.h"
 
+bool CFakeLag_IsAlwaysOnDetourMode();
+bool CFakeLag_IsModeChanging();
+
 namespace {
+struct MutationGuard {
+	bool& flag;
+	explicit MutationGuard(bool& f) : flag(f) { flag = true; }
+	~MutationGuard() { flag = false; }
+};
 constexpr float kNoLag = 0.0f;
 
-void SyncLagDetourState(const PlayerLagManager* lagManager)
+bool SyncLagDetourState(const PlayerLagManager* lagManager)
 {
 	if (CFakeLag_IsAlwaysOnDetourMode()) {
-		LagDetour_Enable();
-		return;
+		return LagDetour_Enable();
 	}
 
 	if (lagManager == nullptr) {
 		LagDetour_Disable();
-		return;
+		return true;
 	}
 
 	if (lagManager->GetLagCount() > 0) {
-		LagDetour_Enable();
-		return;
+		return LagDetour_Enable();
 	}
 
 	LagDetour_Disable();
+	return true;
 }
 }
 
@@ -40,6 +47,7 @@ bool PlayerProfileService::TryGetSupportedClient(int client, IGamePlayer** playe
 
 bool PlayerProfileService::ThrowIfUnsupportedClient(IPluginContext* context, int client) const
 {
+#ifndef UNIT_TEST
 	if (context == nullptr || m_ClientRegistry == nullptr) {
 		return false;
 	}
@@ -56,6 +64,10 @@ bool PlayerProfileService::ThrowIfUnsupportedClient(IPluginContext* context, int
 	}
 
 	return false;
+#else
+	(void)context;
+	return IsClientSupported(client);
+#endif
 }
 
 bool PlayerProfileService::IsClientSupported(int client) const
@@ -70,16 +82,11 @@ void PlayerProfileService::OnClientDisconnecting(int client)
 	}
 
 	const float oldLag = m_LagManager->GetPlayerLag(client);
-	const int oldPacketLossPercent = m_LagManager->GetPlayerPacketLoss(client);
-	if (oldLag <= kNoLag && oldPacketLossPercent <= 0) {
-		return;
-	}
-
-	m_LagManager->ClearPlayerLag(client);
-	m_LagManager->ClearPlayerPacketLoss(client);
-	LagDetour_ClearPacketLossState();
+	const int oldLoss = m_LagManager->GetPlayerPacketLoss(client);
+	m_LagManager->ClearClient(client); // Uses cached connection identity; no address lookup on disconnect.
 	SyncLagDetourState(m_LagManager);
-	NotifyPlayerProfileChanged(client, oldLag, oldPacketLossPercent, kNoLag, 0, CFakeLagChangeReason::Disconnect);
+	if (oldLag > 0 || oldLoss > 0)
+		NotifyPlayerProfileChanged(client, oldLag, oldLoss, 0, 0, CFakeLagChangeReason::Disconnect);
 }
 
 bool PlayerProfileService::SetPlayerLatency(int client, float lagTime)
@@ -119,10 +126,6 @@ bool PlayerProfileService::SetPlayerPacketLoss(int client, int packetLossPercent
 		packetLossPercent <= 0 ? CFakeLagChangeReason::Clear : CFakeLagChangeReason::Manual,
 		false);
 
-	if (changed && packetLossPercent <= 0) {
-		LagDetour_ClearPacketLossState();
-	}
-
 	return changed;
 }
 
@@ -133,33 +136,26 @@ void PlayerProfileService::ClearPlayerPacketLoss(int client)
 	}
 
 	ApplyPlayerProfileChange(client, m_LagManager->GetPlayerLag(client), 0, CFakeLagChangeReason::Clear, false);
-	LagDetour_ClearPacketLossState();
 }
 
 void PlayerProfileService::ClearAllPlayerProfiles()
 {
-	if (m_LagManager == nullptr || m_ClientRegistry == nullptr) {
-		return;
-	}
-
-	for (int client = 1; client <= m_ClientRegistry->GetMaxClients(); client++) {
-		if (!TryGetSupportedClient(client)) {
-			continue;
+	if (!m_LagManager || m_Clearing) return;
+	MutationGuard clearing(m_Clearing);
+	struct Previous { int client; float lag; int loss; };
+	std::vector<Previous> previous;
+	if (m_ClientRegistry) {
+		for (int client = 1; client <= m_ClientRegistry->GetMaxClients(); ++client) {
+			float lag = m_LagManager->GetPlayerLag(client);
+			int loss = m_LagManager->GetPlayerPacketLoss(client);
+			if (lag > 0 || loss > 0) previous.push_back({client, lag, loss});
 		}
-
-		const float oldLag = m_LagManager->GetPlayerLag(client);
-		const int oldPacketLossPercent = m_LagManager->GetPlayerPacketLoss(client);
-		if (oldLag <= kNoLag && oldPacketLossPercent <= 0) {
-			continue;
-		}
-
-		m_LagManager->ClearPlayerLag(client);
-		m_LagManager->ClearPlayerPacketLoss(client);
-		NotifyPlayerProfileChanged(client, oldLag, oldPacketLossPercent, kNoLag, 0, CFakeLagChangeReason::Clear);
 	}
-
-	LagDetour_ClearPacketLossState();
+	m_LagManager->ClearAll(); // Includes profiles whose players are no longer queryable.
+	LagDetour_ClearAll();
 	SyncLagDetourState(m_LagManager);
+	for (const auto& old : previous)
+		NotifyPlayerProfileChanged(old.client, old.lag, old.loss, 0, 0, CFakeLagChangeReason::Clear);
 }
 
 void PlayerProfileService::ClearAllPlayerLatencies()
@@ -206,66 +202,31 @@ ProfileCount PlayerProfileService::GetLaggedClientCount() const
 
 bool PlayerProfileService::ApplyPlayerLatencyChange(ClientIndex client, LagMilliseconds lagTime, CFakeLagChangeReason reason, bool allowPreForward)
 {
-	if (m_LagManager == nullptr) {
-		return false;
-	}
-
-	LagMilliseconds oldLag = m_LagManager->GetPlayerLag(client);
-	LagMilliseconds requestedLag = lagTime;
-
-	if (allowPreForward && m_Hooks != nullptr) {
-		if (!m_Hooks->OnSetPlayerLatency(client, oldLag, &requestedLag, reason)) {
-			return false;
-		}
-	}
-
-	if (requestedLag < kNoLag) {
-		requestedLag = kNoLag;
-	}
-
-	if (oldLag == requestedLag) {
-		return true;
-	}
-
-	const int oldPacketLossPercent = m_LagManager->GetPlayerPacketLoss(client);
-	m_LagManager->SetPlayerLag(client, requestedLag);
-	SyncLagDetourState(m_LagManager);
-	NotifyPlayerProfileChanged(client, oldLag, oldPacketLossPercent, requestedLag, oldPacketLossPercent, reason);
-	return true;
+	if (!m_LagManager) return false;
+	return ApplyPlayerProfileChange(client, lagTime, m_LagManager->GetPlayerPacketLoss(client), reason, allowPreForward);
 }
 
 bool PlayerProfileService::ApplyPlayerProfileChange(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent, CFakeLagChangeReason reason, bool allowPreForward)
 {
-	if (m_LagManager == nullptr) {
+	if (!m_LagManager || m_ApplyingChange || m_Clearing || CFakeLag_IsModeChanging() || !IsClientSupported(client) ||
+		!ValidLatency(lagTime) || packetLossPercent < 0 || packetLossPercent > 100) return false;
+	MutationGuard applying(m_ApplyingChange);
+	const auto revision = m_LagManager->Revision();
+	const float oldLag = m_LagManager->GetPlayerLag(client);
+	const int oldLoss = m_LagManager->GetPlayerPacketLoss(client);
+	float requestedLag = lagTime;
+	if (allowPreForward && m_Hooks && !m_Hooks->OnSetPlayerLatency(client, oldLag, &requestedLag, reason)) return false;
+	// A forward may disconnect, reset, or attempt a nested mutation.
+	if (!ValidLatency(requestedLag) || !IsClientSupported(client) || revision != m_LagManager->Revision()) return false;
+	if (oldLag == requestedLag && oldLoss == packetLossPercent) return true;
+	const bool wasEnabled = LagDetour_IsEnabled();
+	if ((requestedLag > 0 || packetLossPercent > 0) && !LagDetour_Enable()) return false;
+	if (!m_LagManager->SetPlayerProfile(client, requestedLag, packetLossPercent)) {
+		if (!wasEnabled) SyncLagDetourState(m_LagManager);
 		return false;
 	}
-
-	LagMilliseconds oldLag = m_LagManager->GetPlayerLag(client);
-	PacketLossPercent oldPacketLossPercent = m_LagManager->GetPlayerPacketLoss(client);
-	LagMilliseconds requestedLag = lagTime;
-
-	if (allowPreForward && m_Hooks != nullptr) {
-		if (!m_Hooks->OnSetPlayerLatency(client, oldLag, &requestedLag, reason)) {
-			return false;
-		}
-	}
-
-	if (requestedLag < kNoLag) {
-		requestedLag = kNoLag;
-	}
-
-	if (packetLossPercent < 0) {
-		packetLossPercent = 0;
-	}
-
-	if (oldLag == requestedLag && oldPacketLossPercent == packetLossPercent) {
-		return true;
-	}
-
-	m_LagManager->SetPlayerLag(client, requestedLag);
-	m_LagManager->SetPlayerPacketLoss(client, packetLossPercent);
 	SyncLagDetourState(m_LagManager);
-	NotifyPlayerProfileChanged(client, oldLag, oldPacketLossPercent, requestedLag, packetLossPercent, reason);
+	NotifyPlayerProfileChanged(client, oldLag, oldLoss, requestedLag, packetLossPercent, reason);
 	return true;
 }
 

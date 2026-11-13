@@ -1,198 +1,94 @@
-#ifndef _CUSTOM_FAKELAG_NET_STRUCTURES_H_
-#define _CUSTOM_FAKELAG_NET_STRUCTURES_H_
+#pragma once
 
-#include <cstring>
 #include <netadr.h>
+#ifndef UNIT_TEST
+#include <inetchannel.h>
+#endif
+#include <cstring>
+#include <cstdint>
+#include <memory>
+#include <type_traits>
 
-struct dumb_netadr_s {
-  netadrtype_t type;
-  unsigned char ip[4];
-  unsigned short port;
+struct dumb_netadr_t {
+    netadrtype_t type;
+    unsigned char ip[4];
+    unsigned short port;
 };
-
-using dumb_netadr_t = dumb_netadr_s;
-
-
-struct fake_bf_read {
-  const unsigned char* m_pData;
-  int m_nDataBytes;
-  int m_nDataBits;
-  int m_iCurBit;
-  bool m_bOverflow;
-  bool m_bAssertOnOverflow;
-  const char* m_pDebugName;
-
-  // These fields match the layout we need from the engine bit reader on L4D2.
-  int m_BitRead0;
-  int m_BitRead1;
-  int m_BitRead2;
-};
-
-struct _netpacket_s
+inline dumb_netadr_t AddressKey(const netadr_t& address)
 {
-  dumb_netadr_t from;
-  int source;
-  double received;
-  unsigned char* data;
-  fake_bf_read message;
-  int size;
-  int wiresize;
-  bool stream;
-  _netpacket_s* pNext;
-
-  _netpacket_s()
-    : from{},
-      source(0),
-      received(0.0),
-      data(nullptr),
-      message{},
-      size(0),
-      wiresize(0),
-      stream(false),
-      pNext(nullptr)
-  {
-  }
-
-  void ResetRuntimeLinks()
-  {
-    pNext = nullptr;
-  }
-
-  void SyncMessageBuffer()
-  {
-    message.m_pData = data;
-  }
-
-  void CopyPayloadFrom(const _netpacket_s& src)
-  {
-    delete[] data;
-    data = nullptr;
-
-    if (src.size > 0 && src.data != nullptr) {
-      data = new unsigned char[src.size];
-      std::memcpy(data, src.data, src.size);
-    }
-
-    SyncMessageBuffer();
-  }
-
-  void CopyMetadataFrom(const _netpacket_s& src)
-  {
-    from = src.from;
-    source = src.source;
-    received = src.received;
-    message = src.message;
-    size = src.size;
-    wiresize = src.wiresize;
-    stream = src.stream;
-    ResetRuntimeLinks();
-  }
-
-  void CopyFrom(const _netpacket_s& src)
-  {
-    CopyMetadataFrom(src);
-    CopyPayloadFrom(src);
-  }
-
-  bool CopyToLivePacket(_netpacket_s* dest) const
-  {
-    if (dest == nullptr) {
-      return false;
-    }
-
-    unsigned char* liveData = dest->data;
-    const int liveCapacity = dest->message.m_nDataBytes > 0 ? dest->message.m_nDataBytes : dest->size;
-
-    if (size > 0) {
-      if (data == nullptr || liveData == nullptr || liveCapacity < size) {
-        return false;
-      }
-    }
-
-    dest->CopyMetadataFrom(*this);
-    dest->data = liveData;
-    dest->message.m_pData = liveData;
-    dest->message.m_nDataBytes = liveCapacity;
-
-    if (size > 0) {
-      std::memcpy(dest->data, data, size);
-    }
-
-    return true;
-  }
-
-  _netpacket_s(const _netpacket_s& src)
-    :
-    from(src.from),
-    source(src.source),
-    received(src.received),
-    data(nullptr),
-    message(src.message),
-    size(src.size),
-    wiresize(src.wiresize),
-    stream(src.stream),
-    pNext(nullptr)
-  {
-    CopyPayloadFrom(src);
-  }
-
-  _netpacket_s& operator=(const _netpacket_s& src)
-  {
-    if (this == &src) {
-      return *this;
-    }
-
-    CopyFrom(src);
-
-    return *this;
-  }
-
-  _netpacket_s(_netpacket_s&& other) noexcept
-    : from(other.from),
-      source(other.source),
-      received(other.received),
-      data(other.data),
-      message(other.message),
-      size(other.size),
-      wiresize(other.wiresize),
-      stream(other.stream),
-      pNext(nullptr)
-  {
-    other.data = nullptr;
-    other.ResetRuntimeLinks();
-    SyncMessageBuffer();
-  }
-
-  _netpacket_s& operator=(_netpacket_s&& other) noexcept
-  {
-    if (this == &other) {
-      return *this;
-    }
-
-    delete[] data;
-
-    from = other.from;
-    source = other.source;
-    received = other.received;
-    data = other.data;
-    message = other.message;
-    size = other.size;
-    wiresize = other.wiresize;
-    stream = other.stream;
-    ResetRuntimeLinks();
-
-    other.data = nullptr;
-    other.ResetRuntimeLinks();
-    SyncMessageBuffer();
-    return *this;
-  }
-
-  ~_netpacket_s()
-  {
-    delete[] data;
-  }
+    dumb_netadr_t key{};
+    key.type = address.type;
+    std::memcpy(key.ip, address.ip, sizeof(key.ip));
+    key.port = address.port;
+    return key;
+}
+// SDK declaration is a candidate ABI, not evidence that an engine uses it.
+#ifndef UNIT_TEST
+using _netpacket_t = netpacket_t;
+#else
+// Isolated harness transport, deliberately not an engine ABI declaration.
+struct _netpacket_t {
+    dumb_netadr_t from{};
+    int source = 0;
+    double received = 0;
+    unsigned char* data = nullptr;
+    int size = 0;
+    int wiresize = 0;
+    bool stream = false;
+    int readerBytes = 0, readerBits = 0, readerCursor = 0;
+    const unsigned char* readerPointer = nullptr;
 };
+inline dumb_netadr_t AddressKey(const dumb_netadr_t& address) { return address; }
+#endif
 
-using _netpacket_t = _netpacket_s;
+struct SessionId {
+    uint64_t value = 0;
+    explicit SessionId(uint64_t id = 0) : value(id) {}
+    bool operator==(SessionId other) const { return value == other.value; }
+};
+struct Milliseconds { float value; explicit Milliseconds(float v) : value(v) {} };
+struct EngineTime { double value; explicit EngineTime(double v = 0) : value(v) {} };
 
-#endif // _CUSTOM_FAKELAG_NET_STRUCTURES_H_
+struct ReaderPosition {
+    int bytes = 0;
+    int bits = 0;
+    int cursor = 0;
+};
+// A view never frees an engine allocation; no reader object/pointers are copied.
+struct EnginePacketView {
+    dumb_netadr_t from{};
+    int source = 0;
+    EngineTime received;
+    const unsigned char* data = nullptr;
+    int size = 0;
+    int wiresize = 0;
+    bool stream = false;
+    ReaderPosition reader;
+};
+struct QueuedPacket {
+    EnginePacketView metadata;
+    std::unique_ptr<unsigned char[]> payload;
+    SessionId session;
+    EngineTime releaseAt;
+    uint64_t sequence = 0;
+    QueuedPacket() = default;
+    QueuedPacket(const QueuedPacket&) = delete;
+    QueuedPacket& operator=(const QueuedPacket&) = delete;
+    QueuedPacket(QueuedPacket&&) noexcept = default;
+    QueuedPacket& operator=(QueuedPacket&&) noexcept = default;
+};
+static_assert(!std::is_copy_constructible<QueuedPacket>::value, "queued payload is move-only");
+static_assert(std::is_nothrow_move_constructible<QueuedPacket>::value, "heap operations must move payloads");
+
+// A platform adapter must establish the ABI, capture scalar reader position,
+// obtain destination allocation capacity independently of the reader, and
+// rebuild ALL reader pointers using the verified engine contract. Never memcpy bf_read.
+class EnginePacketAdapter {
+public:
+    virtual ~EnginePacketAdapter() = default;
+    virtual bool IsRuntimeValidated() const { return false; }
+    virtual bool Capture(const _netpacket_t&, EnginePacketView&) const { return false; }
+    virtual size_t DestinationCapacity(const _netpacket_t&, bool /*newdata*/) const { return 0; }
+    // Must be transactional: false leaves destination and payload untouched.
+    virtual bool Restore(const QueuedPacket&, _netpacket_t&, size_t /*capacity*/) const { return false; }
+};

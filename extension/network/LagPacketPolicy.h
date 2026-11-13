@@ -1,10 +1,10 @@
 #pragma once
 
 #include "LagSystem.h"
-#include "../extension.h"
+#include "NetworkConfig.h"
 #include "../latency/PlayerLagManager.h"
-#include "tier1/convar.h"
-#include <amtl/am-hashmap.h>
+#include <unordered_map>
+#include <random>
 
 enum class PacketDispatchState {
 	Bypass = 0,
@@ -23,7 +23,9 @@ class LagPacketPolicy
 private:
 	const PlayerLagManager* m_LagManager;
 	LagSystem* m_LagSystem;
-	mutable ke::HashMap<dumb_netadr_t, bool, NetAdrHashPolicy_s> m_BadStateByAddress;
+	mutable std::unordered_map<uint64_t, bool> m_BadStateBySession;
+	const EnginePacketAdapter* m_Adapter;
+	mutable std::mt19937 m_Random{0xCF123u};
 	mutable double m_LastHoldLogBySocket[kMaxSockets] = {};
 	mutable bool m_HasLoggedProfiledSocket[kMaxSockets] = {};
 
@@ -32,17 +34,18 @@ private:
 	bool ShouldBypassLag(LagMilliseconds lagTime) const;
 	CFakeLagPacketLossMode GetPacketLossMode() const;
 	bool ShouldDropPacketBernoulli(PacketLossPercent packetLossPercent) const;
-	bool ShouldDropPacketGilbertElliott(const dumb_netadr_t& netadr, PacketLossPercent packetLossPercent) const;
+	bool ShouldDropPacketGilbertElliott(SessionId session, PacketLossPercent packetLossPercent) const;
 	void MaybeLogActiveProfileSocket(const _netpacket_t& packet, LagMilliseconds lagTime, PacketLossPercent packetLossPercent) const;
 	void MaybeLogHeldPacket(const _netpacket_t& packet, LagMilliseconds lagTime, PacketLossPercent packetLossPercent, bool dueToPacketLoss) const;
 
 public:
-	LagPacketPolicy(const PlayerLagManager* lagManager, LagSystem* lagSystem)
-		: m_LagManager(lagManager), m_LagSystem(lagSystem) {
-		m_BadStateByAddress.init(32);
-	}
+	LagPacketPolicy(const PlayerLagManager* lagManager, LagSystem* lagSystem, const EnginePacketAdapter* adapter)
+		: m_LagManager(lagManager), m_LagSystem(lagSystem), m_Adapter(adapter) {}
 
 	bool IsReady() const { return m_LagManager != nullptr && m_LagSystem != nullptr; }
-	void ClearPacketLossState() { m_BadStateByAddress.clear(); }
+	void ClearPacketLossState() { m_BadStateBySession.clear();
+		for (int i = 0; i < kMaxSockets; ++i) { m_LastHoldLogBySocket[i] = 0; m_HasLoggedProfiledSocket[i] = false; } }
+	size_t GetLossStateCount() const { return m_BadStateBySession.size(); }
+	void ClearSession(SessionId session) { m_BadStateBySession.erase(session.value); }
 	PacketDispatchResult HandlePacket(bool newdata, _netpacket_t* packet) const;
 };

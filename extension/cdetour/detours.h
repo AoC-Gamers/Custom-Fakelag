@@ -212,7 +212,7 @@ public:
 	/**
 	 * These would be somewhat self-explanatory I hope
 	 */
-	void EnableDetour();
+	bool EnableDetour();
 	void DisableDetour();
 
 	void Destroy();

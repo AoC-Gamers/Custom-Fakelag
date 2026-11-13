@@ -18,6 +18,7 @@ ${CXX:-g++} "${extra_flags[@]}" \
   -std=c++17 \
   -Wall \
   -Wextra \
+  -Werror \
   -O0 \
   -g \
   -DUNIT_TEST \
@@ -38,6 +39,9 @@ ${CXX:-g++} "${extra_flags[@]}" \
   -I"$DEPS_DIR/sourcemod-1.12/public" \
   "$TEST_SOURCE" \
   "$LAG_SYSTEM_SOURCE" \
+  "$ROOT/extension/network/LagPacketPolicy.cpp" \
+  "$ROOT/extension/latency/PlayerLagManager.cpp" \
+  "$ROOT/extension/latency/PlayerProfileService.cpp" \
   -o "$TEST_BIN"
 
 "$TEST_BIN"

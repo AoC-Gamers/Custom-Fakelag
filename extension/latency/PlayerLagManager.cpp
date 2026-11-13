@@ -1,4 +1,7 @@
 #include "PlayerLagManager.h"
+#ifndef UNIT_TEST
+#include <eiface.h>
+#include <inetchannel.h>
 bool EngineClientNetAdrResolver::TryResolveClientNetAdr(ClientIndex client, dumb_netadr_t* netadr) const
 {
 	if (netadr == nullptr || m_Engine == nullptr) {
@@ -12,152 +15,98 @@ bool EngineClientNetAdrResolver::TryResolveClientNetAdr(ClientIndex client, dumb
 
 	const auto& remoteAddress = pNetChan->GetRemoteAddress();
 	static_assert(sizeof(*netadr) <= sizeof(remoteAddress), "dumb_netadr_t must fit within netadr_t.");
-	std::memcpy(netadr, &remoteAddress, sizeof(*netadr));
+	*netadr = AddressKey(remoteAddress);
 	return true;
 }
 
-bool PlayerLagManager::TryGetClientNetAdr(ClientIndex client, dumb_netadr_t* netadr) const
+
+#endif
+
+void PlayerLagManager::Invalidate(SessionId session)
 {
-	if (netadr == nullptr || m_NetAdrResolver == nullptr) {
-		return false;
-	}
-
-	return m_NetAdrResolver->TryResolveClientNetAdr(client, netadr);
+    if (m_Events) m_Events->OnSessionInvalidated(session);
 }
-
-void PlayerLagManager::RemoveLagEntry(const dumb_netadr_t& netadr)
+bool PlayerLagManager::SetPlayerProfile(ClientIndex client, LagMilliseconds lag, PacketLossPercent loss)
 {
-	auto existing = m_NetworkProfiles.find(netadr);
-	if (existing.found()) {
-		m_NetworkProfiles.remove(existing);
-	}
+    if (!ValidLatency(lag) || loss < 0 || loss > 100 || client <= 0) return false;
+    if (lag == 0 && loss == 0) { ClearClient(client); return true; }
+    dumb_netadr_t address{};
+    if (!m_NetAdrResolver || !m_NetAdrResolver->TryResolveClientNetAdr(client, &address)) {
+        if (m_Events) m_Events->OnClientNetAdrResolutionFailed(client);
+        return false;
+    }
+    // One address cannot belong to two active connection generations.
+    for (const auto& entry : m_Profiles) {
+        if (entry.first != client && NetAdrHashPolicy_s::matches(entry.second.address, address)) return false;
+    }
+    auto found = m_Profiles.find(client);
+    if (found != m_Profiles.end()) Invalidate(found->second.session);
+    PlayerNetworkProfile profile;
+    profile.address = address;
+    profile.lagTime = lag;
+    profile.packetLossPercent = loss;
+    profile.session = SessionId(++m_NextSession);
+    m_Profiles[client] = profile;
+    ++m_Revision;
+    if (m_Events) m_Events->OnPlayerLagChanged(client, address, lag);
+    return true;
 }
-
-void PlayerLagManager::SetPlayerLag(ClientIndex client, LagMilliseconds lagTime)
+bool PlayerLagManager::SetPlayerLag(ClientIndex client, LagMilliseconds lag)
 {
-	dumb_netadr_t netadr;
-	if (!TryGetClientNetAdr(client, &netadr)) {
-		if (m_Events != nullptr) {
-			m_Events->OnClientNetAdrResolutionFailed(client);
-		}
-		return;
-	}
-
-	if (lagTime <= 0.0f) {
-		auto existing = m_NetworkProfiles.find(netadr);
-		if (!existing.found()) {
-			return;
-		}
-
-		existing->value.lagTime = 0.0f;
-		if (existing->value.packetLossPercent <= 0) {
-			m_NetworkProfiles.remove(existing);
-		}
-		return;
-	}
-
-	auto i = m_NetworkProfiles.findForAdd(netadr);
-	if (!i.found()) {
-		m_NetworkProfiles.add(i, netadr);
-	}
-	i->value.lagTime = lagTime;
-
-	if (m_Events != nullptr) {
-		m_Events->OnPlayerLagChanged(client, netadr, lagTime);
-	}
+    return SetPlayerProfile(client, lag, GetPlayerPacketLoss(client));
 }
-
-void PlayerLagManager::ClearPlayerLag(ClientIndex client)
+bool PlayerLagManager::SetPlayerPacketLoss(ClientIndex client, PacketLossPercent loss)
 {
-	SetPlayerLag(client, 0.0f);
+    return SetPlayerProfile(client, GetPlayerLag(client), loss);
 }
-
-void PlayerLagManager::SetPlayerPacketLoss(ClientIndex client, PacketLossPercent packetLossPercent)
+void PlayerLagManager::ClearPlayerLag(ClientIndex client) { SetPlayerLag(client, 0); }
+void PlayerLagManager::ClearPlayerPacketLoss(ClientIndex client) { SetPlayerPacketLoss(client, 0); }
+void PlayerLagManager::ClearClient(ClientIndex client)
 {
-	dumb_netadr_t netadr;
-	if (!TryGetClientNetAdr(client, &netadr)) {
-		if (m_Events != nullptr) {
-			m_Events->OnClientNetAdrResolutionFailed(client);
-		}
-		return;
-	}
-
-	if (packetLossPercent <= 0) {
-		auto existing = m_NetworkProfiles.find(netadr);
-		if (!existing.found()) {
-			return;
-		}
-
-		existing->value.packetLossPercent = 0;
-		if (existing->value.lagTime <= 0.0f) {
-			m_NetworkProfiles.remove(existing);
-		}
-		return;
-	}
-
-	auto i = m_NetworkProfiles.findForAdd(netadr);
-	if (!i.found()) {
-		m_NetworkProfiles.add(i, netadr);
-	}
-
-	i->value.packetLossPercent = packetLossPercent;
+    auto found = m_Profiles.find(client);
+    if (found != m_Profiles.end()) {
+        const auto session = found->second.session;
+        m_Profiles.erase(found);
+        Invalidate(session);
+    }
+    ++m_Revision; // Also invalidates an in-flight pre-forward after a disconnect.
 }
-
-void PlayerLagManager::ClearPlayerPacketLoss(ClientIndex client)
-{
-	SetPlayerPacketLoss(client, 0);
-}
-
 void PlayerLagManager::ClearAll()
 {
-	m_NetworkProfiles.clear();
+    for (const auto& entry : m_Profiles) Invalidate(entry.second.session);
+    m_Profiles.clear();
+    ++m_Revision;
 }
-
-bool PlayerLagManager::HasPlayerLag(ClientIndex client) const
-{
-	return GetPlayerLag(client) > 0.0f;
-}
-
+bool PlayerLagManager::HasPlayerLag(ClientIndex client) const { return GetPlayerLag(client) > 0; }
+bool PlayerLagManager::HasPlayerPacketLoss(ClientIndex client) const { return GetPlayerPacketLoss(client) > 0; }
 LagMilliseconds PlayerLagManager::GetPlayerLag(ClientIndex client) const
 {
-	dumb_netadr_t netadr;
-	if (!TryGetClientNetAdr(client, &netadr)) {
-		return 0.0f;
-	}
-
-	return GetPlayerLag(netadr);
+    const auto found = m_Profiles.find(client);
+    return found == m_Profiles.end() ? 0 : found->second.lagTime;
 }
-
-LagMilliseconds PlayerLagManager::GetPlayerLag(const dumb_netadr_t& netadr) const
-{
-	auto found = m_NetworkProfiles.find(netadr);
-	if (!found.found()) {
-		return 0.0f;
-	}
-	return found->value.lagTime;
-}
-
-bool PlayerLagManager::HasPlayerPacketLoss(ClientIndex client) const
-{
-	return GetPlayerPacketLoss(client) > 0;
-}
-
 PacketLossPercent PlayerLagManager::GetPlayerPacketLoss(ClientIndex client) const
 {
-	dumb_netadr_t netadr;
-	if (!TryGetClientNetAdr(client, &netadr)) {
-		return 0;
-	}
-
-	return GetPlayerPacketLoss(netadr);
+    const auto found = m_Profiles.find(client);
+    return found == m_Profiles.end() ? 0 : found->second.packetLossPercent;
 }
-
-PacketLossPercent PlayerLagManager::GetPlayerPacketLoss(const dumb_netadr_t& netadr) const
+LagMilliseconds PlayerLagManager::GetPlayerLag(const dumb_netadr_t& address) const
 {
-	auto found = m_NetworkProfiles.find(netadr);
-	if (!found.found()) {
-		return 0;
-	}
-
-	return found->value.packetLossPercent;
+    for (const auto& entry : m_Profiles) {
+        if (NetAdrHashPolicy_s::matches(entry.second.address, address)) return entry.second.lagTime;
+    }
+    return 0;
+}
+PacketLossPercent PlayerLagManager::GetPlayerPacketLoss(const dumb_netadr_t& address) const
+{
+    for (const auto& entry : m_Profiles) {
+        if (NetAdrHashPolicy_s::matches(entry.second.address, address)) return entry.second.packetLossPercent;
+    }
+    return 0;
+}
+SessionId PlayerLagManager::GetSession(const dumb_netadr_t& address) const
+{
+    for (const auto& entry : m_Profiles) {
+        if (NetAdrHashPolicy_s::matches(entry.second.address, address)) return entry.second.session;
+    }
+    return SessionId{};
 }

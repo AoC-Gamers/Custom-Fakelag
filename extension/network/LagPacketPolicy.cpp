@@ -1,9 +1,10 @@
 #include "LagPacketPolicy.h"
-#include <cstdlib>
+#ifndef UNIT_TEST
+#include "../extension.h"
+#endif
 #include "LossModel.h"
 
-extern ConVar sm_custom_fakelag_loss_mode;
-
+#ifndef UNIT_TEST
 namespace {
 
 const char* GetLossModeName(CFakeLagPacketLossMode mode)
@@ -12,15 +13,16 @@ const char* GetLossModeName(CFakeLagPacketLossMode mode)
 }
 
 }  // namespace
+#endif
 
 float LagPacketPolicy::GetPacketLagMs(const _netpacket_t& packet) const
 {
-	return m_LagManager->GetPlayerLag(packet.from);
+	return m_LagManager->GetPlayerLag(AddressKey(packet.from));
 }
 
 int LagPacketPolicy::GetPacketLossPercent(const _netpacket_t& packet) const
 {
-	return m_LagManager->GetPlayerPacketLoss(packet.from);
+	return m_LagManager->GetPlayerPacketLoss(AddressKey(packet.from));
 }
 
 bool LagPacketPolicy::ShouldBypassLag(float lagTime) const
@@ -30,12 +32,7 @@ bool LagPacketPolicy::ShouldBypassLag(float lagTime) const
 
 CFakeLagPacketLossMode LagPacketPolicy::GetPacketLossMode() const
 {
-	const int modeValue = sm_custom_fakelag_loss_mode.GetInt();
-	if (modeValue == static_cast<int>(CFakeLagPacketLossMode::GilbertElliott)) {
-		return CFakeLagPacketLossMode::GilbertElliott;
-	}
-
-	return CFakeLagPacketLossMode::BernoulliUniform;
+	return CFakeLag_GetPacketLossMode();
 }
 
 bool LagPacketPolicy::ShouldDropPacketBernoulli(int packetLossPercent) const
@@ -48,31 +45,20 @@ bool LagPacketPolicy::ShouldDropPacketBernoulli(int packetLossPercent) const
 		return true;
 	}
 
-	const int roll = std::rand() % 100;
-	return roll < packetLossPercent;
+	return std::generate_canonical<double, 53>(m_Random) < packetLossPercent / 100.0;
 }
 
-bool LagPacketPolicy::ShouldDropPacketGilbertElliott(const dumb_netadr_t& netadr, int packetLossPercent) const
+bool LagPacketPolicy::ShouldDropPacketGilbertElliott(SessionId session, int packetLossPercent) const
 {
-	if (packetLossPercent <= 0) {
-		auto existing = m_BadStateByAddress.find(netadr);
-		if (existing.found()) {
-			m_BadStateByAddress.remove(existing);
-		}
-		return false;
-	}
-
-	auto state = m_BadStateByAddress.findForAdd(netadr);
-	if (!state.found()) {
-		if (!m_BadStateByAddress.add(state, netadr)) return false;
-		state->value = false;
-	}
-	const double roll = static_cast<double>(std::rand()) / (static_cast<double>(RAND_MAX) + 1.0);
-	return GilbertElliottDrop(state->value, packetLossPercent, roll);
+	if (!session.value) return false;
+	if (packetLossPercent <= 0) { m_BadStateBySession.erase(session.value); return false; }
+	return GilbertElliottDrop(m_BadStateBySession[session.value], packetLossPercent,
+		std::generate_canonical<double, 53>(m_Random));
 }
 
 void LagPacketPolicy::MaybeLogActiveProfileSocket(const _netpacket_t& packet, LagMilliseconds lagTime, PacketLossPercent packetLossPercent) const
 {
+#ifndef UNIT_TEST
 	if (!CFakeLag_IsDebugEnabled() || packet.source < 0 || packet.source >= kMaxSockets) {
 		return;
 	}
@@ -94,10 +80,14 @@ void LagPacketPolicy::MaybeLogActiveProfileSocket(const _netpacket_t& packet, La
 		lagTime,
 		packetLossPercent,
 		GetLossModeName(GetPacketLossMode()));
+#else
+	(void)packet; (void)lagTime; (void)packetLossPercent;
+#endif
 }
 
 void LagPacketPolicy::MaybeLogHeldPacket(const _netpacket_t& packet, LagMilliseconds lagTime, PacketLossPercent packetLossPercent, bool dueToPacketLoss) const
 {
+#ifndef UNIT_TEST
 	if (!CFakeLag_IsDebugEnabled() || packet.source < 0 || packet.source >= kMaxSockets) {
 		return;
 	}
@@ -122,14 +112,20 @@ void LagPacketPolicy::MaybeLogHeldPacket(const _netpacket_t& packet, LagMillisec
 		packetLossPercent,
 		static_cast<unsigned>(m_LagSystem->GetQueueDepth(packet.source)),
 		dueToPacketLoss ? "packet_loss" : "lag_queue");
+#else
+	(void)packet; (void)lagTime; (void)packetLossPercent; (void)dueToPacketLoss;
+#endif
 }
 
 PacketDispatchResult LagPacketPolicy::HandlePacket(bool newdata, _netpacket_t* packet) const
 {
-	if (!IsReady() || packet == nullptr) {
+	if (!IsReady() || packet == nullptr || m_Adapter == nullptr) {
 		return { PacketDispatchState::Bypass };
 	}
 
+	if (m_LagManager->GetLagCount() == 0 && m_LagSystem->GetPendingCount() == 0)
+		return { PacketDispatchState::Bypass };
+	const size_t capacity = m_Adapter->DestinationCapacity(*packet, newdata);
 	if (newdata) {
 		const float lagTime = GetPacketLagMs(*packet);
 		const int packetLossPercent = GetPacketLossPercent(*packet);
@@ -139,10 +135,11 @@ PacketDispatchResult LagPacketPolicy::HandlePacket(bool newdata, _netpacket_t* p
 
 		const bool shouldDropPacket =
 			GetPacketLossMode() == CFakeLagPacketLossMode::GilbertElliott
-			? ShouldDropPacketGilbertElliott(packet->from, packetLossPercent)
+			? ShouldDropPacketGilbertElliott(m_LagManager->GetSession(AddressKey(packet->from)), packetLossPercent)
 			: ShouldDropPacketBernoulli(packetLossPercent);
 		if (shouldDropPacket) {
-			if (m_LagSystem->GetNextPacket(packet->source, packet)) {
+			m_LagSystem->CountRequestedLoss();
+			if (m_LagSystem->GetNextPacket(packet->source, packet, capacity)) {
 				return { PacketDispatchState::Dispatch };
 			}
 
@@ -154,11 +151,11 @@ PacketDispatchResult LagPacketPolicy::HandlePacket(bool newdata, _netpacket_t* p
 			return { PacketDispatchState::Dispatch };
 		}
 
-		if (!m_LagSystem->LagPacket(packet, lagTime)) {
-			return { PacketDispatchState::Dispatch };
-		}
+		m_LagSystem->LagPacket(packet, Milliseconds(lagTime),
+			m_LagManager->GetSession(AddressKey(packet->from)));
+		// Invalid capture and budget saturation drop newest, never fail open.
 
-		if (m_LagSystem->GetNextPacket(packet->source, packet)) {
+		if (m_LagSystem->GetNextPacket(packet->source, packet, capacity)) {
 			return { PacketDispatchState::Dispatch };
 		}
 
@@ -166,7 +163,7 @@ PacketDispatchResult LagPacketPolicy::HandlePacket(bool newdata, _netpacket_t* p
 		return { PacketDispatchState::Hold };
 	}
 
-	if (m_LagSystem->GetNextPacket(packet->source, packet)) {
+	if (m_LagSystem->GetNextPacket(packet->source, packet, capacity)) {
 		return { PacketDispatchState::Dispatch };
 	}
 

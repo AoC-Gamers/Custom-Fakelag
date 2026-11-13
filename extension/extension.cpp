@@ -1,10 +1,14 @@
 #include "extension.h"
 #include "NET_LagPacket_Detour.h"
-#include <ctime>
-#include <cstdlib>
 #include "tier1/convar.h"
 
 extern ISmmAPI* g_SMAPI;
+extern CustomFakelag g_Sample;
+SH_DECL_HOOK0_void(IServerGameDLL, LevelShutdown, SH_NOATTRIB, 0);
+namespace {
+void LossModeChanged(IConVar*, const char*, float oldValue) { g_Sample.OnLossModeChanged(static_cast<int>(oldValue)); }
+void DetourModeChanged(IConVar*, const char*, float) { g_Sample.OnDetourModeChanged(); }
+}
 
 ConVar sm_custom_fakelag_loss_mode(
 	"sm_custom_fakelag_loss_mode",
@@ -62,6 +66,8 @@ void CloseGameConfig()
 }
 }
 
+CFakeLagPacketLossMode CFakeLag_GetPacketLossMode() { return g_Sample.GetPacketLossMode(); }
+
 bool CFakeLag_IsDebugEnabled()
 {
 	return sm_custom_fakelag_debug.GetBool();
@@ -76,6 +82,10 @@ bool CFakeLag_IsAlwaysOnDetourMode()
 {
 	return sm_custom_fakelag_detour_mode.GetInt() != 0;
 }
+
+bool CFakeLag_IsModeChanging() { return g_Sample.IsModeChanging(); }
+void CustomFakelag::OnSessionInvalidated(SessionId session) { LagDetour_ClearSession(session); }
+void CustomFakelag::OnLevelShutdown() { ResetState(); }
 
 void CustomFakelag::OnClientNetAdrResolutionFailed(int client)
 {
@@ -122,8 +132,6 @@ int CustomFakelag::GetMaxClients() const
 
 bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 {
-	std::srand(static_cast<unsigned int>(std::time(nullptr)));
-
 	char conf_error[255];
 	if (!gameconfs->LoadGameConfigFile("custom_fakelag.games", &g_pGameConf, &conf_error[0], sizeof(conf_error)))
 	{
@@ -135,7 +143,7 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 	}
 
 	double* pNetTime = nullptr;
-	if (!g_pGameConf->GetAddress("net_time", reinterpret_cast<void**>(&pNetTime))) {
+	if (!g_pGameConf->GetAddress("net_time", reinterpret_cast<void**>(&pNetTime)) || pNetTime == nullptr) {
 		CloseGameConfig();
 		ke::SafeSprintf(error, maxlen, "Could not find net_time address in memory");
 		return false;
@@ -148,25 +156,14 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 	CDetourManager::Init(g_pSM->GetScriptingEngine(), g_pGameConf);
 
 	if (!LagDetour_Init(m_LagManager, pNetTime)) {
-		delete m_LagManager;
-		m_LagManager = nullptr;
-		delete m_NetAdrResolver;
-		m_NetAdrResolver = nullptr;
-		CloseGameConfig();
+		ReleaseResources();
 		ke::SafeSprintf(error, maxlen, "Could not detour Net_LagPacket.");
 		return false;
 	}
 
 	m_PlayerProfileApiBridge = new PlayerProfileApiBridge();
 	if (!m_PlayerProfileApiBridge->Initialize()) {
-		delete m_PlayerProfileApiBridge;
-		m_PlayerProfileApiBridge = nullptr;
-		LagDetour_Shutdown();
-		delete m_LagManager;
-		m_LagManager = nullptr;
-		delete m_NetAdrResolver;
-		m_NetAdrResolver = nullptr;
-		CloseGameConfig();
+		ReleaseResources();
 		ke::SafeSprintf(error, maxlen, "Could not create Custom Fakelag forwards.");
 		return false;
 	}
@@ -180,6 +177,7 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 		if (error != nullptr && maxlen > 0) {
 			ke::SafeSprintf(error, maxlen, "Could not find interface: %s", CVAR_INTERFACE_VERSION);
 		}
+		ReleaseResources();
 		return false;
 	}
 	g_pCVar = cvarIface;
@@ -196,12 +194,8 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 	}
 
 	if (CFakeLag_IsAlwaysOnDetourMode() && !LagDetour_Enable()) {
-		LagDetour_Shutdown();
-		delete m_LagManager;
-		m_LagManager = nullptr;
-		delete m_NetAdrResolver;
-		m_NetAdrResolver = nullptr;
-		CloseGameConfig();
+		ConVar_Unregister();
+		ReleaseResources();
 		ke::SafeSprintf(error, maxlen, "Could not enable NET_LagPacket detour in always-on mode.");
 		return false;
 	}
@@ -209,6 +203,11 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 	sharesys->AddNatives(myself, g_CFakeLagNatives);
 	sharesys->RegisterLibrary(myself, "custom_fakelag");
 	playerhelpers->AddClientListener(this);
+	SH_ADD_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_MEMBER(this, &CustomFakelag::OnLevelShutdown), false);
+	g_pSM->LogMessage(myself, "[custom_fakelag] Engine ABI unverified: profile activation is disabled in this build.");
+	m_Loaded = true;
+	sm_custom_fakelag_loss_mode.InstallChangeCallback(LossModeChanged);
+	sm_custom_fakelag_detour_mode.InstallChangeCallback(DetourModeChanged);
 	return true;
 }
 
@@ -222,6 +221,8 @@ bool CustomFakelag::RegisterConCommandBase(ConCommandBase* pVar)
 }
 
 void CustomFakelag::SDK_OnUnload() {
+	m_Loaded = false;
+	SH_REMOVE_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_MEMBER(this, &CustomFakelag::OnLevelShutdown), false);
 	playerhelpers->RemoveClientListener(this);
 
 	if (m_PlayerProfileService != nullptr) {
@@ -229,6 +230,12 @@ void CustomFakelag::SDK_OnUnload() {
 	} else if (m_LagManager != nullptr) {
 		m_LagManager->ClearAll();
 	}
+	ConVar_Unregister();
+	ReleaseResources();
+}
+
+void CustomFakelag::ReleaseResources()
+{
 	delete m_PlayerProfileService;
 	m_PlayerProfileService = nullptr;
 	if (m_PlayerProfileApiBridge != nullptr) {
@@ -243,11 +250,14 @@ void CustomFakelag::SDK_OnUnload() {
 	delete m_NetAdrResolver;
 	m_NetAdrResolver = nullptr;
 
-	ConVar_Unregister();
-
 	if (g_pGameConf != nullptr) {
 		CloseGameConfig();
 	}
+}
+
+void CustomFakelag::OnClientConnected(int client)
+{
+	if (m_PlayerProfileService) m_PlayerProfileService->OnClientDisconnecting(client);
 }
 
 void CustomFakelag::OnClientDisconnecting(int client)
@@ -257,11 +267,12 @@ void CustomFakelag::OnClientDisconnecting(int client)
 	}
 }
 
-void CustomFakelag::SetPlayerProfile(int client, float lagTime, int packetLossPercent)
+bool CustomFakelag::SetPlayerProfile(int client, float lagTime, int packetLossPercent)
 {
 	if (m_PlayerProfileService != nullptr) {
-		m_PlayerProfileService->SetPlayerProfile(client, lagTime, packetLossPercent);
+		return m_PlayerProfileService->SetPlayerProfile(client, lagTime, packetLossPercent);
 	}
+	return false;
 }
 
 bool CustomFakelag::GetPlayerProfile(int client, float& lagTime, int& packetLossPercent) const
@@ -287,25 +298,36 @@ bool CustomFakelag::HasPlayerProfile(int client) const
 		|| m_PlayerProfileService->HasPlayerPacketLoss(client);
 }
 
-void CustomFakelag::ClearPlayerProfile(int client)
+bool CustomFakelag::ClearPlayerProfile(int client)
 {
 	if (m_PlayerProfileService != nullptr) {
-		m_PlayerProfileService->SetPlayerProfile(client, kNoLag, 0);
+		return m_PlayerProfileService->SetPlayerProfile(client, kNoLag, 0);
 	}
+	return false;
 }
 
 void CustomFakelag::SetPacketLossMode(CFakeLagPacketLossMode mode)
 {
-	const CFakeLagPacketLossMode oldMode = GetPacketLossMode();
-	if (oldMode != mode) {
-		ResetState();
-	}
-
 	sm_custom_fakelag_loss_mode.SetValue(static_cast<int>(mode));
+}
 
-	if (oldMode != mode && m_PlayerProfileApiBridge != nullptr) {
-		m_PlayerProfileApiBridge->OnPacketLossModeChanged(oldMode, mode);
-	}
+void CustomFakelag::OnLossModeChanged(int oldMode)
+{
+	if (!m_Loaded || m_ChangingMode) return;
+	m_ChangingMode = true;
+	ResetState();
+	if (m_PlayerProfileApiBridge)
+		m_PlayerProfileApiBridge->OnPacketLossModeChanged(static_cast<CFakeLagPacketLossMode>(oldMode), GetPacketLossMode());
+	m_ChangingMode = false;
+}
+void CustomFakelag::OnDetourModeChanged()
+{
+	if (!m_Loaded || m_ChangingMode) return;
+	m_ChangingMode = true;
+	ResetState();
+	if (CFakeLag_IsAlwaysOnDetourMode() && !LagDetour_Enable()) sm_custom_fakelag_detour_mode.SetValue(0);
+	if (!CFakeLag_IsAlwaysOnDetourMode() && GetProfiledClientCount() == 0) LagDetour_Disable();
+	m_ChangingMode = false;
 }
 
 CFakeLagPacketLossMode CustomFakelag::GetPacketLossMode() const
@@ -328,6 +350,7 @@ void CustomFakelag::ClearAllPlayerProfiles()
 void CustomFakelag::ResetState()
 {
 	ClearAllPlayerProfiles();
+	LagDetour_ClearAll();
 }
 
 bool CustomFakelag::IsClientSupported(int client) const
@@ -358,15 +381,16 @@ cell_t CFakeLag_SetPlayerProfile(IPluginContext* pContext, const cell_t* params)
 		return 0;
 	}
 
-	if (lagTime < kNoLag) {
-		return pContext->ThrowNativeError("Lag time must be greater than or equal to 0.");
+	if (!ValidLatency(lagTime)) {
+		return pContext->ThrowNativeError("Lag time must be finite and between 0 and 10000 milliseconds.");
 	}
 
 	if (packetLossPercent < 0 || packetLossPercent > 100) {
 		return pContext->ThrowNativeError("Packet loss percent must be between 0 and 100.");
 	}
 
-	g_Sample.SetPlayerProfile(client, lagTime, packetLossPercent);
+	if (!g_Sample.SetPlayerProfile(client, lagTime, packetLossPercent))
+		return pContext->ThrowNativeError("Profile was not applied: forward rejected, invalid latency, unresolved address, reentrant mutation or detour activation failed.");
 	return 1;
 }
 
@@ -407,8 +431,7 @@ cell_t CFakeLag_ClearPlayerProfile(IPluginContext* pContext, const cell_t* param
 		return 0;
 	}
 
-	g_Sample.ClearPlayerProfile(client);
-	return 1;
+	return g_Sample.ClearPlayerProfile(client) ? 1 : 0;
 }
 
 cell_t CFakeLag_SetPacketLossMode(IPluginContext* pContext, const cell_t* params)

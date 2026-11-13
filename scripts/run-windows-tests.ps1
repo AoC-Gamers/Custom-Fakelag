@@ -59,12 +59,13 @@ function Import-VcVarsEnvironment {
 
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 
+$DepsDir = if ($env:DEPS_DIR) { $env:DEPS_DIR } else { Join-Path $Root ".deps\exts-windows" }
 $IncludeArgs = @(
     "/I", (Join-Path $Root "extension"),
-    "/I", (Join-Path $Root ".deps\hl2sdk-l4d2\public"),
-    "/I", (Join-Path $Root ".deps\hl2sdk-l4d2\public\tier1"),
-    "/I", (Join-Path $Root ".deps\sourcemod-1.12\public\amtl"),
-    "/I", (Join-Path $Root ".deps\sourcemod-1.12\public")
+    "/I", (Join-Path $DepsDir "hl2sdk-l4d2\public"),
+    "/I", (Join-Path $DepsDir "hl2sdk-l4d2\public\tier1"),
+    "/I", (Join-Path $DepsDir "sourcemod-1.12\public\amtl"),
+    "/I", (Join-Path $DepsDir "sourcemod-1.12\public")
 )
 
 $cl = Get-Command cl.exe -ErrorAction SilentlyContinue
@@ -77,7 +78,7 @@ if (-not $cl) {
     Import-VcVarsEnvironment $vcvarsall
 }
 
-& cl /std:c++17 /EHsc /nologo /W3 /Od /Zi /DUNIT_TEST /Fe:$TestExe $TestSource $LagSystemSource @IncludeArgs
+& cl /std:c++17 /EHsc /nologo /W3 /Od /Zi /DUNIT_TEST /Fe:$TestExe $TestSource $LagSystemSource (Join-Path $Root "extension\network\LagPacketPolicy.cpp") (Join-Path $Root "extension\latency\PlayerLagManager.cpp") (Join-Path $Root "extension\latency\PlayerProfileService.cpp") @IncludeArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to compile tests."
 }

@@ -42,6 +42,7 @@
 #endif
 
 #include <jit/x86/x86_macros.h>
+#include "MemoryProtection.h"
 
 struct patch_t
 {
@@ -54,15 +55,9 @@ struct patch_t
 	size_t bytes;
 };
 
-inline void ProtectMemory(void *addr, int length, int prot)
+inline bool ProtectMemory(void *addr, int length, int prot)
 {
-#if defined PLATFORM_POSIX
-	void *addr2 = (void *)ALIGN(addr);
-	mprotect(addr2, sysconf(_SC_PAGESIZE), prot);
-#elif defined PLATFORM_WINDOWS
-	DWORD old_prot;
-	VirtualProtect(addr, length, prot, &old_prot);
-#endif
+	return length > 0 && TryProtectMemory(addr, static_cast<size_t>(length), prot);
 }
 
 inline void SetMemPatchable(void *address, size_t size)

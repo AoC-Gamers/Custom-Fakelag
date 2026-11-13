@@ -1,9 +1,8 @@
 #pragma once
 #include <cstring>
-#include <mathlib.h>
-#include <eiface.h>
-#include <inetchannel.h>
-#include <amtl/am-hashmap.h>
+class IVEngineServer;
+#include <map>
+#include "../network/LagSystem.h"
 #include "../network/net_structures.h"
 
 using ClientIndex = int;
@@ -46,6 +45,7 @@ class IPlayerLagManagerEvents
 public:
 	virtual ~IPlayerLagManagerEvents() = default;
 	virtual void OnClientNetAdrResolutionFailed(ClientIndex client) = 0;
+	virtual void OnSessionInvalidated(SessionId session) = 0;
 	virtual void OnPlayerLagChanged(ClientIndex client, const dumb_netadr_t& netadr, LagMilliseconds lagTime) = 0;
 };
 
@@ -65,35 +65,38 @@ class PlayerLagManager
 {
 private:
 	struct PlayerNetworkProfile {
-		LagMilliseconds lagTime = 0.0f;
+		dumb_netadr_t address{};
+		LagMilliseconds lagTime = 0;
 		PacketLossPercent packetLossPercent = 0;
+		SessionId session;
 	};
-
 	const IClientNetAdrResolver* m_NetAdrResolver;
 	IPlayerLagManagerEvents* m_Events;
-	ke::HashMap<dumb_netadr_t, PlayerNetworkProfile, NetAdrHashPolicy_s> m_NetworkProfiles;
-
-	bool TryGetClientNetAdr(ClientIndex client, dumb_netadr_t* netadr) const;
-	void RemoveLagEntry(const dumb_netadr_t& netadr);
+	std::map<ClientIndex, PlayerNetworkProfile> m_Profiles;
+	uint64_t m_Revision = 0;
+	uint64_t m_NextSession = 0;
+	void Invalidate(SessionId session);
 
 public:
 	explicit PlayerLagManager(const IClientNetAdrResolver* netAdrResolver, IPlayerLagManagerEvents* events = nullptr)
 		: m_NetAdrResolver(netAdrResolver),
-		  m_Events(events) {
-		m_NetworkProfiles.init(32);
-	}
+		  m_Events(events) {}
 
-	void SetPlayerLag(ClientIndex client, LagMilliseconds lagTime);
+	bool SetPlayerLag(ClientIndex client, LagMilliseconds lagTime);
 	void ClearPlayerLag(ClientIndex client);
-	void SetPlayerPacketLoss(ClientIndex client, PacketLossPercent packetLossPercent);
+	bool SetPlayerPacketLoss(ClientIndex client, PacketLossPercent packetLossPercent);
 	void ClearPlayerPacketLoss(ClientIndex client);
 	void ClearAll();
+	void ClearClient(ClientIndex client);
+	bool SetPlayerProfile(ClientIndex client, LagMilliseconds lag, PacketLossPercent loss);
+	SessionId GetSession(const dumb_netadr_t& address) const;
+	uint64_t Revision() const { return m_Revision; }
 
 	bool HasPlayerLag(ClientIndex client) const;
 	LagMilliseconds GetPlayerLag(ClientIndex client) const;
 	bool HasPlayerPacketLoss(ClientIndex client) const;
 	PacketLossPercent GetPlayerPacketLoss(ClientIndex client) const;
-	ProfileCount GetLagCount() const { return m_NetworkProfiles.elements(); }
+	ProfileCount GetLagCount() const { return m_Profiles.size(); }
 
 	LagMilliseconds GetPlayerLag(const dumb_netadr_t& netadr) const;
 	PacketLossPercent GetPlayerPacketLoss(const dumb_netadr_t& netadr) const;

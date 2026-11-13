@@ -209,6 +209,11 @@ bool CDetour::CreateDetour()
 	detour_restore.bytes = copy_bytes((unsigned char *)detour_address, NULL, OP_JMP_SIZE);
 #endif
 
+	if (detour_restore.bytes < OP_JMP_SIZE || detour_restore.bytes > sizeof(detour_restore.patch)) {
+		g_pSM->LogError(myself, "Invalid detour instruction span");
+		return false;
+	}
+
 	JitWriter wr;
 	JitWriter *jit = &wr;
 	jit_uint32_t CodeSize = 0;
@@ -242,6 +247,7 @@ jit_rewind:
 	{
 		CodeSize = wr.get_outputpos();
 		wr.outbase = (jitcode_t)spengine->AllocatePageMemory(CodeSize);
+		if (!wr.outbase) return false;
 		spengine->SetReadWrite(wr.outbase);
 		wr.outptr = wr.outbase;
 		detour_trampoline = wr.outbase;
@@ -270,13 +276,15 @@ void CDetour::DeleteDetour()
 	}
 }
 
-void CDetour::EnableDetour()
+bool CDetour::EnableDetour()
 {
 	if (!detoured)
 	{
+		if (!enabled || !ProtectMemory(detour_address, static_cast<int>(detour_restore.bytes), PAGE_EXECUTE_READWRITE)) return false;
 		DoGatePatch((unsigned char *)detour_address, detour_callback);
 		detoured = true;
 	}
+	return true;
 }
 
 void CDetour::DisableDetour()

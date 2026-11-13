@@ -1,7 +1,12 @@
 #pragma once
 
 #include "PlayerLagManager.h"
+#ifndef UNIT_TEST
 #include "smsdk_ext.h"
+#else
+class IGamePlayer;
+class IPluginContext;
+#endif
 
 enum class CFakeLagChangeReason {
 	Manual = 0,
@@ -37,6 +42,8 @@ private:
 	PlayerLagManager* m_LagManager;
 	IPlayerProfileHooks* m_Hooks;
 	const IClientRegistry* m_ClientRegistry;
+	bool m_ApplyingChange = false;
+	bool m_Clearing = false;
 
 	bool ApplyPlayerLatencyChange(ClientIndex client, LagMilliseconds lagTime, CFakeLagChangeReason reason, bool allowPreForward);
 	bool ApplyPlayerProfileChange(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent, CFakeLagChangeReason reason, bool allowPreForward);
