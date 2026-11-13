@@ -1,5 +1,8 @@
 # Integración del motor y resultados de operación
 
+> Informe histórico de Linux. El trabajo Windows posterior y sus pendientes
+> están en [WINDOWS_ENGINE_VALIDATION.md](WINDOWS_ENGINE_VALIDATION.md).
+
 Fecha: 2026-11-13. Revisión de partida: `2ce01ff`.
 Código de esta integración: `8bad69f26b4dc96901ef99e1654094c742e562d9`.
 

@@ -5,9 +5,14 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 ## [Unreleased]
 
 ### Integración del motor
+- Adaptador candidato Windows para un SHA PE32 exacto: código cargado y ASLR,
+  validación MSVC/SDK real, capacidad y lector analizados independientemente.
+  Preserva el byte stream no preparado sin leerlo. Builds, ASan y consola
+  nativa probados; SRCDS Windows/jugadores pendientes por falta de servidor.
+  Véase docs/WINDOWS_ENGINE_VALIDATION.md.
 - Adaptador real para el ELF Linux x86 identificado de L4D2 2.2.4.3: identidad
   comprobada, capacidad física verificada y reconstrucción del lector por el
-  caller del motor. Otros módulos y Windows siguen rechazando activación.
+  caller del motor. Otros módulos siguen rechazando activación.
 - Resultado de servicio separado en aplicado, sin cambios, veto y error; Handled
   y Stop cancelan normalmente sin excepción nativa ni notificación de éxito.
 - Retirada comprobada del detour: protección fallida no escribe ni libera la

@@ -2,9 +2,11 @@
 
 > El adaptador real está habilitado para el motor Linux x86 identificado por
 > build ID `b152439170af081a0d31fc357364a4cd4caa56ac` (L4D2 2.2.4.3).
-> Windows y otros módulos mantienen rechazo controlado. Hay pruebas en SRCDS
-> con UDP connectionless; la aceptación con jugadores reales sigue pendiente.
-> Véase [integración y matriz de evidencia](docs/ENGINE_INTEGRATION_VALIDATION.md).
+> Hay un adaptador candidato Windows PE32 para SHA `8a6d4680…bf7ba86`,
+> probado estáticamente y en arneses MSVC con SDK real. La aceptación en SRCDS
+> Windows y con jugadores sigue pendiente. Otros módulos se rechazan.
+> Véase [validación Windows](docs/WINDOWS_ENGINE_VALIDATION.md) y
+> [evidencia Linux](docs/ENGINE_INTEGRATION_VALIDATION.md).
 
 Extensión de SourceMod para aplicar fake lag por jugador en **Left 4 Dead 2**.
 

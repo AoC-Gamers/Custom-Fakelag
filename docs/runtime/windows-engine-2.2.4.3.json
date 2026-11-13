@@ -1,0 +1,151 @@
+{
+  "platform": "windows-x86",
+  "module": "engine.dll",
+  "patch_version": "2.2.4.3",
+  "provenance": "Steam app 550 client installation; dedicated server module identity NOT established",
+  "sha256": "8a6d468059394bf4cfce32f11dcba12ef45de88da1373084d5a2916d0bf7ba86",
+  "pe_machine": "0x14c",
+  "optional_header_magic": "0x10b",
+  "timestamp": "0x6a440ed6",
+  "size_of_image": "0x73f000",
+  "preferred_image_base": "0x10000000",
+  "file_version": null,
+  "product_version": null,
+  "pdb": {
+    "guid": "74953c8e-a15b-43d9-bbf3-6fb8f0a85876",
+    "age": 34,
+    "path": "C:\\buildworker\\l4d2_rel_win32\\build\\src\\engine\\Release\\engine.pdb",
+    "symbols_obtained": false
+  },
+  "symbols": {
+    "NET_LagPacket": "0x1c9ba0",
+    "NET_GetPacket": "0x1cdd20",
+    "NET_ProcessSocket": "0x1cddf0",
+    "NET_ReceiveDatagram": "0x1cd660",
+    "NET_GetLoopPacket": "0x1cc8f0",
+    "CBitRead_StartReading": "0x290a30",
+    "net_time": "0x6b2b48",
+    "net_packets_pointer": "0x6b2e04",
+    "net_packets_count": "0x6b2e10"
+  },
+  "symbol_status": "Function names inferred from call graph/instructions and SDK; no original PDB types",
+  "calling_convention": "cdecl x86; bool [ebp+8], packet pointer [ebp+12], bool result AL, caller cleans stack",
+  "signatures": {
+    "NET_LagPacket": {
+      "rva": "0x1c9ba0",
+      "count": 1,
+      "section": ".text"
+    },
+    "net_time": {
+      "rva": "0x1c9d6a",
+      "count": 1,
+      "section": ".text",
+      "operand_offset": 2,
+      "operand_type": "absolute address of writable double, no additional dereference"
+    }
+  },
+  "packet": {
+    "size": 80,
+    "alignment": 8,
+    "from": 0,
+    "source": 12,
+    "received": 16,
+    "data": 24,
+    "message": 28,
+    "size_field": 64,
+    "wiresize": 68,
+    "stream": 72,
+    "next": 76,
+    "stream_contract": "opaque, not initialized by inspected datagram/loopback paths; preserve destination byte without reading"
+  },
+  "netadr": {
+    "size": 12,
+    "alignment": 4
+  },
+  "reader": {
+    "size": 36,
+    "alignment": 4,
+    "type": "CBitRead",
+    "prepared_after_detour": true,
+    "start_call_rva": "0x1cdddc"
+  },
+  "buffer": {
+    "allocation_bytes": "0x37ab8",
+    "buffer_offset": 4,
+    "minimum_capacity": "0x37ab0",
+    "fallback_allocation_bytes": "0x37ab0",
+    "allocation_call_rva": "0x1cdeea",
+    "buffer_passed_call_rva": "0x1cdf1a",
+    "newdata_false_call_rva": "0x1cdd9d"
+  },
+  "evidence_ranges": {
+    "hook_arguments": [
+      "0x1c9ba0",
+      "0x18"
+    ],
+    "native_restore": [
+      "0x1c9d40",
+      "0x71"
+    ],
+    "loopback_calls": [
+      "0x1cc927",
+      "0x82"
+    ],
+    "receive_capacity": [
+      "0x1cd691",
+      "0x47"
+    ],
+    "receive_hook": [
+      "0x1cdc03",
+      "0x2b"
+    ],
+    "get_packet_and_reader": [
+      "0x1cdd20",
+      "0xc8"
+    ],
+    "allocation": [
+      "0x1cdee5",
+      "0x40"
+    ],
+    "reader_pointer_setup": [
+      "0x290a30",
+      "0x3e"
+    ],
+    "split_bounds": [
+      "0x1cd4dc",
+      "0x10"
+    ],
+    "receive_split_dispatch": [
+      "0x1cd83d",
+      "0x5b"
+    ],
+    "decompressed_copy_back": [
+      "0x1cd942",
+      "0x22"
+    ],
+    "reused_buffer_next_call": [
+      "0x1ce177",
+      "0x1a"
+    ],
+    "buffer_pool_offset": [
+      "0x1c9fa0",
+      "0x1f"
+    ],
+    "packet_vector_construction": [
+      "0x1cc592",
+      "0x47"
+    ],
+    "packet_vector_initial_count": [
+      "0x1cf91a",
+      "0x1f"
+    ]
+  },
+  "acceptance": {
+    "offline": "passed",
+    "mapped_pe_sdk_harness": "passed",
+    "srcds_module_resolution": "not_executed",
+    "srcds_udp": "not_executed",
+    "human_clients": "not_executed"
+  },
+  "steam_client_build_id": "23990068"
+}

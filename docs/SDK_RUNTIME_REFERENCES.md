@@ -1,8 +1,9 @@
 # Referencias SDK y runtime
 
 Actualizado: 2026-11-13. Existe un adaptador real para **un módulo Linux x86
-identificado**. Otros motores, Windows incluido, conservan el rechazo controlado
-de activación. No hay una ConVar que salte esta comprobación.
+identificado**. Windows tiene ahora un adaptador candidato PE32 para una identidad exacta;
+su aceptación en SRCDS sigue pendiente. Otros módulos se rechazan.
+Véase [validación Windows](WINDOWS_ENGINE_VALIDATION.md). No hay una ConVar que salte esta comprobación.
 
 ## Identidad del motor soportado
 
@@ -85,13 +86,16 @@ inicial, pero tiene direcciones distintas y no sustituye al binario local
 identificado. Sus tipos de Ghidra no son autoridad automática. Las netprops son
 SendTables y no describen el layout de paquetes.
 
-No existe `engine.dll` objetivo disponible. Steam negó la descarga anónima del
-depot Windows y el usuario confirmó que no está descargado y hay restricciones
-de espacio. No se descargó el servidor completo. Windows se compila y prueba en
-CI, pero **no se habilita el adaptador** ni se certifican sus patrones o ABI.
-Gamedata no necesitó cambios: la resolución efectiva Linux existente fue
-comprobada al cargar y activar el detour en SRCDS. Patrones Windows siguen
-pendientes de identidad, unicidad y resolución efectiva.
+Se analizó el engine.dll PE32 de la instalación Steam cliente, SHA-256
+`8a6d468059394bf4cfce32f11dcba12ef45de88da1373084d5a2916d0bf7ba86`.
+No se comprobó que sea el módulo de un servidor dedicado: no se encontró
+srcds.exe/dedicated.dll. La identidad y el contrato tienen pruebas estáticas y
+con PE mapeado/SDK real. Esto no acredita SRCDS Windows ni jugadores.
+El adaptador candidato verifica SHA del archivo propietario, código cargado con
+relocaciones ASLR, direcciones, regiones y representación del SDK.
+[Manifiesto Windows](runtime/windows-engine-2.2.4.3.json) y
+[validación y pendientes](WINDOWS_ENGINE_VALIDATION.md).
+Los patrones existentes son únicos en esa DLL; no se modificó gamedata.
 
 Para admitir otro módulo se debe registrar su identidad, verificar callers,
 capacidad y lector, extender explícitamente el adaptador y repetir pruebas.

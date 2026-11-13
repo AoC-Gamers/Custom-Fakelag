@@ -1,0 +1,251 @@
+{
+  "date": "2026-11-13",
+  "base_sha": "7c72156974257b5a2d460af049409b04176c5332",
+  "branch": "feat/windows-engine-validation",
+  "code_sha": "0de8a2148581ec3a211c48226f1dfc30b131a6ec",
+  "overall_acceptance": "pending_srcds_windows_and_human_client",
+  "engine_sha256": "8a6d468059394bf4cfce32f11dcba12ef45de88da1373084d5a2916d0bf7ba86",
+  "engine_provenance": "Steam app 550 client; NOT an observed dedicated-server module",
+  "srcds_version": null,
+  "installed_extension_sha256": null,
+  "artifacts": {
+    "normal": {
+      "build_path": ".build/windows-l4d2/package/addons/sourcemod/extensions/custom_fakelag.ext.dll",
+      "sha256": "f83497186a30d3eac0d7b5cd14a8c66c05b134919d0d82f645bd9dbd91dfbf13",
+      "bytes": 354304,
+      "installed_in_srcds": false,
+      "pe_machine": "0x14c",
+      "cf_probe_name_count": 0
+    },
+    "harness": {
+      "build_path": ".build/windows-harness/package/addons/sourcemod/extensions/custom_fakelag.ext.dll",
+      "sha256": "d0dd21a28f163878b76b7d059bda6b0644d80470928f40c36000150b93e2d20e",
+      "bytes": 356864,
+      "installed_in_srcds": false,
+      "pe_machine": "0x14c",
+      "cf_probe_name_count": 4
+    },
+    "sourcepawn": {
+      "build_path": ".build/plugins/addons/sourcemod/plugins/player_fakelag.smx",
+      "sha256": "9aeb6c244c7175f4c573215026d8b3a1e709a319dce4a6ccd52226c5495682df",
+      "bytes": 50136,
+      "installed_in_srcds": false
+    },
+    "sourcepawn_harness": {
+      "build_path": ".build/custom_fakelag_test.smx",
+      "sha256": "c4af4e996fdc5047cb03e311963f3867befc851c3ce9d43894475da50b618cac",
+      "bytes": 7369,
+      "installed_in_srcds": false
+    },
+    "linux_incremental": {
+      "build_path": ".build/linux-l4d2/package/addons/sourcemod/extensions/custom_fakelag.ext.2.l4d2.so",
+      "sha256": "680e20be1dbc6183ccfd5d143da5fc2ba42e2a84048d4084f19bbf198b9ef698",
+      "bytes": 2504712,
+      "installed_in_srcds": false
+    }
+  },
+  "mapped_pe_process": {
+    "status": "passed",
+    "method": "LoadLibraryExW DONT_RESOLVE_DLL_REFERENCES; no engine execution",
+    "instrumentation": "MSVC x86 AddressSanitizer on test executable and adapter only",
+    "observed_addresses": "mapped_base=66A60000 lag=66C29BA0 net_time=67112B48 packet_size=80 packet_alignment=8 reader_size=36",
+    "checks": [
+      {
+        "name": "unresolved function refused",
+        "status": "passed"
+      },
+      {
+        "name": "wrong RVA refused",
+        "status": "passed"
+      },
+      {
+        "name": "foreign time refused",
+        "status": "passed"
+      },
+      {
+        "name": "Windows engine identified; SRCDS acceptance must be recorded separately",
+        "status": "passed"
+      },
+      {
+        "name": "nonfinite engine clock refused",
+        "status": "passed"
+      },
+      {
+        "name": "finite clock restores eligibility",
+        "status": "passed"
+      },
+      {
+        "name": "capture ignores unprepared SDK reader",
+        "status": "passed"
+      },
+      {
+        "name": "new data gets physical capacity",
+        "status": "passed"
+      },
+      {
+        "name": "no new data still has full allocation",
+        "status": "passed"
+      },
+      {
+        "name": "packet outside constructed vector count rejected",
+        "status": "passed"
+      },
+      {
+        "name": "foreign packet rejected",
+        "status": "passed"
+      },
+      {
+        "name": "insufficient capacity is transactional",
+        "status": "passed"
+      },
+      {
+        "name": "SDK restore preserves buffer and native timestamp",
+        "status": "passed"
+      },
+      {
+        "name": "restore never touches stale reader",
+        "status": "passed"
+      },
+      {
+        "name": "unprepared stream byte is neither interpreted nor overwritten",
+        "status": "passed"
+      },
+      {
+        "name": "SDK caller operation rebuilds reader pointers and cursor",
+        "status": "passed"
+      },
+      {
+        "name": "non-writable allocation rejected",
+        "status": "passed"
+      },
+      {
+        "name": "modified loaded code refused without writes",
+        "status": "passed"
+      },
+      {
+        "name": "identity retry after isolated patch restored",
+        "status": "passed"
+      }
+    ]
+  },
+  "tests": [
+    {
+      "name": "MSVC x86 core regressions ASan",
+      "status": "passed",
+      "log": "tests-windows-asan.log"
+    },
+    {
+      "name": "offline verifier positive exact PE",
+      "status": "passed",
+      "evidence": "windows-static-2026-11-13.json"
+    },
+    {
+      "name": "offline verifier scanner/unknown identity regressions",
+      "status": "passed",
+      "log": "offline-verifier-tests.log"
+    },
+    {
+      "name": "native Windows console input child process",
+      "status": "passed",
+      "log": "console-transport.log"
+    },
+    {
+      "name": "normal Windows extension build",
+      "status": "passed",
+      "log": "build-windows.log"
+    },
+    {
+      "name": "opt-in Windows extension build",
+      "status": "passed",
+      "log": "build-windows-harness.log"
+    },
+    {
+      "name": "SourcePawn plugin and explicit harness compile",
+      "status": "passed",
+      "logs": [
+        "build-smx.log",
+        "build-smx-harness.log"
+      ]
+    },
+    {
+      "name": "Linux x86+x64 ASan/UBSan and incremental ELF32 build",
+      "status": "passed",
+      "log": "linux-final-regressions.log"
+    }
+  ],
+  "runtime_pending": [
+    {
+      "name": "SRCDS module and extension identity",
+      "status": "not_executed",
+      "missing": "srcds.exe, dedicated.dll and compatible isolated runtime"
+    },
+    {
+      "name": "SRCDS activation and no-profile baseline",
+      "status": "not_executed",
+      "missing": "Windows dedicated instance"
+    },
+    {
+      "name": "UDP baseline and 50/120/300 ms",
+      "status": "not_executed",
+      "missing": "Windows dedicated instance"
+    },
+    {
+      "name": "Bernoulli/GE 0/intermediate/100 and limits",
+      "status": "not_executed",
+      "missing": "Windows dedicated instance"
+    },
+    {
+      "name": "sessions/reset/modes/map/unload/reload",
+      "status": "not_executed",
+      "missing": "Windows dedicated instance"
+    },
+    {
+      "name": "native API/plugin and Handled/Stop",
+      "status": "not_executed",
+      "missing": "Windows dedicated instance plus connected human"
+    },
+    {
+      "name": "real reconnect/slot reuse with pending packets",
+      "status": "not_executed",
+      "missing": "Windows dedicated instance plus connected human"
+    },
+    {
+      "name": "Linux SRCDS new run",
+      "status": "not_executed",
+      "missing": "identified Linux server module and runtime volume"
+    }
+  ],
+  "limitations": [
+    "Client module identity cannot establish server module identity",
+    "No Windows SRCDS runtime passed",
+    "No human client acceptance",
+    "No Windows UBSan or whole-engine instrumentation",
+    "Full Windows runner not executed; console transport alone self-tested",
+    "Inherited runner still needs baseline, 50/300 ms, intermediate loss and limit cases before full acceptance"
+  ],
+  "ge": {
+    "percentages": [
+      0,
+      1,
+      10,
+      20,
+      50,
+      80,
+      99,
+      100
+    ],
+    "samples_each": 2000000,
+    "seed": "0xCF123 + percent",
+    "tolerance": "8 sigma with correlation factor 3 and burst geometric bound",
+    "observations": [
+      "loss=0 effective=0 burst=0 runs=0",
+      "loss=1 effective=0.9938 burst=2.02053 runs=9837",
+      "loss=10 effective=10.0466 burst=2.22454 runs=90325",
+      "loss=20 effective=19.9922 burst=2.49888 runs=160010",
+      "loss=50 effective=50.0303 burst=4.002 runs=250026",
+      "loss=80 effective=80.014 burst=10.0166 runs=159762",
+      "loss=99 effective=99.0108 burst=201.898 runs=9808",
+      "loss=100 effective=100 burst=2e+06 runs=1"
+    ]
+  }
+}
