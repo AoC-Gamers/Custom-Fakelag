@@ -2,6 +2,9 @@
 #include "NET_LagPacket_Detour.h"
 #include "network/LagPacketPolicy.h"
 #include "network/L4D2PacketAdapter.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 extern IGameConfig* g_pGameConf;
 CDetour* DLagPacket = nullptr;
@@ -57,7 +60,18 @@ bool LagDetour_Init(const PlayerLagManager* lagManager, const double* pNetTime)
 	void* lagFunction = nullptr;
 	if (!g_pGameConf->GetMemSig("NET_LagPacket", &lagFunction) || !lagFunction) return false;
 	if (!s_EngineAdapter.Initialize(lagFunction, pNetTime))
-		g_pSM->LogError(myself, "[custom_fakelag] Engine module not supported by the verified packet adapter; activation remains unavailable.");
+		g_pSM->LogError(myself, "[custom_fakelag] Packet adapter refused: %s", s_EngineAdapter.Diagnostic());
+	else {
+		g_pSM->LogMessage(myself, "[custom_fakelag] Packet adapter accepted: NET_LagPacket=%p net_time=%p (%s)",
+			lagFunction, static_cast<const void*>(pNetTime), s_EngineAdapter.Diagnostic());
+#ifdef _WIN32
+		HMODULE owner = nullptr;
+		char path[32768];
+		if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			reinterpret_cast<LPCSTR>(lagFunction), &owner) && GetModuleFileNameA(owner, path, sizeof(path)))
+			g_pSM->LogMessage(myself, "[custom_fakelag] Accepted engine module: %s base=%p", path, static_cast<void*>(owner));
+#endif
+	}
 	s_LagSystem = new LagSystem(pNetTime, &s_EngineAdapter);
 	s_LagPacketPolicy = new LagPacketPolicy(s_LagManager, s_LagSystem, &s_EngineAdapter);
 	return true;

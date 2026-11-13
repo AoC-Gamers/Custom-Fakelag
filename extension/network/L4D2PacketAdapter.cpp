@@ -1,5 +1,6 @@
 #include "L4D2PacketAdapter.h"
 #include <cmath>
+#include "WindowsEngineContract.h"
 
 #if defined(__linux__) && !defined(UNIT_TEST)
 #include <dlfcn.h>
@@ -49,6 +50,7 @@ bool L4D2PacketAdapter::Initialize(const void* lagFunction, const double* netTim
     m_Validated = false;
     m_PacketTable = nullptr;
     m_NetTime = nullptr;
+    m_Diagnostic = "Engine architecture or identity is unsupported";
 #if defined(__linux__) && !defined(UNIT_TEST) && UINTPTR_MAX == UINT32_MAX
     static_assert(sizeof(netadr_t) == 12 && alignof(netadr_t) == 4, "identified Linux netadr ABI");
     static_assert(sizeof(bf_read) == 36 && alignof(bf_read) == 4, "identified Linux reader ABI");
@@ -99,6 +101,36 @@ bool L4D2PacketAdapter::Initialize(const void* lagFunction, const double* netTim
     m_PacketTable = reinterpret_cast<_netpacket_t**>(const_cast<unsigned char*>(base + 0x39c4d0));
     m_NetTime = netTime;
     m_Validated = true;
+    m_Diagnostic = "Identified Linux x86 engine";
+    return true;
+#elif defined(_WIN32) && !defined(UNIT_TEST) && UINTPTR_MAX == UINT32_MAX
+    static_assert(sizeof(netadr_t) == 12 && alignof(netadr_t) == 4, "identified Windows netadr ABI");
+    static_assert(sizeof(bf_read) == 36 && alignof(bf_read) == 4, "identified Windows reader ABI");
+    static_assert(sizeof(netpacket_t) == 80 && alignof(netpacket_t) == 8, "identified Windows MSVC packet ABI");
+    static_assert(L4D2PacketCodec::ReceiveBufferBytes == WindowsEngineContract::BufferBytes,
+                  "independently verified Windows receive capacity");
+    unsigned char* base = nullptr;
+    if (!WindowsEngineContract::Identify(lagFunction, netTime, base, m_Diagnostic)) return false;
+    if (!std::isfinite(*netTime)) {
+        m_Diagnostic = "Windows net_time is not a finite double";
+        return false;
+    }
+    netpacket_t packet;
+    const uintptr_t object = reinterpret_cast<uintptr_t>(&packet);
+    if (reinterpret_cast<uintptr_t>(&packet.source) - object != 12 ||
+        reinterpret_cast<uintptr_t>(&packet.received) - object != 16 ||
+        reinterpret_cast<uintptr_t>(&packet.data) - object != 24 ||
+        reinterpret_cast<uintptr_t>(&packet.message) - object != 28 ||
+        reinterpret_cast<uintptr_t>(&packet.size) - object != 64 ||
+        reinterpret_cast<uintptr_t>(&packet.wiresize) - object != 68 ||
+        reinterpret_cast<uintptr_t>(&packet.stream) - object != 72 ||
+        reinterpret_cast<uintptr_t>(&packet.pNext) - object != 76) {
+        m_Diagnostic = "Windows SDK packet fields differ from the disassembled ABI";
+        return false;
+    }
+    m_PacketTable = reinterpret_cast<_netpacket_t**>(base + WindowsEngineContract::TableRva);
+    m_NetTime = netTime;
+    m_Validated = true;
     return true;
 #else
     (void)lagFunction; (void)netTime;
@@ -108,9 +140,22 @@ bool L4D2PacketAdapter::Initialize(const void* lagFunction, const double* netTim
 
 bool L4D2PacketAdapter::IsEnginePacket(const _netpacket_t& packet) const
 {
+#if defined(_WIN32) && !defined(UNIT_TEST)
+    // The identified NET_GetPacket writes only its three table entries and
+    // retains the full-size NET_ProcessSocket buffer across all receive paths.
+    // Neither packet.size nor reader fields establish allocation capacity.
+    if (!m_Validated || !m_PacketTable ||
+        !WindowsEngineContract::Region(m_PacketTable, sizeof(*m_PacketTable)) || !*m_PacketTable ||
+        !WindowsEngineContract::Region(&packet, sizeof(packet), true) ||
+        packet.source < 0 || packet.source > 2 ||
+        reinterpret_cast<uintptr_t>(&packet) != reinterpret_cast<uintptr_t>(*m_PacketTable) + size_t(packet.source) * sizeof(packet) ||
+        reinterpret_cast<uintptr_t>(packet.data) % alignof(uint32_t) != 0) return false;
+    return WindowsEngineContract::Region(packet.data, WindowsEngineContract::BufferBytes, true);
+#else
     return m_Validated && m_PacketTable && *m_PacketTable && packet.source >= 0 && packet.source <= 2 &&
         &packet == *m_PacketTable + packet.source && packet.data &&
         reinterpret_cast<uintptr_t>(packet.data) % alignof(uint32_t) == 0;
+#endif
 }
 bool L4D2PacketAdapter::Capture(const _netpacket_t& packet, EnginePacketView& view) const
 {

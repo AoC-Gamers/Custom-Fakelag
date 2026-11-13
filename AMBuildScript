@@ -136,6 +136,9 @@ class ExtensionConfig(object):
     elif cxx.vendor == 'msvc':
       self.configure_msvc(cxx)
 
+    if os.environ.get('CUSTOM_FAKELAG_ENGINE_HARNESS') == '1':
+      cxx.defines += ['CUSTOM_FAKELAG_ENGINE_HARNESS']
+
     # Optimization
     if builder.options.opt == '1':
       cxx.defines += ['NDEBUG']
@@ -179,8 +182,6 @@ class ExtensionConfig(object):
       '-m32',
       '-fvisibility=hidden',
     ]
-    if os.environ.get('CUSTOM_FAKELAG_ENGINE_HARNESS') == '1':
-      cxx.defines += ['CUSTOM_FAKELAG_ENGINE_HARNESS']
     cxx.cxxflags += [
       '-std=c++14',
       '-fno-exceptions',
@@ -248,6 +249,7 @@ class ExtensionConfig(object):
       'winspool.lib',
       'comdlg32.lib',
       'advapi32.lib',
+      'ws2_32.lib',
       'shell32.lib',
       'ole32.lib',
       'oleaut32.lib',
