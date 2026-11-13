@@ -2,7 +2,7 @@
   "platform": "windows-x86",
   "module": "engine.dll",
   "patch_version": "2.2.4.3",
-  "provenance": "Steam app 550 client installation; dedicated server module identity NOT established",
+  "provenance": "Steam app 222860 Windows depot 222862 manifest 3949057889917418048; downloaded dedicated engine SHA matches analyzed client file",
   "sha256": "8a6d468059394bf4cfce32f11dcba12ef45de88da1373084d5a2916d0bf7ba86",
   "pe_machine": "0x14c",
   "optional_header_magic": "0x10b",
@@ -143,9 +143,11 @@
   "acceptance": {
     "offline": "passed",
     "mapped_pe_sdk_harness": "passed",
-    "srcds_module_resolution": "not_executed",
-    "srcds_udp": "not_executed",
-    "human_clients": "not_executed"
+    "srcds_module_resolution": "passed",
+    "srcds_udp": "passed, 32 functional checks",
+    "human_clients": "passed, 17 API checks plus normal plugin/reconnect/map/unload",
+    "process_shutdown": "failed, also reproduced in fresh vanilla"
   },
-  "steam_client_build_id": "23990068"
+  "steam_client_build_id": "23990068",
+  "steam_server_build_id": "23990100"
 }

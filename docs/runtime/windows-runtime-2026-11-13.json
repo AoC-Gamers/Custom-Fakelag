@@ -1,0 +1,717 @@
+{
+  "date": "2026-11-13",
+  "code_sha": "8c7663848b402c47e90f23e0bc1211dbf9b83e0b",
+  "base_sha": "7c72156974257b5a2d460af049409b04176c5332",
+  "functional_acceptance": "passed_for_exact_windows_x86_module",
+  "server_process_shutdown": "failed_also_in_fresh_vanilla",
+  "server": {
+    "steam_app": 222860,
+    "build_id": "23990100",
+    "version": "2.2.4.3",
+    "exe_build": "11:44:59 Jun 30 2026 (10097) (550)",
+    "engine_path": "C:\\Users\\israe\\Documents\\Codex\\2026-11-13\\tene\\work\\windows-srcds\\bin\\engine.dll",
+    "engine_sha256": "8a6d468059394bf4cfce32f11dcba12ef45de88da1373084d5a2916d0bf7ba86",
+    "windows_depot": 222862,
+    "manifest": "3949057889917418048",
+    "windows_download_bytes": 62773088,
+    "windows_uncompressed_bytes": 161492365,
+    "common_depot": 222861,
+    "common_manifest": "4827977561765481436",
+    "bootstrap_download_bytes": 7532144,
+    "bootstrap_uncompressed_bytes": 14649422
+  },
+  "resources": {
+    "linked_files": 57810,
+    "linked_logical_bytes": 13440099938,
+    "changed_source_assets": 0,
+    "private_manifest_sha256": "acec09818f5048f4a8496330234f7941188a94c4def37783b28f2a886c32c9c2"
+  },
+  "artifacts": {
+    "normal": {
+      "sha256": "b67bd608e3f6d4d709011cd5aaf7deb4562bcee2f9a7aa147391113c4e626017",
+      "bytes": 356864,
+      "cf_probe_strings": 0,
+      "installed_and_observed_in_srcds": true
+    },
+    "harness": {
+      "sha256": "7204c34efbb68bb38c86aaf900733444fe9fb3b17b81a2c7fd07f38879f94e03",
+      "bytes": 359936,
+      "cf_probe_strings": 5,
+      "installed_and_observed_in_srcds": true
+    }
+  },
+  "runtime": {
+    "sourcemod": "1.12.0.7260",
+    "metamod": "1.12.0-dev+1229 / 4e031eb",
+    "left4dhooks": "1.175",
+    "left4dhooks_source_sha": "7672bdefc4e03a693ae7fdc06e470df41b4cc069",
+    "builtinvotes": "0.8.1, locally built MSVC x86",
+    "builtinvotes_source_sha": "eaa2a578ad82c1d2e14041229dc6479470750adb"
+  },
+  "udp_probe": {
+    "kind": "SRCDS real connectionless UDP; synthetic profile identity",
+    "results": [
+      {
+        "test": "no-profiles-no-queue",
+        "state": {
+          "enabled": 0,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        },
+        "challenge_rtt_ms": null,
+        "challenge_reply_observed": false
+      },
+      {
+        "test": "latency-50ms",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 12,
+          "mean_hold_ms": 75.805,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "latency-300ms",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 12,
+          "mean_hold_ms": 318.406,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "bernoulli-loss-0-400",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 400,
+          "mean_hold_ms": 30.233,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "bernoulli-loss-50-400",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 203,
+          "mean_hold_ms": 29.282,
+          "loss": 197,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "bernoulli-loss-100-400",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 400,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "ge-loss-0-400",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 400,
+          "mean_hold_ms": 30.317,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "ge-loss-50-400",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 1,
+          "dispatched": 210,
+          "mean_hold_ms": 28.752,
+          "loss": 190,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "ge-loss-100-400",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 1,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 400,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "session-limit-bounded",
+        "state": {
+          "enabled": 1,
+          "pending": 256,
+          "bytes": 5888,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 44
+        }
+      },
+      {
+        "test": "reset-after-saturation",
+        "state": {
+          "enabled": 0,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 256,
+          "invalid": 0,
+          "saturation": 44
+        }
+      },
+      {
+        "test": "reset-idempotent",
+        "state": {
+          "enabled": 0,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 256,
+          "invalid": 0,
+          "saturation": 44
+        }
+      },
+      {
+        "test": "pending-before-profile-edit",
+        "state": {
+          "enabled": 1,
+          "pending": 4,
+          "bytes": 92,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "edit-invalidates-generation",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 4,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "only-new-generation-dispatched",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 4,
+          "mean_hold_ms": 69.771,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 4,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "latency-120ms",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 6,
+          "mean_hold_ms": 137.468,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "bernoulli-loss-100",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 6,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "direct-convar-reset",
+        "state": {
+          "enabled": 0,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 6,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "ge-loss-100",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 1,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 6,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "pending-before-reset",
+        "state": {
+          "enabled": 1,
+          "pending": 4,
+          "bytes": 92,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "reset-pending",
+        "state": {
+          "enabled": 0,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 4,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "pending-before-session-clear",
+        "state": {
+          "enabled": 1,
+          "pending": 3,
+          "bytes": 69,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "session-clear",
+        "state": {
+          "enabled": 0,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 3,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "same-address-new-profile",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 3,
+          "mean_hold_ms": 146.53,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "pending-before-always-on",
+        "state": {
+          "enabled": 1,
+          "pending": 2,
+          "bytes": 46,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "always-on-reset",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 2,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "lazy-reset",
+        "state": {
+          "enabled": 0,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 2,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "pending-before-map-change",
+        "state": {
+          "enabled": 1,
+          "pending": 2,
+          "bytes": 46,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "map-change",
+        "state": {
+          "enabled": 0,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 2,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "pending-before-unload",
+        "state": {
+          "enabled": 1,
+          "pending": 2,
+          "bytes": 46,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "reload-clean",
+        "state": {
+          "enabled": 0,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 0,
+          "mean_hold_ms": 0.0,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      },
+      {
+        "test": "dispatch-after-unload-reload",
+        "state": {
+          "enabled": 1,
+          "pending": 0,
+          "bytes": 0,
+          "loss_states": 0,
+          "dispatched": 3,
+          "mean_hold_ms": 143.682,
+          "loss": 0,
+          "restore_failed": 0,
+          "lifecycle": 0,
+          "invalid": 0,
+          "saturation": 0
+        }
+      }
+    ],
+    "process_exit_code": 3221226505,
+    "teardown_status": "failed"
+  },
+  "human_acceptance": {
+    "client": "real Steam client, authenticated, IsFakeClient=false, slot 1",
+    "public_api_checks": 17,
+    "final_failures": 0,
+    "successful_api_runs": [
+      "L 11/13/2026 - 12:45:46: [windows_public_api.smx] [windows_api] API_DONE checks=17 failures=0",
+      "L 11/13/2026 - 12:52:30: [windows_public_api.smx] [windows_api] API_DONE checks=17 failures=0",
+      "L 11/13/2026 - 12:54:13: [windows_public_api.smx] [windows_api] API_DONE checks=17 failures=0",
+      "L 11/13/2026 - 12:55:10: [windows_public_api.smx] [windows_api] API_DONE checks=17 failures=0"
+    ],
+    "normal_plugin_commands": "FakeClientCommand on real client; temporary root flags restored; apply/query/status/clear passed",
+    "normal_plugin_loss_policy": "command may derive loss up to configured sm_fakelag_loss_max_percent; initial test assumed zero incorrectly",
+    "profile_latency_ms": 120,
+    "incoming_mean_hold_ms": 137.877,
+    "measurement": "net_time at dispatch minus original incoming packet received; NOT RTT/net_graph",
+    "traffic_evidence": [
+      "L 11/13/2026 - 12:31:03: [windows_public_api.smx] [windows_api] TRAFFIC_START baseline_incoming_avg=0.000355",
+      "L 11/13/2026 - 12:31:06: [CUSTOM_FAKELAG] [engine_probe] stage=status enabled=1 pending=4 bytes=184 loss_states=0 dispatched=66 mean_hold_ms=137.787 loss=0 restore_failed=0 lifecycle=0 invalid=0 saturation=0",
+      "L 11/13/2026 - 12:31:06: [windows_public_api.smx] [windows_api] traffic_stage=0 profile_count=1 incoming_avg=0.000381",
+      "L 11/13/2026 - 12:31:10: [CUSTOM_FAKELAG] [engine_probe] stage=status enabled=1 pending=2 bytes=92 loss_states=0 dispatched=95 mean_hold_ms=137.877 loss=37 restore_failed=0 lifecycle=4 invalid=0 saturation=0",
+      "L 11/13/2026 - 12:31:10: [windows_public_api.smx] [windows_api] traffic_stage=1 profile_count=1 incoming_avg=0.000440",
+      "L 11/13/2026 - 12:31:13: [CUSTOM_FAKELAG] [engine_probe] stage=status enabled=1 pending=5 bytes=230 loss_states=1 dispatched=121 mean_hold_ms=137.837 loss=76 restore_failed=0 lifecycle=6 invalid=0 saturation=0",
+      "L 11/13/2026 - 12:31:13: [windows_public_api.smx] [windows_api] traffic_stage=2 profile_count=1 incoming_avg=0.000704",
+      "L 11/13/2026 - 12:31:14: [CUSTOM_FAKELAG] [engine_probe] stage=status enabled=1 pending=0 bytes=0 loss_states=1 dispatched=121 mean_hold_ms=137.837 loss=99 restore_failed=0 lifecycle=11 invalid=0 saturation=0",
+      "L 11/13/2026 - 12:31:14: [windows_public_api.smx] [windows_api] traffic_stage=3 profile_count=1 incoming_avg=0.000704",
+      "L 11/13/2026 - 12:31:14: [CUSTOM_FAKELAG] [engine_probe] stage=status enabled=1 pending=10 bytes=468 loss_states=0 dispatched=121 mean_hold_ms=137.837 loss=99 restore_failed=0 lifecycle=11 invalid=0 saturation=0",
+      "L 11/13/2026 - 12:31:14: [windows_public_api.smx] [windows_api] traffic_stage=4 profile_count=1 incoming_avg=0.000704",
+      "L 11/13/2026 - 12:31:14: [CUSTOM_FAKELAG] [engine_probe] stage=status enabled=0 pending=0 bytes=0 loss_states=0 dispatched=121 mean_hold_ms=137.837 loss=99 restore_failed=0 lifecycle=21 invalid=0 saturation=0",
+      "L 11/13/2026 - 12:31:14: [windows_public_api.smx] [windows_api] TRAFFIC_DONE",
+      "L 11/13/2026 - 12:31:44: [CUSTOM_FAKELAG] [engine_probe] stage=status enabled=0 pending=0 bytes=0 loss_states=0 dispatched=121 mean_hold_ms=137.837 loss=99 restore_failed=0 lifecycle=21 invalid=0 saturation=0",
+      "L 11/13/2026 - 12:31:45: [CUSTOM_FAKELAG] [engine_probe] stage=status enabled=1 pending=0 bytes=0 loss_states=0 dispatched=121 mean_hold_ms=137.837 loss=99 restore_failed=0 lifecycle=21 invalid=0 saturation=0",
+      "L 11/13/2026 - 12:31:45: [CUSTOM_FAKELAG] [engine_probe] stage=status enabled=0 pending=0 bytes=0 loss_states=0 dispatched=121 mean_hold_ms=137.837 loss=99 restore_failed=0 lifecycle=21 invalid=0 saturation=0"
+    ],
+    "reconnect": "same IP/source port and slot reused; new userid 7; initial profile=0; prior pending queue cleared; plugin later intentionally restored stored profile",
+    "map": "native production build: 5000ms profile and pending traffic, c1m1_hotel -> c1m2_streets, detour restored, same client/slot profile=0; API 17 checks pass afterwards",
+    "unload_reload": "native production build while real client connected; dependent plugins unloaded in order, original code bytes confirmed, reloaded and API 17 checks pass",
+    "old_failures": "pre-fix real forward exception applied a profile; fixed by individually executing listeners; earliest harness expected mode-change on unchanged mode and always-zero plugin loss, corrected assertions"
+  },
+  "loaded_modules": [
+    {
+      "ModuleName": "engine.dll",
+      "FileName": "c:\\users\\israe\\documents\\codex\\2026-11-13\\tene\\work\\windows-srcds\\bin\\engine.dll",
+      "Base": "5D040000"
+    },
+    {
+      "ModuleName": "custom_fakelag.ext.dll",
+      "FileName": "c:\\users\\israe\\documents\\codex\\2026-11-13\\tene\\work\\windows-srcds\\left4dead2\\addons\\sourcemod\\extensions\\custom_fakelag.ext.dll",
+      "Base": "62EA0000"
+    }
+  ],
+  "patch_lifecycle": [
+    {
+      "stage": "before-real-traffic",
+      "pid": 36860,
+      "base": "5D040000",
+      "bytes": "558bec5157",
+      "original": true
+    },
+    {
+      "stage": "real-120ms-active",
+      "pid": 36860,
+      "base": "5D040000",
+      "bytes": "e92ba067fe",
+      "original": false
+    },
+    {
+      "stage": "after-real-traffic",
+      "pid": 36860,
+      "base": "5D040000",
+      "bytes": "558bec5157",
+      "original": true
+    },
+    {
+      "stage": "normal-extension-unloaded",
+      "pid": 35032,
+      "base": "5C1B0000",
+      "bytes": "558bec5157",
+      "original": true
+    },
+    {
+      "stage": "normal-pending-before-map",
+      "pid": 11196,
+      "base": "5D040000",
+      "bytes": "e97b9e7bfe",
+      "original": false
+    },
+    {
+      "stage": "normal-after-human-map",
+      "pid": 11196,
+      "base": "5D040000",
+      "bytes": "558bec5157",
+      "original": true
+    },
+    {
+      "stage": "normal-unloaded-with-client-traffic",
+      "pid": 11196,
+      "base": "5D040000",
+      "bytes": "558bec5157",
+      "original": true
+    },
+    {
+      "stage": "final-normal-extension-removed",
+      "pid": 11196,
+      "base": "5D040000",
+      "bytes": "558bec5157",
+      "original": true
+    }
+  ],
+  "vanilla_shutdown_baseline": {
+    "kind": "fresh vanilla process, no Metamod/SourceMod/Custom-Fakelag loaded",
+    "pid": 32468,
+    "exit_code": 3221226505,
+    "mod_commands_unavailable": true
+  },
+  "shutdown_details": {
+    "same_exit_hex": "0xc0000409",
+    "functional_runner_exit": 1,
+    "runner_marks_teardown_failed": true,
+    "other_observations": "initial Windows WER reported SourceMod during LdrShutdownProcess; cdb captured first AV in server.dll after own extension was explicitly unloaded; exact root cause remains unconfirmed",
+    "no_engine_patching_to_hide_failure": true
+  },
+  "checks": {
+    "msvc_x86_asan": "passed",
+    "real_sdk_asan": "passed 19 checks",
+    "linux_x86_asan_ubsan": "passed WSL Ubuntu 24.04",
+    "linux_x64_asan_ubsan": "passed WSL Ubuntu 24.04",
+    "linux_elf32_build": "passed",
+    "sourcepawn_normal_and_harness": "passed",
+    "normal_windows_build": "passed",
+    "harness_windows_build": "passed"
+  },
+  "limitations": [
+    "Only exact PE32 SHA supported; Windows x64/unknown hashes rejected",
+    "Runtime Linux not re-executed",
+    "Whole SRCDS not sanitizer instrumented",
+    "Clean whole-process shutdown remains failed, also reproduced without all mods",
+    "Strict loaded-code gate requires unloading Left4DHooks before re-initializing this extension: CBaseServer::FillServerInfo patch at RVA 0x133cb0 otherwise refuses activation",
+    "Functional validation is finite, with one real Steam client; no production soak/load certification"
+  ],
+  "final_state": {
+    "server_running": false,
+    "default_installed_extension": "normal build",
+    "test_plugin": "disabled",
+    "client_game_install_modified": false
+  }
+}

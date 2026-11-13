@@ -1,8 +1,8 @@
 # Referencias SDK y runtime
 
 Actualizado: 2026-11-13. Existe un adaptador real para **un módulo Linux x86
-identificado**. Windows tiene ahora un adaptador candidato PE32 para una identidad exacta;
-su aceptación en SRCDS sigue pendiente. Otros módulos se rechazan.
+identificado**. Windows tiene un adaptador PE32 para una identidad exacta, comprobado en SRCDS
+Windows con UDP y un cliente Steam real. Otros módulos se rechazan.
 Véase [validación Windows](WINDOWS_ENGINE_VALIDATION.md). No hay una ConVar que salte esta comprobación.
 
 ## Identidad del motor soportado
@@ -86,16 +86,19 @@ inicial, pero tiene direcciones distintas y no sustituye al binario local
 identificado. Sus tipos de Ghidra no son autoridad automática. Las netprops son
 SendTables y no describen el layout de paquetes.
 
-Se analizó el engine.dll PE32 de la instalación Steam cliente, SHA-256
-`8a6d468059394bf4cfce32f11dcba12ef45de88da1373084d5a2916d0bf7ba86`.
-No se comprobó que sea el módulo de un servidor dedicado: no se encontró
-srcds.exe/dedicated.dll. La identidad y el contrato tienen pruebas estáticas y
-con PE mapeado/SDK real. Esto no acredita SRCDS Windows ni jugadores.
-El adaptador candidato verifica SHA del archivo propietario, código cargado con
-relocaciones ASLR, direcciones, regiones y representación del SDK.
-[Manifiesto Windows](runtime/windows-engine-2.2.4.3.json) y
-[validación y pendientes](WINDOWS_ENGINE_VALIDATION.md).
-Los patrones existentes son únicos en esa DLL; no se modificó gamedata.
+El engine.dll PE32 de Steam cliente y el del servidor dedicado descargado son
+idénticos: SHA `8a6d468059394bf4cfce32f11dcba12ef45de88da1373084d5a2916d0bf7ba86`.
+Procedencia dedicada: app 222860, depot 222862, manifest 3949057889917418048,
+build 23990100, versión 2.2.4.3/build 10097. Se comprobó el módulo realmente cargado,
+sus direcciones y la extensión instalada; 32 casos UDP y 17 API con cliente real.
+El adaptador verifica SHA del archivo propietario, código cargado con ASLR,
+direcciones, regiones y SDK. Firmas Windows únicas: gamedata no cambió.
+[Manifiesto Windows](runtime/windows-engine-2.2.4.3.json),
+[evidencia runtime](runtime/windows-runtime-2026-11-13.json) y
+[validación y límites](WINDOWS_ENGINE_VALIDATION.md).
+El cierre del proceso completo falla también en una instancia nueva sin mods;
+no se presenta como aprobado. Cargar Left4DHooks parchea FillServerInfo: para
+reinicializar la extensión se descarga ese plugin primero, sin debilitar el gate.
 
 Para admitir otro módulo se debe registrar su identidad, verificar callers,
 capacidad y lector, extender explícitamente el adaptador y repetir pruebas.

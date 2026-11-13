@@ -5,11 +5,17 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 ## [Unreleased]
 
 ### Integración del motor
-- Adaptador candidato Windows para un SHA PE32 exacto: código cargado y ASLR,
-  validación MSVC/SDK real, capacidad y lector analizados independientemente.
-  Preserva el byte stream no preparado sin leerlo. Builds, ASan y consola
-  nativa probados; SRCDS Windows/jugadores pendientes por falta de servidor.
-  Véase docs/WINDOWS_ENGINE_VALIDATION.md.
+- Adaptador Windows PE32 comprobado en SRCDS 2.2.4.3 para un SHA exacto:
+  32 casos UDP y 17 casos API con cliente Steam real; lector/stream opacos,
+  límites, reconexión, mapa y retirada/recarga del parche. Recursos locales
+  reutilizados por hardlink y descargas selectivas del servidor.
+- Corregida propagación real de errores de listeners: SourceMod devuelve éxito
+  global incluso si un callback falla. Se invocan listeners con handles/serials
+  estables y se aborta transaccionalmente ante fallo o Action inválida; Handled y
+  Stop siguen siendo vetos normales. Reentrada comprobada con cliente real.
+- Transporte Windows renovado tras bootstrap, con consola privada, QuickEdit
+  desactivado, breakaway de job y evidencia explícita de teardown. Cierre completo
+  de SRCDS sigue fallando también sin mods: no se oculta ni se marca aprobado.
 - Adaptador real para el ELF Linux x86 identificado de L4D2 2.2.4.3: identidad
   comprobada, capacidad física verificada y reconstrucción del lector por el
   caller del motor. Otros módulos siguen rechazando activación.
