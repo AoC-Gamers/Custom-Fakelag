@@ -232,6 +232,10 @@ jobs:
         shell: pwsh
         run: make test-exts-windows
 
+      - name: Compile Windows SDK contract harness
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/test-windows-sdk-contract.ps1 -BuildOnly
+
       - name: Build Windows extension package
         shell: pwsh
         run: make build-exts-windows

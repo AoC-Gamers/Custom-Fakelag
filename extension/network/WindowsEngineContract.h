@@ -6,6 +6,7 @@
 #include <vector>
 #include <cstring>
 #include <cstdint>
+#include "WindowsCodeCompatibility.h"
 
 namespace WindowsEngineContract {
 constexpr uintptr_t LagRva = 0x1c9ba0, TimeRva = 0x6b2b48, TableRva = 0x6b2e04;
@@ -93,7 +94,8 @@ inline bool Identify(const void* lag, const double* time, unsigned char*& base, 
     if (std::memcmp(base, file.data(), sizeof(IMAGE_DOS_HEADER)) ||
         std::memcmp(loaded, &rebasedHeaders, sizeof(IMAGE_NT_HEADERS32))) return false;
     // Bind disk identity to loaded code, accounting for ASLR HIGHLOW relocations.
-    // This also rejects pre-existing third-party patches in the analyzed code.
+    // All code is exact except the verified, bounded FillServerInfo entry
+    // detour used by Left4DHooks. Packet-contract code has no exceptions.
     std::vector<unsigned char> image(pe->OptionalHeader.SizeOfImage, 0);
     const auto* sections = IMAGE_FIRST_SECTION(pe);
     for (unsigned i = 0; i < pe->FileHeader.NumberOfSections; ++i)
@@ -117,17 +119,27 @@ inline bool Identify(const void* lag, const double* time, unsigned char*& base, 
         cursor += block->SizeOfBlock;
     }
     error = "Windows engine: loaded executable bytes differ from identified file";
+    bool compatibleFillDetour = false;
     for (unsigned i = 0; i < pe->FileHeader.NumberOfSections; ++i) {
         const auto& section = sections[i];
         if (!(section.Characteristics & IMAGE_SCN_MEM_EXECUTE)) continue;
         if (!Region(base + section.VirtualAddress, section.Misc.VirtualSize, false, true) ||
-            std::memcmp(base + section.VirtualAddress, image.data() + section.VirtualAddress, section.Misc.VirtualSize)) return false;
+            !WindowsEngineCode::MatchesExecutableRange(base, image.data(), image.size(),
+                reinterpret_cast<uintptr_t>(base), section.VirtualAddress, section.Misc.VirtualSize,
+                [&](uint32_t target) {
+                    const bool valid = Region(reinterpret_cast<const void*>(static_cast<uintptr_t>(target)),
+                                              WindowsEngineCode::EntryDetourBytes, false, true);
+                    if (valid) compatibleFillDetour = true;
+                    return valid;
+                })) return false;
     }
     error = "Windows engine: net_time operand does not resolve to the verified double";
     uintptr_t resolved = 0;
     std::memcpy(&resolved, base + 0x1c9d6c, sizeof(resolved));
     if (resolved != reinterpret_cast<uintptr_t>(time)) return false;
-    error = "Windows engine identified; SRCDS acceptance must be recorded separately";
+    error = compatibleFillDetour
+        ? "Windows engine identified; compatible FillServerInfo entry detour accepted"
+        : "Windows engine identified; SRCDS acceptance must be recorded separately";
     return true;
 }
 } // namespace WindowsEngineContract

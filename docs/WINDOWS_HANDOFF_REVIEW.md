@@ -61,8 +61,9 @@ completamente sano, aunque los casos funcionales hayan pasado. El runner conserv
 exit 1 para ese cierre fallido. La causa exacta no queda atribuida exclusivamente
 a Custom-Fakelag ni resuelta por esta integración.
 
-La comprobación estricta de la sección ejecutable exige inicializar Custom-Fakelag
-antes de que Left4DHooks parchee el motor. La recarga aceptada retira primero sus
-dependientes y Left4DHooks y los carga después. Se conserva esa restricción; no se
-relajó la identidad del módulo ni se afirma compatibilidad con otros hashes o
-con una carga de producción prolongada.
+En la revisión recibida, la recarga aceptada retiraba primero los dependientes y
+Left4DHooks por la comparación estricta de toda la sección ejecutable. La
+[corrección posterior del orden de carga](WINDOWS_LOAD_ORDER.md) admite únicamente
+su detour conocido de entrada y conserva los checks del motor. La aceptación de
+esa corrección con Left4DHooks activo en SRCDS debe registrarse por separado;
+no se afirma soporte para otros hashes ni una carga de producción prolongada.

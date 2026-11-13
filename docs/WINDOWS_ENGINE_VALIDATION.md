@@ -85,7 +85,8 @@ FillServerInfo fuera de ese contrato; su orden de carga se registra más abajo.
 
 GetModuleHandleEx/GetModuleFileNameW determinan el propietario de las direcciones.
 Se compara SHA-256 del archivo y toda sección ejecutable cargada contra bytes
-reubicados IMAGE_REL_BASED_HIGHLOW. Windows modifica ImageBase en la cabecera;
+reubicados IMAGE_REL_BASED_HIGHLOW, con la excepción acotada posterior del detour
+de entrada FillServerInfo descrita en [carga con Left4DHooks](WINDOWS_LOAD_ORDER.md). Windows modifica ImageBase en la cabecera;
 se normaliza ese campo y el resto debe coincidir. Se exigen base+RVA exactos,
 operando net_time correcto, regiones válidas y reloj finito. Identidad y bytes
 completos implican las firmas únicas documentadas. Gamedata no cambió.
@@ -219,11 +220,13 @@ la IP privada 192.168.1.87 respondió y permitió la conexión real. No se cambi
 firewall/router. El baseline connectionless sin perfil comprueba cola cero;
 el RTT del challenge de loopback sigue sin medida válida.
 
-Un reload con Left4DHooks activo fue correctamente rechazado: modifica cinco
-bytes en RVA 0x133cb0 (`CBaseServer::FillServerInfo`, firma de su gamedata).
-La comprobación de toda .text no se debilitó. La recarga validada descarga
-player_fakelag y Left4DHooks antes de reinicializar Custom-Fakelag y los carga
-después. Los offsets del contrato del paquete no se trasladaron de Linux.
+La revisión de esta entrega rechazaba el reload con Left4DHooks activo porque
+modifica cinco bytes en RVA 0x133cb0 (`CBaseServer::FillServerInfo`). La recarga
+registrada entonces retiró player_fakelag y Left4DHooks antes de reinicializar.
+Esa restricción se corrigió después mediante la [excepción acotada de carga](WINDOWS_LOAD_ORDER.md),
+sin cambiar los checks de identidad ni admitir modificaciones del contrato de
+paquetes. La repetición de SRCDS con Left4DHooks permaneciendo activo sigue
+pendiente; no se atribuye retroactivamente a los resultados de esta entrega.
 
 Los primeros WER mostraban SourceMod durante LdrShutdownProcess. CDB
 10.0.29680.1004 capturó una primera AV en server.dll durante un quit después de

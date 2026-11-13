@@ -1,5 +1,8 @@
-param([Parameter(Mandatory=$true)][string]$EnginePath)
+param([string]$EnginePath, [switch]$BuildOnly)
 $ErrorActionPreference = 'Stop'
+if (-not $BuildOnly -and (-not $EnginePath -or -not (Test-Path -LiteralPath $EnginePath -PathType Leaf))) {
+  throw 'Supply the identified engine.dll with -EnginePath, or use -BuildOnly to compile without executing the PE tests.'
+}
 $root = Split-Path -Parent $PSScriptRoot
 $deps = if ($env:DEPS_DIR) { $env:DEPS_DIR } else { Join-Path $root '.deps\exts-windows' }
 $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
@@ -26,7 +29,9 @@ try {
     /Fe:windows_sdk_contract.exe /link "$sdk\lib\public\tier1.lib" "$sdk\lib\public\tier0.lib" `
     "$sdk\lib\public\vstdlib.lib" advapi32.lib ws2_32.lib
   if ($LASTEXITCODE) { throw "SDK contract compilation failed: $LASTEXITCODE" }
-  $env:PATH = (Split-Path -Parent ([IO.Path]::GetFullPath($EnginePath))) + ';' + $env:PATH
-  & .\windows_sdk_contract.exe ([IO.Path]::GetFullPath($EnginePath))
-  if ($LASTEXITCODE) { throw "SDK contract tests failed: $LASTEXITCODE" }
+  if (-not $BuildOnly) {
+    $env:PATH = (Split-Path -Parent ([IO.Path]::GetFullPath($EnginePath))) + ';' + $env:PATH
+    & .\windows_sdk_contract.exe ([IO.Path]::GetFullPath($EnginePath))
+    if ($LASTEXITCODE) { throw "SDK contract tests failed: $LASTEXITCODE" }
+  }
 } finally { Pop-Location }

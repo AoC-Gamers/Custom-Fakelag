@@ -102,6 +102,44 @@ int wmain(int argc, wchar_t** argv)
           "modified loaded code refused without writes");
     *code = saved; VirtualProtect(code, 1, oldProtect, &oldProtect);
     Check(adapter.Initialize(lag, time), "identity retry after isolated patch restored");
+    // Simulate the exact independently observed Left4DHooks entry patch in
+    // this non-executing image. Do not execute either the DLL or this callback.
+    auto* fillEntry = base + WindowsEngineCode::FillServerInfoRva;
+    std::array<unsigned char, WindowsEngineCode::EntryDetourBytes> fillOriginal;
+    std::memcpy(fillOriginal.data(), fillEntry, fillOriginal.size());
+    auto* callback = static_cast<unsigned char*>(VirtualAlloc(nullptr, 64,
+        MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE));
+    Check(callback != nullptr, "allocate isolated executable detour target");
+    if (callback) {
+        std::memset(callback, 0xcc, 64);
+        VirtualProtect(fillEntry, fillOriginal.size(), PAGE_EXECUTE_READWRITE, &oldProtect);
+        fillEntry[0] = 0xe9;
+        const uint32_t displacement = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(callback)) -
+            static_cast<uint32_t>(reinterpret_cast<uintptr_t>(fillEntry) + 5);
+        std::memcpy(fillEntry + 1, &displacement, sizeof(displacement));
+        std::array<unsigned char, WindowsEngineCode::EntryDetourBytes> installedJump;
+        std::memcpy(installedJump.data(), fillEntry, installedJump.size());
+        Check(adapter.Initialize(lag, time) && adapter.IsRuntimeValidated() &&
+              !std::memcmp(installedJump.data(), fillEntry, installedJump.size()),
+              "existing Left4DHooks-shaped detour permits initialization without modifying it");
+        Check(adapter.Initialize(lag, time), "reload accepts the same active entry detour");
+        DWORD callbackProtect;
+        VirtualProtect(callback, 64, PAGE_READWRITE, &callbackProtect);
+        Check(!adapter.Initialize(lag, time), "non-executable callback refused");
+        VirtualProtect(callback, 64, callbackProtect, &callbackProtect);
+        DWORD hookProtect;
+        VirtualProtect(code, 1, PAGE_EXECUTE_READWRITE, &hookProtect);
+        *code ^= 1;
+        Check(!adapter.Initialize(lag, time), "packet hook modification refused even with compatible detour");
+        *code = saved;
+        VirtualProtect(code, 1, hookProtect, &hookProtect);
+        fillEntry[0] = 0x90;
+        Check(!adapter.Initialize(lag, time), "arbitrary FillServerInfo patch refused");
+        std::memcpy(fillEntry, fillOriginal.data(), fillOriginal.size());
+        VirtualProtect(fillEntry, fillOriginal.size(), oldProtect, &oldProtect);
+        VirtualFree(callback, 0, MEM_RELEASE);
+        Check(adapter.Initialize(lag, time), "identity accepts original image after isolated compatibility test");
+    }
     FreeLibrary(module);
     return failures ? 1 : 0;
 }

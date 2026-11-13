@@ -97,8 +97,10 @@ direcciones, regiones y SDK. Firmas Windows únicas: gamedata no cambió.
 [evidencia runtime](runtime/windows-runtime-2026-11-13.json) y
 [validación y límites](WINDOWS_ENGINE_VALIDATION.md).
 El cierre del proceso completo falla también en una instancia nueva sin mods;
-no se presenta como aprobado. Cargar Left4DHooks parchea FillServerInfo: para
-reinicializar la extensión se descarga ese plugin primero, sin debilitar el gate.
+no se presenta como aprobado. La validación permite ahora el detour E9 de cinco
+bytes de Left4DHooks en FillServerInfo sin exigir su descarga: el resto del código,
+la identidad de disco y el contrato de paquetes siguen exactos.
+[Política, regresiones y repetición de aceptación](WINDOWS_LOAD_ORDER.md).
 
 Para admitir otro módulo se debe registrar su identidad, verificar callers,
 capacidad y lector, extender explícitamente el adaptador y repetir pruebas.

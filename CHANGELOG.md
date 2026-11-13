@@ -4,6 +4,16 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 
 ## [Unreleased]
 
+### Compatibilidad de carga Windows
+- Se permite inicializar/reinicializar el adaptador con el detour de entrada
+  conocido de Left4DHooks en FillServerInfo, sin retirarlo ni alterar sus bytes.
+- La excepción cubre solo cinco bytes E9 rel32 en el sitio identificado, con
+  destino externo legible/ejecutable. Identidad PE, ASLR, código de paquetes y
+  todo byte ejecutable restante conservan su validación exacta.
+- Regresiones negativas/positivas comunes y ampliación del arnés SDK Windows;
+  CI compila ese arnés sin distribuir engine.dll. Repetición real en SRCDS con
+  Left4DHooks activo pendiente en Windows: docs/WINDOWS_LOAD_ORDER.md.
+
 ### Integración del motor
 - Adaptador Windows PE32 comprobado en SRCDS 2.2.4.3 para un SHA exacto:
   32 casos UDP y 17 casos API con cliente Steam real; lector/stream opacos,

@@ -4,6 +4,8 @@
 > build ID `b152439170af081a0d31fc357364a4cd4caa56ac` (L4D2 2.2.4.3).
 > El adaptador Windows PE32 para SHA `8a6d4680…bf7ba86` se comprobó en SRCDS
 > 2.2.4.3 con UDP y un cliente Steam real. Solo se admite esa identidad.
+> El detour de entrada conocido de Left4DHooks se admite al cargar/recargar;
+> [política y pruebas](docs/WINDOWS_LOAD_ORDER.md).
 > Véase [validación Windows y límites](docs/WINDOWS_ENGINE_VALIDATION.md), incluido
 > un fallo de cierre de SRCDS que también se reproduce sin mods, y
 > [evidencia Linux](docs/ENGINE_INTEGRATION_VALIDATION.md).

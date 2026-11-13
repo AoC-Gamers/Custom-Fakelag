@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <functional>
+#include "../extension/network/WindowsCodeCompatibility.h"
 #include "../extension/cdetour/MemoryProtection.h"
 #include "../extension/cdetour/MemoryPatch.h"
 #include "../extension/network/LagSystem.h"
@@ -365,8 +366,69 @@ void TestLossModel()
     Expect(!GilbertElliottDrop(bad, 20, 0), "exit delivers");
     Expect(!GilbertElliottDrop(bad, 0, 0) && !bad, "zero clears loss state");
 }
+void TestWindowsLoadedCodeCompatibility()
+{
+    using namespace WindowsEngineCode;
+    const uint64_t base = 0x10000000;
+    const size_t slot = FillServerInfoRva;
+    const size_t imageSize = 0x300000;
+    const size_t rangeStart = 0x1000, rangeLength = imageSize - rangeStart;
+    std::vector<unsigned char> expected(imageSize, 0xcc);
+    std::memcpy(expected.data() + slot, FillServerInfoEntry, EntryDetourBytes);
+    auto loaded = expected;
+    const uint32_t externalTarget = 0x0ff00000;
+    int targetChecks = 0;
+    auto compare = [&](bool executable = true) {
+        return MatchesExecutableRange(loaded.data(), expected.data(), imageSize, base,
+            rangeStart, rangeLength, [&](uint32_t target) {
+                ++targetChecks;
+                return executable && target == externalTarget;
+            });
+    };
+    auto jumpTo = [&](uint32_t target) {
+        loaded = expected;
+        loaded[slot] = 0xe9;
+        const uint32_t displacement = target - static_cast<uint32_t>(base + slot + 5);
+        std::memcpy(loaded.data() + slot + 1, &displacement, sizeof(displacement));
+    };
+    Expect(compare() && targetChecks == 0, "unchanged engine stays exact, without querying detour targets");
+    jumpTo(externalTarget);
+    Expect(compare() && compare(), "known FillServerInfo entry detour permits initialization and reload");
+    Expect(!compare(false), "unreadable or non-executable detour destination rejected");
+    loaded[slot] = 0x90;
+    Expect(!compare(), "arbitrary overwritten entry bytes rejected");
+    jumpTo(externalTarget); loaded[slot + 5] ^= 1;
+    Expect(!compare(), "sixth byte outside detour remains protected");
+    jumpTo(externalTarget); loaded[slot - 1] ^= 1;
+    Expect(!compare(), "byte before the exception remains protected");
+    for (size_t critical : {0x1c9ba0, 0x1c9d6c, 0x1cdd20, 0x1cd660, 0x1cddf0, 0x290a30}) {
+        jumpTo(externalTarget); loaded[critical] ^= 1;
+        Expect(!compare(), "packet code and net_time operand remain exact with the allowed detour");
+    }
+    jumpTo(0xf0000000);
+    Expect(MatchesExecutableRange(loaded.data(), expected.data(), imageSize, base,
+        rangeStart, rangeLength, [](uint32_t target) { return target == 0xf0000000; }),
+        "i386 rel32 wrapping is decoded correctly under ASLR");
+    jumpTo(0);
+    Expect(!compare(), "null detour destination rejected");
+    jumpTo(static_cast<uint32_t>(base + slot));
+    Expect(!compare(), "self-loop detour rejected");
+    jumpTo(static_cast<uint32_t>(base + 0x1000));
+    Expect(!compare(), "jump into engine or packet-contract code rejected");
+    jumpTo(externalTarget); expected[slot] ^= 1;
+    Expect(!compare(), "exception requires the verified original entry bytes");
+    expected[slot] ^= 1; loaded = expected; loaded[slot + 3] ^= 1;
+    Expect(!compare(), "an opcode other than E9 cannot use the exception");
+    jumpTo(externalTarget);
+    Expect(!MatchesExecutableRange(loaded.data(), expected.data(), imageSize, base, slot + 1, 4,
+                                  [](uint32_t) { return true; }), "partial exception at section boundary rejected");
+    Expect(!MatchesExecutableRange(loaded.data(), expected.data(), imageSize, base, imageSize, 1,
+                                  [](uint32_t) { return true; }), "out-of-image executable range rejected");
+}
+
 int main()
 {
+    TestWindowsLoadedCodeCompatibility();
     TestQueueOwnershipAndOrdering(); TestVerifiedEngineCodec(); TestRestoreFailureAndLimits(); TestProfilesResetReconnectAndFailures(); TestPolicyPreservesUnprofiledAndClearsLoss(); TestHookRemovalFailures(); TestMemoryProtectionFailures(); TestLossModel();
     if (failures) { std::cerr << failures << " failures\n"; return 1; }
     std::cout << "All tests passed (synthetic transport, no engine ABI claim).\n";
