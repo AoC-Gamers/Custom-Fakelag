@@ -61,6 +61,7 @@ def main():
               'production_source': '9c7debcf334ef534d715449b828e0c6d5fa67853',
               'base': '65031fb83da9b1ce9487237c3a19e83735c02686',
               'runtime_requested': str(a.runtime.resolve()), 'runtime_sha256': digest(a.runtime),
+              'collector_source_sha256': digest(Path(__file__)),
               'events': [], 'who_terminated': None, 'forced_termination': False}
     state_path = a.output.with_suffix('.state.json')
     def save(state):
@@ -170,6 +171,8 @@ def main():
                 private_log = log.read_bytes()[log_offset:].decode('utf-8', errors='replace')
                 result['resolved_human_steam_identity'] = bool(re.search(r'STEAM_[01]:[01]:\d+', text + private_log))
                 result['auth_validation_event'] = 'STEAM USERID validated' in private_log
+                if a.scenario != 'idle' and not (result['resolved_human_steam_identity'] and result['auth_validation_event']):
+                    raise RuntimeError('Real Steam client authentication not confirmed')
                 result['activity_started'] = time.time(); save('activity')
                 time.sleep(a.duration)
                 text = record('status')
