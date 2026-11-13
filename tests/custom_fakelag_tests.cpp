@@ -98,13 +98,13 @@ void TestRestoreFailureAndLimits()
     QueueLimits limits; limits.sessionPackets = 2; limits.globalPackets = 3;
     limits.sessionBytes = 12; limits.globalBytes = 16;
     LagSystem queue(&now, &adapter, limits);
-    PacketFixture large(8), small(4), live;
-    Expect(queue.LagPacket(&large.packet, Milliseconds(10), SessionId(1)) == EnqueueResult::Queued, "first budgeted packet");
-    Expect(queue.LagPacket(&large.packet, Milliseconds(10), SessionId(1)) == EnqueueResult::Saturated, "session byte budget");
-    Expect(queue.LagPacket(&small.packet, Milliseconds(10), SessionId(1)) == EnqueueResult::Queued, "session exact byte limit");
-    Expect(queue.LagPacket(&small.packet, Milliseconds(10), SessionId(1)) == EnqueueResult::Saturated, "session packet limit");
-    Expect(queue.LagPacket(&small.packet, Milliseconds(10), SessionId(2)) == EnqueueResult::Queued, "global exact limit");
-    Expect(queue.LagPacket(&small.packet, Milliseconds(10), SessionId(3)) == EnqueueResult::Saturated, "global packet/byte budget");
+    PacketFixture largePacket(8), smallPacket(4), live;
+    Expect(queue.LagPacket(&largePacket.packet, Milliseconds(10), SessionId(1)) == EnqueueResult::Queued, "first budgeted packet");
+    Expect(queue.LagPacket(&largePacket.packet, Milliseconds(10), SessionId(1)) == EnqueueResult::Saturated, "session byte budget");
+    Expect(queue.LagPacket(&smallPacket.packet, Milliseconds(10), SessionId(1)) == EnqueueResult::Queued, "session exact byte limit");
+    Expect(queue.LagPacket(&smallPacket.packet, Milliseconds(10), SessionId(1)) == EnqueueResult::Saturated, "session packet limit");
+    Expect(queue.LagPacket(&smallPacket.packet, Milliseconds(10), SessionId(2)) == EnqueueResult::Queued, "global exact limit");
+    Expect(queue.LagPacket(&smallPacket.packet, Milliseconds(10), SessionId(3)) == EnqueueResult::Saturated, "global packet/byte budget");
     now = 2;
     Expect(queue.GetNextPacket(0, &live.packet, 4), "insufficient destination drops large head and delivers next");
     Expect(queue.Counters().restoreFailed == 1 && queue.GetRetainedBytes() == 4, "failed restoration accounted exactly once");
@@ -115,15 +115,15 @@ void TestRestoreFailureAndLimits()
     queue.CountRequestedLoss();
     Expect(queue.Counters().requestedLoss == 1, "requested loss separate from internal failures");
     for (float lag : {-1.f, 10001.f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
-        Expect(queue.LagPacket(&small.packet, Milliseconds(lag), SessionId(2)) == EnqueueResult::Invalid, "invalid latency rejected");
-    small.packet.readerBits = 999;
-    Expect(queue.LagPacket(&small.packet, Milliseconds(1), SessionId(2)) == EnqueueResult::Invalid, "invalid reader scalar bounds");
-    small.packet.readerBits = 32; small.packet.source = -1;
-    Expect(queue.LagPacket(&small.packet, Milliseconds(1), SessionId(2)) == EnqueueResult::Invalid, "invalid socket");
+        Expect(queue.LagPacket(&smallPacket.packet, Milliseconds(lag), SessionId(2)) == EnqueueResult::Invalid, "invalid latency rejected");
+    smallPacket.packet.readerBits = 999;
+    Expect(queue.LagPacket(&smallPacket.packet, Milliseconds(1), SessionId(2)) == EnqueueResult::Invalid, "invalid reader scalar bounds");
+    smallPacket.packet.readerBits = 32; smallPacket.packet.source = -1;
+    Expect(queue.LagPacket(&smallPacket.packet, Milliseconds(1), SessionId(2)) == EnqueueResult::Invalid, "invalid socket");
     EnginePacketAdapter unsupported;
     LagSystem unavailable(&now, &unsupported);
     Expect(!unsupported.IsRuntimeValidated() && unsupported.DestinationCapacity(live.packet, false) == 0, "unknown ABI fails closed with no capacity assumption");
-    Expect(unavailable.LagPacket(&large.packet, Milliseconds(1), SessionId(1)) == EnqueueResult::Invalid, "unknown adapter refuses capture");
+    Expect(unavailable.LagPacket(&largePacket.packet, Milliseconds(1), SessionId(1)) == EnqueueResult::Invalid, "unknown adapter refuses capture");
 }
 class Resolver : public IClientNetAdrResolver {
 public:
