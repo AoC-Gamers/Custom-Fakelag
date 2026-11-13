@@ -62,14 +62,14 @@ void PlayerProfileApiBridge::Shutdown()
 	}
 }
 
-bool PlayerProfileApiBridge::OnSetPlayerLatency(int client, float oldLag, float* requestedLag, CFakeLagChangeReason reason)
+LatencyForwardResult PlayerProfileApiBridge::OnSetPlayerLatency(int client, float oldLag, float* requestedLag, CFakeLagChangeReason reason)
 {
 	if (requestedLag == nullptr) {
-		return false;
+		return LatencyForwardResult::Error;
 	}
 
 	if (m_OnSetPlayerLatency == nullptr || m_OnSetPlayerLatency->GetFunctionCount() == 0) {
-		return true;
+		return LatencyForwardResult::Continue;
 	}
 
 	cell_t result = 0;
@@ -77,8 +77,8 @@ bool PlayerProfileApiBridge::OnSetPlayerLatency(int client, float oldLag, float*
 	m_OnSetPlayerLatency->PushFloat(oldLag);
 	m_OnSetPlayerLatency->PushFloatByRef(requestedLag);
 	m_OnSetPlayerLatency->PushCell(static_cast<cell_t>(reason));
-	m_OnSetPlayerLatency->Execute(&result);
-	return result < Pl_Handled;
+	const int error = m_OnSetPlayerLatency->Execute(&result);
+	return ClassifyLatencyForwardResult(error, result);
 }
 
 void PlayerProfileApiBridge::OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason)

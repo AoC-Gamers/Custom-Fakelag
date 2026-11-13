@@ -8,6 +8,16 @@ class IGamePlayer;
 class IPluginContext;
 #endif
 
+enum class ProfileChangeResult { Applied, Unchanged, Vetoed, Error };
+inline bool ProfileChangeSucceeded(ProfileChangeResult result) {
+    return result == ProfileChangeResult::Applied || result == ProfileChangeResult::Unchanged;
+}
+enum class LatencyForwardResult { Continue, Vetoed, Error };
+inline LatencyForwardResult ClassifyLatencyForwardResult(int executeError, int action) {
+    if (executeError != 0) return LatencyForwardResult::Error;
+    return action >= 3 ? LatencyForwardResult::Vetoed : LatencyForwardResult::Continue;
+}
+
 enum class CFakeLagChangeReason {
 	Manual = 0,
 	Clear,
@@ -24,7 +34,7 @@ class IPlayerProfileHooks
 {
 public:
 	virtual ~IPlayerProfileHooks() = default;
-	virtual bool OnSetPlayerLatency(ClientIndex client, LagMilliseconds oldLag, LagMilliseconds* requestedLag, CFakeLagChangeReason reason) = 0;
+	virtual LatencyForwardResult OnSetPlayerLatency(ClientIndex client, LagMilliseconds oldLag, LagMilliseconds* requestedLag, CFakeLagChangeReason reason) = 0;
 	virtual void OnPlayerProfileChanged(ClientIndex client, LagMilliseconds oldLag, PacketLossPercent oldPacketLossPercent, LagMilliseconds newLag, PacketLossPercent newPacketLossPercent, CFakeLagChangeReason reason) = 0;
 };
 
@@ -46,7 +56,7 @@ private:
 	bool m_Clearing = false;
 
 	bool ApplyPlayerLatencyChange(ClientIndex client, LagMilliseconds lagTime, CFakeLagChangeReason reason, bool allowPreForward);
-	bool ApplyPlayerProfileChange(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent, CFakeLagChangeReason reason, bool allowPreForward);
+	ProfileChangeResult ApplyPlayerProfileChange(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent, CFakeLagChangeReason reason, bool allowPreForward);
 	void NotifyPlayerProfileChanged(ClientIndex client, LagMilliseconds oldLag, PacketLossPercent oldPacketLossPercent, LagMilliseconds newLag, PacketLossPercent newPacketLossPercent, CFakeLagChangeReason reason) const;
 
 public:
@@ -63,10 +73,10 @@ public:
 
 	bool SetPlayerLatency(ClientIndex client, LagMilliseconds lagTime);
 	void ClearPlayerLatency(ClientIndex client);
-	bool SetPlayerProfile(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent);
+	ProfileChangeResult SetPlayerProfile(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent);
 	bool SetPlayerPacketLoss(ClientIndex client, PacketLossPercent packetLossPercent);
 	void ClearPlayerPacketLoss(ClientIndex client);
-	void ClearAllPlayerProfiles();
+	bool ClearAllPlayerProfiles();
 	void ClearAllPlayerLatencies();
 
 	LagMilliseconds GetPlayerLatency(ClientIndex client) const;

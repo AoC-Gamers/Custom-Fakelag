@@ -42,93 +42,55 @@
 #endif
 
 #include <jit/x86/x86_macros.h>
-#include "MemoryProtection.h"
-
-struct patch_t
-{
-	patch_t()
-	{
-		patch[0] = 0;
-		bytes = 0;
-	}
-	unsigned char patch[20];
-	size_t bytes;
-};
+#include "MemoryPatch.h"
 
 inline bool ProtectMemory(void *addr, int length, int prot)
 {
 	return length > 0 && TryProtectMemory(addr, static_cast<size_t>(length), prot);
 }
 
-inline void SetMemPatchable(void *address, size_t size)
+inline bool PatchRelJump32(unsigned char *target, void *callback)
 {
-	ProtectMemory(address, (int)size, PAGE_EXECUTE_READWRITE);
+	patch_t jump;
+	jump.bytes = 5;
+	jump.patch[0] = IA32_JMP_IMM32;
+	const int32_t displacement = static_cast<int32_t>(reinterpret_cast<uintptr_t>(callback) -
+		(reinterpret_cast<uintptr_t>(target) + 5));
+	std::memcpy(jump.patch + 1, &displacement, sizeof(displacement));
+	return ApplyPatch(target, 0, &jump, nullptr);
 }
 
-inline void PatchRelJump32(unsigned char *target, void *callback)
+inline bool PatchAbsJump64(unsigned char *target, void *callback)
 {
-	SetMemPatchable(target, 5);
-
-	// jmp <32-bit displacement>
-	target[0] = IA32_JMP_IMM32;
-	*(int32_t *)(&target[1]) = int32_t((unsigned char *)callback - (target + 5));
-}
-
-inline void PatchAbsJump64(unsigned char *target, void *callback)
-{
-	int i = 0;
-	SetMemPatchable(target, 14);
-	
-	// push <lower 32-bits>         ; allocates 64-bit stack space on x64
-	// mov [rsp+4], <upper 32-bits> ; unnecessary if upper bits are 0
-	// ret                          ; jump to address on stack
-	target[i++] = IA32_PUSH_IMM32;
-	*(int32_t *)(&target[i]) = int32_t(int64_t(callback));
-	i += 4;
-	if ((int64_t(callback) >> 32) != 0)
-	{
-		target[i++] = IA32_MOV_RM_IMM32;
-		target[i++] = ia32_modrm(MOD_DISP8, 0, kREG_SIB);
-		target[i++] = ia32_sib(NOSCALE, kREG_NOIDX, kREG_ESP);
-		target[i++] = 0x04;
-		*(int32_t *)(&target[i]) = (int64_t(callback) >> 32);
-		i += 4;
+	patch_t jump;
+	size_t i = 0;
+	jump.patch[i++] = IA32_PUSH_IMM32;
+	const uint64_t address = reinterpret_cast<uintptr_t>(callback);
+	const uint32_t low = static_cast<uint32_t>(address);
+	std::memcpy(jump.patch + i, &low, sizeof(low)); i += sizeof(low);
+	const uint32_t high = static_cast<uint32_t>(address >> 32);
+	if (high) {
+		jump.patch[i++] = IA32_MOV_RM_IMM32;
+		jump.patch[i++] = ia32_modrm(MOD_DISP8, 0, kREG_SIB);
+		jump.patch[i++] = ia32_sib(NOSCALE, kREG_NOIDX, kREG_ESP);
+		jump.patch[i++] = 0x04;
+		std::memcpy(jump.patch + i, &high, sizeof(high)); i += sizeof(high);
 	}
-	target[i] = IA32_RET;
+	jump.patch[i++] = IA32_RET;
+	jump.bytes = i;
+	return ApplyPatch(target, 0, &jump, nullptr);
 }
 
-inline void DoGatePatch(unsigned char *target, void *callback)
+inline bool DoGatePatch(unsigned char *target, void *callback)
 {
 #if defined(_WIN64) || defined(__x86_64__)
-	int64_t diff = int64_t(callback) - (int64_t(target) + 5);
-	int32_t upperBits = (diff >> 32);
-	if (upperBits == 0 || upperBits == -1)
-		PatchRelJump32(target, callback);
-	else
-		PatchAbsJump64(target, callback);
+	const int64_t diff = int64_t(callback) - (int64_t(target) + 5);
+	if (diff >= (std::numeric_limits<int32_t>::min)() && diff <= (std::numeric_limits<int32_t>::max)())
+		return PatchRelJump32(target, callback);
+	return PatchAbsJump64(target, callback);
 #else
-	PatchRelJump32(target, callback);
+	return PatchRelJump32(target, callback);
 #endif
-}
-
-inline void ApplyPatch(void *address, int offset, const patch_t *patch, patch_t *restore)
-{
-	ProtectMemory(address, 20, PAGE_EXECUTE_READWRITE);
-
-	unsigned char *addr = (unsigned char *)address + offset;
-	if (restore)
-	{
-		for (size_t i=0; i<patch->bytes; i++)
-		{
-			restore->patch[i] = addr[i];
-		}
-		restore->bytes = patch->bytes;
-	}
-
-	for (size_t i=0; i<patch->bytes; i++)
-	{
-		addr[i] = patch->patch[i];
-	}
 }
 
 #endif //_INCLUDE_SOURCEMOD_DETOURHELPERS_H_

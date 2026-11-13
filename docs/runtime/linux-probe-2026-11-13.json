@@ -1,0 +1,270 @@
+{
+  "kind": "SRCDS real connectionless UDP; synthetic profile identity",
+  "results": [
+    {
+      "test": "latency-120ms",
+      "state": {
+        "enabled": 1,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 6,
+        "mean_hold_ms": 136.351,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "bernoulli-loss-100",
+      "state": {
+        "enabled": 1,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 6,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "direct-convar-reset",
+      "state": {
+        "enabled": 0,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 6,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "ge-loss-100",
+      "state": {
+        "enabled": 1,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 1,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 6,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "pending-before-reset",
+      "state": {
+        "enabled": 1,
+        "pending": 4,
+        "bytes": 92,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "reset-pending",
+      "state": {
+        "enabled": 0,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 4,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "pending-before-session-clear",
+      "state": {
+        "enabled": 1,
+        "pending": 3,
+        "bytes": 69,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "session-clear",
+      "state": {
+        "enabled": 0,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 3,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "same-address-new-profile",
+      "state": {
+        "enabled": 1,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 3,
+        "mean_hold_ms": 134.878,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "pending-before-always-on",
+      "state": {
+        "enabled": 1,
+        "pending": 2,
+        "bytes": 46,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "always-on-reset",
+      "state": {
+        "enabled": 1,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 2,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "lazy-reset",
+      "state": {
+        "enabled": 0,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 2,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "pending-before-map-change",
+      "state": {
+        "enabled": 1,
+        "pending": 2,
+        "bytes": 46,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "map-change",
+      "state": {
+        "enabled": 0,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 2,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "pending-before-unload",
+      "state": {
+        "enabled": 1,
+        "pending": 2,
+        "bytes": 46,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "reload-clean",
+      "state": {
+        "enabled": 0,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 0,
+        "mean_hold_ms": 0.0,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    },
+    {
+      "test": "dispatch-after-unload-reload",
+      "state": {
+        "enabled": 1,
+        "pending": 0,
+        "bytes": 0,
+        "loss_states": 0,
+        "dispatched": 3,
+        "mean_hold_ms": 136.876,
+        "loss": 0,
+        "restore_failed": 0,
+        "lifecycle": 0,
+        "invalid": 0
+      }
+    }
+  ],
+  "engine_sha256": "8f8093a18bba14cb73fc11589687bfb8156b00328b7413d697f1a76ed4b7621a",
+  "runtime_os": "Ubuntu 26.04.1 LTS, ELF32 i386 SRCDS",
+  "sourcemod_runtime": "1.12.0.7259",
+  "harness_extension_sha256": "7b088f3667e6417dfe425354fe5030b443d3a653cec733d4ad2393d01fe0e9c6",
+  "production_extension_sha256": "b579374aabc3eef5d822b750b305e1e19831d2a42223f50c4401bd17ed9fa412",
+  "limitations": [
+    "Synthetic profile/address resolver for connectionless loopback UDP, not Steam player login.",
+    "Measured engine dispatch and drop counters, not game-client RTT or rendered gameplay.",
+    "Windows engine binary unavailable; activation remains refused."
+  ]
+}

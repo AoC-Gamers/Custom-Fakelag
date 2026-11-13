@@ -1,13 +1,14 @@
 #include "extension.h"
 #include "NET_LagPacket_Detour.h"
 #include "tier1/convar.h"
+#include <cstdlib>
 
 extern ISmmAPI* g_SMAPI;
 extern CustomFakelag g_Sample;
 SH_DECL_HOOK0_void(IServerGameDLL, LevelShutdown, SH_NOATTRIB, 0);
 namespace {
 void LossModeChanged(IConVar*, const char*, float oldValue) { g_Sample.OnLossModeChanged(static_cast<int>(oldValue)); }
-void DetourModeChanged(IConVar*, const char*, float) { g_Sample.OnDetourModeChanged(); }
+void DetourModeChanged(IConVar*, const char*, float oldValue) { g_Sample.OnDetourModeChanged(static_cast<int>(oldValue)); }
 }
 
 ConVar sm_custom_fakelag_loss_mode(
@@ -204,7 +205,7 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 	sharesys->RegisterLibrary(myself, "custom_fakelag");
 	playerhelpers->AddClientListener(this);
 	SH_ADD_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_MEMBER(this, &CustomFakelag::OnLevelShutdown), false);
-	g_pSM->LogMessage(myself, "[custom_fakelag] Engine ABI unverified: profile activation is disabled in this build.");
+	g_pSM->LogMessage(myself, "[custom_fakelag] Packet adapter initialized; unsupported engine identities will reject profile activation.");
 	m_Loaded = true;
 	sm_custom_fakelag_loss_mode.InstallChangeCallback(LossModeChanged);
 	sm_custom_fakelag_detour_mode.InstallChangeCallback(DetourModeChanged);
@@ -236,6 +237,12 @@ void CustomFakelag::SDK_OnUnload() {
 
 void CustomFakelag::ReleaseResources()
 {
+	if (!LagDetour_Shutdown()) {
+		// SourceMod's unload callback is void: returning cannot veto dlclose.
+		// Stop before code containing a live callback can be unmapped.
+		g_pSM->LogError(myself, "[custom_fakelag] Fatal: cannot unload while NET_LagPacket remains patched. No hook infrastructure was freed.");
+		std::abort();
+	}
 	delete m_PlayerProfileService;
 	m_PlayerProfileService = nullptr;
 	if (m_PlayerProfileApiBridge != nullptr) {
@@ -244,7 +251,6 @@ void CustomFakelag::ReleaseResources()
 		m_PlayerProfileApiBridge = nullptr;
 	}
 
-	LagDetour_Shutdown();
 	delete m_LagManager;
 	m_LagManager = nullptr;
 	delete m_NetAdrResolver;
@@ -267,12 +273,12 @@ void CustomFakelag::OnClientDisconnecting(int client)
 	}
 }
 
-bool CustomFakelag::SetPlayerProfile(int client, float lagTime, int packetLossPercent)
+ProfileChangeResult CustomFakelag::SetPlayerProfile(int client, float lagTime, int packetLossPercent)
 {
 	if (m_PlayerProfileService != nullptr) {
 		return m_PlayerProfileService->SetPlayerProfile(client, lagTime, packetLossPercent);
 	}
-	return false;
+	return ProfileChangeResult::Error;
 }
 
 bool CustomFakelag::GetPlayerProfile(int client, float& lagTime, int& packetLossPercent) const
@@ -298,12 +304,12 @@ bool CustomFakelag::HasPlayerProfile(int client) const
 		|| m_PlayerProfileService->HasPlayerPacketLoss(client);
 }
 
-bool CustomFakelag::ClearPlayerProfile(int client)
+ProfileChangeResult CustomFakelag::ClearPlayerProfile(int client)
 {
 	if (m_PlayerProfileService != nullptr) {
 		return m_PlayerProfileService->SetPlayerProfile(client, kNoLag, 0);
 	}
-	return false;
+	return ProfileChangeResult::Error;
 }
 
 void CustomFakelag::SetPacketLossMode(CFakeLagPacketLossMode mode)
@@ -315,18 +321,24 @@ void CustomFakelag::OnLossModeChanged(int oldMode)
 {
 	if (!m_Loaded || m_ChangingMode) return;
 	m_ChangingMode = true;
-	ResetState();
+	if (!ResetState()) {
+		g_pSM->LogError(myself, "[custom_fakelag] Loss mode change aborted: detour synchronization failed.");
+		sm_custom_fakelag_loss_mode.SetValue(oldMode);
+		m_ChangingMode = false;
+		return;
+	}
 	if (m_PlayerProfileApiBridge)
 		m_PlayerProfileApiBridge->OnPacketLossModeChanged(static_cast<CFakeLagPacketLossMode>(oldMode), GetPacketLossMode());
 	m_ChangingMode = false;
 }
-void CustomFakelag::OnDetourModeChanged()
+void CustomFakelag::OnDetourModeChanged(int oldMode)
 {
 	if (!m_Loaded || m_ChangingMode) return;
 	m_ChangingMode = true;
-	ResetState();
-	if (CFakeLag_IsAlwaysOnDetourMode() && !LagDetour_Enable()) sm_custom_fakelag_detour_mode.SetValue(0);
-	if (!CFakeLag_IsAlwaysOnDetourMode() && GetProfiledClientCount() == 0) LagDetour_Disable();
+	if (!ResetState()) {
+		g_pSM->LogError(myself, "[custom_fakelag] Detour mode change failed; previous mode restored and hook infrastructure retained.");
+		sm_custom_fakelag_detour_mode.SetValue(oldMode);
+	}
 	m_ChangingMode = false;
 }
 
@@ -340,17 +352,16 @@ CFakeLagPacketLossMode CustomFakelag::GetPacketLossMode() const
 	return CFakeLagPacketLossMode::BernoulliUniform;
 }
 
-void CustomFakelag::ClearAllPlayerProfiles()
+bool CustomFakelag::ClearAllPlayerProfiles()
 {
-	if (m_PlayerProfileService != nullptr) {
-		m_PlayerProfileService->ClearAllPlayerProfiles();
-	}
+	return m_PlayerProfileService && m_PlayerProfileService->ClearAllPlayerProfiles();
 }
 
-void CustomFakelag::ResetState()
+bool CustomFakelag::ResetState()
 {
-	ClearAllPlayerProfiles();
+	const bool synchronized = ClearAllPlayerProfiles();
 	LagDetour_ClearAll();
+	return synchronized;
 }
 
 bool CustomFakelag::IsClientSupported(int client) const
@@ -389,8 +400,10 @@ cell_t CFakeLag_SetPlayerProfile(IPluginContext* pContext, const cell_t* params)
 		return pContext->ThrowNativeError("Packet loss percent must be between 0 and 100.");
 	}
 
-	if (!g_Sample.SetPlayerProfile(client, lagTime, packetLossPercent))
-		return pContext->ThrowNativeError("Profile was not applied: forward rejected, invalid latency, unresolved address, reentrant mutation or detour activation failed.");
+	const auto result = g_Sample.SetPlayerProfile(client, lagTime, packetLossPercent);
+	if (result == ProfileChangeResult::Vetoed) return 0;
+	if (result == ProfileChangeResult::Error)
+		return pContext->ThrowNativeError("Profile was not applied: invalid latency, forward execution error, unresolved address, reentrant mutation or detour operation failed.");
 	return 1;
 }
 
@@ -431,7 +444,9 @@ cell_t CFakeLag_ClearPlayerProfile(IPluginContext* pContext, const cell_t* param
 		return 0;
 	}
 
-	return g_Sample.ClearPlayerProfile(client) ? 1 : 0;
+	const auto result = g_Sample.ClearPlayerProfile(client);
+	if (result == ProfileChangeResult::Error) return pContext->ThrowNativeError("Profile could not be cleared.");
+	return ProfileChangeSucceeded(result) ? 1 : 0;
 }
 
 cell_t CFakeLag_SetPacketLossMode(IPluginContext* pContext, const cell_t* params)
@@ -443,6 +458,8 @@ cell_t CFakeLag_SetPacketLossMode(IPluginContext* pContext, const cell_t* params
 	}
 
 	g_Sample.SetPacketLossMode(static_cast<CFakeLagPacketLossMode>(modeValue));
+	if (g_Sample.GetPacketLossMode() != static_cast<CFakeLagPacketLossMode>(modeValue))
+		return pContext->ThrowNativeError("Packet loss mode change failed while synchronizing the detour.");
 	return 1;
 }
 
@@ -453,13 +470,15 @@ cell_t CFakeLag_GetPacketLossMode(IPluginContext* pContext, const cell_t* params
 
 cell_t CFakeLag_ClearAllPlayerProfiles(IPluginContext* pContext, const cell_t* params)
 {
-	g_Sample.ClearAllPlayerProfiles();
+	if (!g_Sample.ClearAllPlayerProfiles())
+		return pContext->ThrowNativeError("Profiles were cleared, but detour synchronization failed; hook infrastructure was retained.");
 	return 1;
 }
 
 cell_t CFakeLag_ResetState(IPluginContext* pContext, const cell_t* params)
 {
-	g_Sample.ResetState();
+	if (!g_Sample.ResetState())
+		return pContext->ThrowNativeError("State was cleared, but detour synchronization failed; hook infrastructure was retained.");
 	return 1;
 }
 

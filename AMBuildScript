@@ -179,6 +179,8 @@ class ExtensionConfig(object):
       '-m32',
       '-fvisibility=hidden',
     ]
+    if os.environ.get('CUSTOM_FAKELAG_ENGINE_HARNESS') == '1':
+      cxx.defines += ['CUSTOM_FAKELAG_ENGINE_HARNESS']
     cxx.cxxflags += [
       '-std=c++14',
       '-fno-exceptions',
@@ -269,7 +271,7 @@ class ExtensionConfig(object):
     cxx.defines += ['_LINUX', 'POSIX']
     cxx.cflags += ['-fPIC']
     cxx.cxxflags += ['-fPIC']
-    cxx.linkflags += ['-Wl,--exclude-libs,ALL', '-Wl,--no-undefined', '-Wl,-rpath,$ORIGIN', '-lm']
+    cxx.linkflags += ['-Wl,--exclude-libs,ALL', '-Wl,--no-undefined', '-Wl,-rpath,$ORIGIN', '-lm', '-ldl']
     if cxx.vendor == 'gcc':
       cxx.linkflags += ['-static-libgcc']
     elif cxx.vendor == 'clang':

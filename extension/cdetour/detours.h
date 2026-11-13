@@ -213,9 +213,9 @@ public:
 	 * These would be somewhat self-explanatory I hope
 	 */
 	bool EnableDetour();
-	void DisableDetour();
+	bool DisableDetour();
 
-	void Destroy();
+	bool Destroy();
 
 	friend class CDetourManager;
 
@@ -228,7 +228,7 @@ private:
 
 	/* These create/delete the allocated memory */
 	bool CreateDetour();
-	void DeleteDetour();
+	bool DeleteDetour();
 
 	bool enabled;
 	bool detoured;

@@ -1,0 +1,44 @@
+{
+  "platform": "linux-x86",
+  "module": "engine_srv.so",
+  "patch_version": "2.2.4.3",
+  "steam_build_id": "23990100",
+  "exe_build": "10097, Jun 30 2026 18:39:58",
+  "sha256": "8f8093a18bba14cb73fc11589687bfb8156b00328b7413d697f1a76ed4b7621a",
+  "gnu_build_id": "b152439170af081a0d31fc357364a4cd4caa56ac",
+  "symbols": {
+    "_Z13NET_LagPacketbP11netpacket_s": "0x1b36b0",
+    "_Z13NET_GetPacketiPh": "0x1b7350",
+    "_Z17NET_ProcessSocketiP28IConnectionlessPacketHandler": "0x1b7470",
+    "_Z19NET_ReceiveDatagramiP11netpacket_s": "0x1b6870",
+    "_Z17NET_GetLoopPacketP11netpacket_s": "0x1b3a40",
+    "_ZN8CBitRead12StartReadingEPKviii": "0x2476e0",
+    "_ZL11net_packets": "0x39c4d0",
+    "net_time": "0x39c140"
+  },
+  "packet": {
+    "size": 80,
+    "alignment": 4,
+    "from": 0,
+    "source": 12,
+    "received": 16,
+    "data": 24,
+    "message": 28,
+    "size_field": 64,
+    "wiresize": 68,
+    "stream": 72,
+    "next": 76
+  },
+  "netadr": {"size": 12, "alignment": 4},
+  "reader": {"size": 36, "alignment": 4, "type": "CBitRead", "prepared_after_detour": true},
+  "buffer": {
+    "allocation_bytes": "0x37ab8",
+    "header_bytes": 8,
+    "payload_capacity": "0x37ab0",
+    "allocation_at": "NET_ProcessSocket+0x10a",
+    "buffer_passed_at": "0x1b75a9",
+    "reader_start_at": "0x1b7424",
+    "newdata_false_call_at": "0x1b745b"
+  },
+  "windows": "not identified; unavailable binary, activation refused"
+}

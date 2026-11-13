@@ -169,10 +169,11 @@ bool CDetour::Init(ISourcePawnEngine *spengine, IGameConfig *gameconf)
 	return enabled;
 }
 
-void CDetour::Destroy()
+bool CDetour::Destroy()
 {
-	DeleteDetour();
+	if (!DeleteDetour()) return false;
 	delete this;
+	return true;
 }
 
 bool CDetour::IsEnabled()
@@ -261,38 +262,30 @@ jit_rewind:
 	return true;
 }
 
-void CDetour::DeleteDetour()
+bool CDetour::DeleteDetour()
 {
-	if (detoured)
-	{
-		DisableDetour();
-	}
-
-	if (detour_trampoline)
-	{
-		/* Free the allocated trampoline memory */
-		spengine->FreePageMemory(detour_trampoline);
-		detour_trampoline = NULL;
-	}
+	return TryDestroyHook(detoured,
+		[&]() { return ApplyPatch(detour_address, 0, &detour_restore, nullptr); },
+		[&]() {
+			if (detour_trampoline) spengine->FreePageMemory(detour_trampoline);
+			detour_trampoline = nullptr;
+			if (trampoline) *trampoline = nullptr;
+			enabled = false;
+		});
 }
 
 bool CDetour::EnableDetour()
 {
 	if (!detoured)
 	{
-		if (!enabled || !ProtectMemory(detour_address, static_cast<int>(detour_restore.bytes), PAGE_EXECUTE_READWRITE)) return false;
-		DoGatePatch((unsigned char *)detour_address, detour_callback);
+		if (!enabled || !DoGatePatch((unsigned char *)detour_address, detour_callback)) return false;
 		detoured = true;
 	}
 	return true;
 }
 
-void CDetour::DisableDetour()
+bool CDetour::DisableDetour()
 {
-	if (detoured)
-	{
-		/* Remove the patch */
-		ApplyPatch(detour_address, 0, &detour_restore, NULL);
-		detoured = false;
-	}
+	return TryDetachHook(detoured,
+		[&]() { return ApplyPatch(detour_address, 0, &detour_restore, nullptr); });
 }

@@ -16,6 +16,8 @@ struct QueueLimits {
     size_t packetBytes = 65536;
 };
 struct PacketCounters {
+    uint64_t dispatched = 0;
+    double totalHoldSeconds = 0;
     uint64_t requestedLoss = 0;
     uint64_t saturation = 0;
     uint64_t restoreFailed = 0;

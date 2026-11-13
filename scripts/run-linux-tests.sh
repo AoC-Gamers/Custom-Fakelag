@@ -42,6 +42,7 @@ ${CXX:-g++} "${extra_flags[@]}" \
   -I"$DEPS_DIR/sourcemod-1.12/public" \
   "$TEST_SOURCE" \
   "$LAG_SYSTEM_SOURCE" \
+  "$ROOT/extension/network/L4D2PacketAdapter.cpp" \
   "$ROOT/extension/network/LagPacketPolicy.cpp" \
   "$ROOT/extension/latency/PlayerLagManager.cpp" \
   "$ROOT/extension/latency/PlayerProfileService.cpp" \

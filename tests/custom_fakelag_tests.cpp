@@ -6,20 +6,22 @@
 #include <limits>
 #include <functional>
 #include "../extension/cdetour/MemoryProtection.h"
+#include "../extension/cdetour/MemoryPatch.h"
 #include "../extension/network/LagSystem.h"
 #include "../extension/network/LossModel.h"
+#include "../extension/network/L4D2PacketAdapter.h"
 #include "../extension/network/LagPacketPolicy.h"
 #include "../extension/latency/PlayerProfileService.h"
 
 // Injectable boundaries: these tests never patch engine memory.
-bool enabled = false, activationWorks = true, alwaysOn = false, changingMode = false;
+bool enabled = false, activationWorks = true, removalWorks = true, alwaysOn = false, changingMode = false;
 int activations = 0;
 CFakeLagPacketLossMode lossMode = CFakeLagPacketLossMode::GilbertElliott;
 CFakeLagPacketLossMode CFakeLag_GetPacketLossMode() { return lossMode; }
 LagSystem* activeQueue = nullptr;
 bool LagDetour_Enable() { ++activations; if (!activationWorks) return false; return enabled = true; }
 void LagDetour_ClearAll() { if (activeQueue) activeQueue->ClearAll(); }
-void LagDetour_Disable() { enabled = false; LagDetour_ClearAll(); }
+bool LagDetour_Disable() { if (!removalWorks) return false; enabled = false; LagDetour_ClearAll(); return true; }
 bool LagDetour_IsEnabled() { return enabled; }
 void LagDetour_ClearPacketLossState() {}
 bool CFakeLag_IsAlwaysOnDetourMode() { return alwaysOn; }
@@ -91,6 +93,26 @@ void TestQueueOwnershipAndOrdering()
     Expect(target.payload.get() == pointer, "self move assignment retains valid ownership");
     // Copy/assignment of owner are rejected by static_assert in net_structures.h.
 }
+void TestVerifiedEngineCodec()
+{
+    PacketFixture input(4, 0x61), output(4, 0xcc);
+    input.packet.readerBytes = -123; input.packet.readerBits = -123; input.packet.readerCursor = -123;
+    input.packet.readerPointer = reinterpret_cast<const unsigned char*>(uintptr_t(1));
+    EnginePacketView view;
+    Expect(L4D2PacketCodec::Capture(input.packet, view), "capture ignores uninitialized engine reader");
+    Expect(view.reader.bytes == 4 && view.reader.bits == 32 && view.reader.cursor == 0,
+           "reader description follows verified post-hook initialization");
+    QueuedPacket queued; queued.metadata = view; queued.metadata.data = nullptr;
+    queued.payload.reset(new unsigned char[4]); std::memcpy(queued.payload.get(), input.bytes, 4);
+    Expect(!L4D2PacketCodec::Restore(queued, output.packet, 3, EngineTime(8)) && output.bytes[0] == 0xcc,
+           "insufficient capacity is transactional");
+    Expect(L4D2PacketCodec::Restore(queued, output.packet, sizeof(output.bytes), EngineTime(8)) &&
+           output.bytes[0] == 0x61 && output.packet.received == 8 && output.packet.readerPointer == output.bytes,
+           "restore keeps live allocation, uses engine delivery time and leaves reader for caller");
+    L4D2PacketAdapter unknown;
+    Expect(!unknown.Initialize(nullptr, nullptr) && !unknown.IsRuntimeValidated() &&
+           unknown.DestinationCapacity(input.packet, false) == 0, "unknown engine cannot acquire an allocation capacity");
+}
 void TestRestoreFailureAndLimits()
 {
     SyntheticAdapter adapter;
@@ -154,7 +176,8 @@ public:
     std::function<void(float*)> pre;
     std::function<void()> post;
     int notifications = 0;
-    bool OnSetPlayerLatency(int, float, float* lag, CFakeLagChangeReason) override { if (pre) pre(lag); return true; }
+    LatencyForwardResult forwardResult = LatencyForwardResult::Continue;
+    LatencyForwardResult OnSetPlayerLatency(int, float, float* lag, CFakeLagChangeReason) override { if (pre) pre(lag); return forwardResult; }
     void OnPlayerProfileChanged(int, float, int, float, int, CFakeLagChangeReason) override { ++notifications; if (post) post(); }
 };
 void TestProfilesResetReconnectAndFailures()
@@ -166,7 +189,28 @@ void TestProfilesResetReconnectAndFailures()
     PlayerLagManager manager(&resolver, &events);
     PlayerProfileService service(&manager, &hooks, &registry);
     activationWorks = true; enabled = alwaysOn = false;
-    Expect(service.SetPlayerProfile(1, 100, 20) && enabled, "lazy enables on first profile");
+    Expect(service.SetPlayerProfile(1, 0, 0) == ProfileChangeResult::Unchanged, "unchanged distinct from applied");
+    const int beforeVeto = hooks.notifications;
+    const int beforeActivation = activations;
+    for (int action : {3, 4}) {
+        hooks.forwardResult = ClassifyLatencyForwardResult(0, action);
+        Expect(service.SetPlayerProfile(1, 100, 20) == ProfileChangeResult::Vetoed,
+               "Handled and Stop are normal vetoes, not errors");
+    }
+    hooks.forwardResult = ClassifyLatencyForwardResult(17, 0);
+    Expect(service.SetPlayerProfile(1, 100, 20) == ProfileChangeResult::Error, "forward execution failure is an error");
+    Expect(manager.GetLagCount() == 0 && hooks.notifications == beforeVeto && activations == beforeActivation,
+           "veto never commits notifies or activates hook");
+    hooks.forwardResult = LatencyForwardResult::Continue;
+    Expect(ProfileChangeSucceeded(service.SetPlayerProfile(1, 100, 20)) && enabled, "lazy enables on first profile");
+    const int afterApply = hooks.notifications;
+    for (int action : {3, 4}) {
+        hooks.forwardResult = ClassifyLatencyForwardResult(0, action);
+        Expect(service.SetPlayerProfile(1, 10, 0) == ProfileChangeResult::Vetoed &&
+               manager.GetPlayerLag(1) == 100 && manager.GetPlayerPacketLoss(1) == 20 && hooks.notifications == afterApply,
+               "normal veto preserves an existing profile and emits no success notification");
+    }
+    hooks.forwardResult = LatencyForwardResult::Continue;
     dumb_netadr_t address{}; resolver.TryResolveClientNetAdr(1, &address);
     auto first = manager.GetSession(address);
     PacketFixture packet;
@@ -175,9 +219,9 @@ void TestProfilesResetReconnectAndFailures()
     service.OnClientDisconnecting(1);
     Expect(queue.GetPendingCount() == 0 && queue.GetRetainedBytes() == 0 && manager.GetLagCount() == 0 && !enabled, "disconnect clears by cached session without resolver");
     resolver.works = true; registry.connected = true;
-    Expect(service.SetPlayerProfile(1, 100, 0) && !(manager.GetSession(address) == first), "reconnect gets a fresh generation");
+    Expect(ProfileChangeSucceeded(service.SetPlayerProfile(1, 100, 0)) && !(manager.GetSession(address) == first), "reconnect gets a fresh generation");
     queue.LagPacket(&packet.packet, Milliseconds(100), manager.GetSession(address));
-    Expect(service.SetPlayerProfile(1, 50, 0) && queue.GetPendingCount() == 0, "profile edit discards old queue");
+    Expect(ProfileChangeSucceeded(service.SetPlayerProfile(1, 50, 0)) && queue.GetPendingCount() == 0, "profile edit discards old queue");
     queue.LagPacket(&packet.packet, Milliseconds(100), manager.GetSession(address));
     alwaysOn = true; service.ClearAllPlayerProfiles(); service.ClearAllPlayerProfiles();
     Expect(manager.GetLagCount() == 0 && queue.GetPendingCount() == 0 && queue.GetRetainedBytes() == 0 && enabled, "always-on total reset is idempotent");
@@ -185,31 +229,38 @@ void TestProfilesResetReconnectAndFailures()
     Expect(!enabled, "lazy reset disables; reactivation leaves queue empty");
     activationWorks = false;
     auto notifications = hooks.notifications;
-    Expect(!service.SetPlayerProfile(1, 100, 0) && manager.GetLagCount() == 0 && hooks.notifications == notifications, "activation failure cannot commit or notify");
+    Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(1, 100, 0)) && manager.GetLagCount() == 0 && hooks.notifications == notifications, "activation failure cannot commit or notify");
     activationWorks = true; resolver.works = false;
-    Expect(!service.SetPlayerProfile(1, 100, 20) && manager.GetLagCount() == 0 && !enabled && events.errors == 1, "resolution failure rolls back new detour");
+    Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(1, 100, 20)) && manager.GetLagCount() == 0 && !enabled && events.errors == 1, "resolution failure rolls back new detour");
     resolver.works = true;
     for (float lag : {-1.f, 10001.f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
-        Expect(!service.SetPlayerProfile(1, lag, 0), "invalid input rejected before forward");
-    Expect(!service.SetPlayerProfile(1, 1, 101), "loss range validated internally");
+        Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(1, lag, 0)), "invalid input rejected before forward");
+    Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(1, 1, 101)), "loss range validated internally");
     hooks.pre = [](float* lag) { *lag = std::numeric_limits<float>::quiet_NaN(); };
-    Expect(!service.SetPlayerProfile(1, 100, 0), "invalid forward result rejected");
-    hooks.pre = [&](float*) { Expect(!service.SetPlayerProfile(1, 20, 0), "nested profile write rejected"); service.ClearAllPlayerProfiles(); };
-    Expect(!service.SetPlayerProfile(1, 100, 0) && manager.GetLagCount() == 0, "reset during pre-forward invalidates transaction");
+    Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(1, 100, 0)), "invalid forward result rejected");
+    hooks.pre = [&](float*) { Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(1, 20, 0)), "nested profile write rejected"); service.ClearAllPlayerProfiles(); };
+    Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(1, 100, 0)) && manager.GetLagCount() == 0, "reset during pre-forward invalidates transaction");
     hooks.pre = [&](float*) { service.OnClientDisconnecting(1); };
-    Expect(!service.SetPlayerProfile(1, 100, 0), "disconnect during forward invalidates transaction");
+    Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(1, 100, 0)), "disconnect during forward invalidates transaction");
     hooks.pre = {};
     changingMode = true;
-    Expect(!service.SetPlayerProfile(1, 100, 0), "mode transition cannot repopulate state from forwards");
+    Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(1, 100, 0)), "mode transition cannot repopulate state from forwards");
     changingMode = false;
-    Expect(service.SetPlayerProfile(1, 100, 0), "profile restored after failures");
+    Expect(ProfileChangeSucceeded(service.SetPlayerProfile(1, 100, 0)), "profile restored after failures");
     auto oldSession = manager.GetSession(address);
     queue.LagPacket(&packet.packet, Milliseconds(100), oldSession);
-    hooks.post = [&] { Expect(!service.SetPlayerProfile(2, 100, 0), "reset notification cannot recreate profiles"); };
+    hooks.post = [&] { Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(2, 100, 0)), "reset notification cannot recreate profiles"); };
     registry.connected = false;
     service.ClearAllPlayerProfiles();
     Expect(queue.Counters().lifecycle >= 3 && manager.GetLagCount() == 0, "total reset includes unsupported clients and lifecycle counters");
-    hooks.post = {}; activeQueue = nullptr;
+    hooks.post = {}; registry.connected = true;
+    Expect(service.SetPlayerProfile(1, 100, 0) == ProfileChangeResult::Applied, "applied distinct from unchanged");
+    removalWorks = false;
+    Expect(!service.ClearAllPlayerProfiles() && enabled && manager.GetLagCount() == 0,
+           "reset propagates failed hook removal while preserving hook ownership");
+    removalWorks = true;
+    Expect(service.ClearAllPlayerProfiles() && !enabled, "successful retirement retry recovers after reset");
+    activeQueue = nullptr;
 }
 void TestPolicyPreservesUnprofiledAndClearsLoss()
 {
@@ -233,12 +284,36 @@ void TestPolicyPreservesUnprofiledAndClearsLoss()
     queue.ClearAll(); manager.ClearAll();
     Expect(policy.GetLossStateCount() == 0 && queue.GetRetainedBytes() == 0 && manager.GetLagCount() == 0,
            "total reset leaves zero profiles queues bytes loss state");
+    EnginePacketAdapter unverified;
+    manager.SetPlayerProfile(1, 50, 100);
+    LagPacketPolicy unsupportedPolicy(&manager, &queue, &unverified);
+    Expect(unsupportedPolicy.HandlePacket(true, &packet.packet).state == PacketDispatchState::Bypass,
+           "foreign or unverified buffer provenance delegates to original engine");
     lossMode = CFakeLagPacketLossMode::BernoulliUniform;
     manager.SetPlayerProfile(1, 0, 100);
     Expect(policy.HandlePacket(true, &packet.packet).state == PacketDispatchState::Hold, "Bernoulli 100 percent");
     manager.SetPlayerProfile(1, 0, 0);
     Expect(policy.HandlePacket(true, &packet.packet).state == PacketDispatchState::Bypass, "Bernoulli zero preserves engine");
     lossMode = CFakeLagPacketLossMode::GilbertElliott;
+}
+bool RejectProtection(void*, size_t, int) { return false; }
+bool AcceptProtection(void*, size_t, int) { return true; }
+void TestHookRemovalFailures()
+{
+    unsigned char code[5] = {0xe9, 1, 2, 3, 4};
+    patch_t original; original.bytes = 5; std::memset(original.patch, 0x90, 5);
+    patch_t saved; saved.bytes = 2; saved.patch[0] = 7;
+    bool attached = true, released = false;
+    auto restoreFailure = [&]() { return ApplyPatch(code, 0, &original, &saved, RejectProtection); };
+    Expect(!TryDetachHook(attached, restoreFailure) && attached && code[0] == 0xe9,
+           "protection failure leaves original patch active without writes");
+    Expect(saved.bytes == 2 && saved.patch[0] == 7, "failed patch leaves saved bytes untouched");
+    Expect(!TryDestroyHook(attached, restoreFailure, [&]() { released = true; }) && !released && attached,
+           "failed removal must not release trampoline or callback infrastructure");
+    Expect(TryDestroyHook(attached, [&]() { return ApplyPatch(code, 0, &original, nullptr, AcceptProtection); },
+                          [&]() { released = true; }) && released && !attached && code[0] == 0x90,
+           "successful retry restores code before releasing infrastructure");
+    Expect(TryDetachHook(attached, []() { return false; }), "already detached is idempotent");
 }
 void TestMemoryProtectionFailures()
 {
@@ -289,7 +364,7 @@ void TestLossModel()
 }
 int main()
 {
-    TestQueueOwnershipAndOrdering(); TestRestoreFailureAndLimits(); TestProfilesResetReconnectAndFailures(); TestPolicyPreservesUnprofiledAndClearsLoss(); TestMemoryProtectionFailures(); TestLossModel();
+    TestQueueOwnershipAndOrdering(); TestVerifiedEngineCodec(); TestRestoreFailureAndLimits(); TestProfilesResetReconnectAndFailures(); TestPolicyPreservesUnprofiledAndClearsLoss(); TestHookRemovalFailures(); TestMemoryProtectionFailures(); TestLossModel();
     if (failures) { std::cerr << failures << " failures\n"; return 1; }
     std::cout << "All tests passed (synthetic transport, no engine ABI claim).\n";
 }

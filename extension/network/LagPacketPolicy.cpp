@@ -126,6 +126,7 @@ PacketDispatchResult LagPacketPolicy::HandlePacket(bool newdata, _netpacket_t* p
 	if (m_LagManager->GetLagCount() == 0 && m_LagSystem->GetPendingCount() == 0)
 		return { PacketDispatchState::Bypass };
 	const size_t capacity = m_Adapter->DestinationCapacity(*packet, newdata);
+	if (capacity == 0) return { PacketDispatchState::Bypass };
 	if (newdata) {
 		const float lagTime = GetPacketLagMs(*packet);
 		const int packetLossPercent = GetPacketLossPercent(*packet);

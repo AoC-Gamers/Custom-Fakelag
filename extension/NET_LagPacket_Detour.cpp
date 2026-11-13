@@ -1,10 +1,12 @@
 #include "extension.h"
 #include "NET_LagPacket_Detour.h"
 #include "network/LagPacketPolicy.h"
+#include "network/L4D2PacketAdapter.h"
 
+extern IGameConfig* g_pGameConf;
 CDetour* DLagPacket = nullptr;
 
-static EnginePacketAdapter s_EngineAdapter; // No runtime ABI has been certified.
+static L4D2PacketAdapter s_EngineAdapter;
 static const PlayerLagManager* s_LagManager = nullptr;
 static LagSystem* s_LagSystem = nullptr;
 static LagPacketPolicy* s_LagPacketPolicy = nullptr;
@@ -36,18 +38,26 @@ bool CreateNetLagPacketDetour()
 	return true;
 }
 
-void RemoveNetLagPacketDetour()
+bool RemoveNetLagPacketDetour()
 {
 	if (DLagPacket != nullptr) {
-		DLagPacket->Destroy();
+		if (!DLagPacket->Destroy()) {
+			g_pSM->LogError(myself, "[custom_fakelag] Detour removal failed; hook and trampoline remain owned and active.");
+			return false;
+		}
 		DLagPacket = nullptr;
 	}
+	return true;
 }
 
 bool LagDetour_Init(const PlayerLagManager* lagManager, const double* pNetTime)
 {
 	if (!lagManager || !pNetTime) return false;
 	s_LagManager = lagManager;
+	void* lagFunction = nullptr;
+	if (!g_pGameConf->GetMemSig("NET_LagPacket", &lagFunction) || !lagFunction) return false;
+	if (!s_EngineAdapter.Initialize(lagFunction, pNetTime))
+		g_pSM->LogError(myself, "[custom_fakelag] Engine module not supported by the verified packet adapter; activation remains unavailable.");
 	s_LagSystem = new LagSystem(pNetTime, &s_EngineAdapter);
 	s_LagPacketPolicy = new LagPacketPolicy(s_LagManager, s_LagSystem, &s_EngineAdapter);
 	return true;
@@ -75,17 +85,16 @@ bool LagDetour_Enable()
 	return created;
 }
 
-void LagDetour_Disable()
+bool LagDetour_Disable()
 {
+	const bool wasEnabled = DLagPacket != nullptr;
+	if (!RemoveNetLagPacketDetour()) return false;
 	LagDetour_ClearAll();
-	if (DLagPacket == nullptr) {
-		return;
-	}
 
-	RemoveNetLagPacketDetour();
-	if (CFakeLag_IsDebugEnabled()) {
+	if (wasEnabled && CFakeLag_IsDebugEnabled()) {
 		g_pSM->LogMessage(myself, "[custom_fakelag] NET_LagPacket detour disabled.");
 	}
+	return true;
 }
 
 bool LagDetour_IsEnabled()
@@ -93,14 +102,15 @@ bool LagDetour_IsEnabled()
 	return DLagPacket != nullptr;
 }
 
-void LagDetour_Shutdown()
+bool LagDetour_Shutdown()
 {
-	LagDetour_Disable();
+	if (!LagDetour_Disable()) return false;
 	delete s_LagPacketPolicy;
 	s_LagPacketPolicy = nullptr;
 	delete s_LagSystem;
 	s_LagSystem = nullptr;
 	s_LagManager = nullptr;
+	return true;
 }
 
 void LagDetour_ClearPacketLossState()
@@ -120,3 +130,14 @@ void LagDetour_ClearSession(SessionId session)
     if (s_LagSystem) s_LagSystem->ClearSession(session);
     if (s_LagPacketPolicy) s_LagPacketPolicy->ClearSession(session);
 }
+
+#ifdef CUSTOM_FAKELAG_ENGINE_HARNESS
+void LagDetour_TestSnapshot(size_t& pending, size_t& bytes, size_t& lossStates, PacketCounters& counters)
+{
+    if (!s_LagSystem) return;
+    lossStates = s_LagPacketPolicy ? s_LagPacketPolicy->GetLossStateCount() : 0;
+    pending = s_LagSystem->GetPendingCount();
+    bytes = s_LagSystem->GetRetainedBytes();
+    counters = s_LagSystem->Counters();
+}
+#endif

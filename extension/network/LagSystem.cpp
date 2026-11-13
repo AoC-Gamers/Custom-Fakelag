@@ -64,7 +64,11 @@ bool LagSystem::GetNextPacket(int socket, _netpacket_t* destination, size_t allo
         --m_Count;
         m_Bytes -= size_t(owned.metadata.size);
         if (size_t(owned.metadata.size) <= allocationCapacity && m_Adapter &&
-            m_Adapter->Restore(owned, *destination, allocationCapacity)) return true;
+            m_Adapter->Restore(owned, *destination, allocationCapacity)) {
+            ++m_Counters.dispatched;
+            m_Counters.totalHoldSeconds += (std::max)(0.0, *m_NetTime - owned.metadata.received.value);
+            return true;
+        }
         ++m_Counters.restoreFailed;
     }
     return false;

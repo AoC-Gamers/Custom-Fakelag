@@ -43,17 +43,17 @@ private:
 	bool RegisterConCommandBase(ConCommandBase* pVar) override;
 
 public:
-	bool SetPlayerProfile(int client, float lagTime, int packetLossPercent);
+	ProfileChangeResult SetPlayerProfile(int client, float lagTime, int packetLossPercent);
 	bool GetPlayerProfile(int client, float& lagTime, int& packetLossPercent) const;
 	bool HasPlayerProfile(int client) const;
-	bool ClearPlayerProfile(int client);
+	ProfileChangeResult ClearPlayerProfile(int client);
 	bool IsModeChanging() const { return m_ChangingMode; }
 	void OnLossModeChanged(int oldMode);
-	void OnDetourModeChanged();
+	void OnDetourModeChanged(int oldMode);
 	void SetPacketLossMode(CFakeLagPacketLossMode mode);
 	CFakeLagPacketLossMode GetPacketLossMode() const;
-	void ClearAllPlayerProfiles();
-	void ResetState();
+	bool ClearAllPlayerProfiles();
+	bool ResetState();
 	bool IsClientSupported(int client) const;
 	bool ThrowIfUnsupportedClient(IPluginContext* context, int client) const;
 	int GetProfiledClientCount() const;
