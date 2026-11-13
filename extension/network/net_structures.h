@@ -142,8 +142,6 @@ struct _netpacket_s
       return *this;
     }
 
-    delete[] data;
-
     CopyFrom(src);
 
     return *this;

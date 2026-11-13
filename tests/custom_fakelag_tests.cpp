@@ -2,6 +2,9 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <random>
+#include <cmath>
+#include "../extension/network/LossModel.h"
 
 #include <amtl/am-priority-queue.h>
 
@@ -207,10 +210,54 @@ void TestLagSystemAvoidsHeadOfLineBlockingOnSameSocket()
     Expect(live.data[0] == 0x61, "later packet should be dispatched second");
 }
 
+void TestCopyAssignmentAndMove()
+{
+    auto a = MakePacket(1, 4, 1), b = MakePacket(2, 8, 2);
+    a = b;
+    Expect(a.data != b.data && a.size == 8 && a.data[7] == 2, "copy assignment owns independent buffer");
+    a = a;
+    auto c = a;
+    auto d = std::move(c);
+    b = std::move(d);
+    Expect(b.data[7] == 2 && c.data == nullptr && d.data == nullptr, "move transfers ownership");
+}
+
+void TestLossModel()
+{
+    for (int percent : {0, 1, 10, 20, 50, 80, 99, 100}) {
+        std::mt19937 rng(0xCF123u + percent);
+        bool bad = false;
+        const int n = 2000000;
+        int drops = 0, runs = 0;
+        for (int i = 0; i < n; ++i) {
+            bool previous = bad;
+            bool drop = GilbertElliottDrop(bad, percent, std::generate_canonical<double, 53>(rng));
+            drops += drop;
+            runs += drop && !previous;
+        }
+        double p = percent / 100.0;
+        // Integrated autocorrelation (1+rho)/(1-rho)=3; eight sigma + startup bias.
+        double tolerance = 8 * std::sqrt(3 * p * (1-p) / n) + 20.0/n;
+        Expect(std::abs(double(drops)/n-p) <= tolerance, "stationary loss within correlated eight-sigma bound");
+        double burst = runs ? double(drops)/runs : 0;
+        if (percent > 0 && percent < 100) {
+            double mean = 2/(1-p);
+            double burstTolerance = 8 * std::sqrt(mean*(mean-1)/runs) + mean/runs;
+            Expect(std::abs(burst-mean) <= burstTolerance, "bad run mean within geometric eight-sigma bound");
+        }
+        std::cout << "loss=" << percent << " effective=" << double(drops)*100/n << " burst=" << burst << " runs=" << runs << "\n";
+    }
+    bool bad = false;
+    Expect(GilbertElliottDrop(bad, 20, 0.0), "entry packet drops");
+    Expect(!GilbertElliottDrop(bad, 20, 0.0), "exit packet delivers");
+}
+
 }  // namespace
 
 int main()
 {
+    TestCopyAssignmentAndMove();
+    TestLossModel();
     TestPriorityQueueOrdersOldestPacketFirst();
     TestCopyToLivePacketPreservesLiveBuffer();
     TestCopyToLivePacketRejectsSmallBuffer();

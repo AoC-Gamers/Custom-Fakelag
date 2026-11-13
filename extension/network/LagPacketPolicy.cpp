@@ -1,5 +1,6 @@
 #include "LagPacketPolicy.h"
 #include <cstdlib>
+#include "LossModel.h"
 
 extern ConVar sm_custom_fakelag_loss_mode;
 
@@ -61,35 +62,13 @@ bool LagPacketPolicy::ShouldDropPacketGilbertElliott(const dumb_netadr_t& netadr
 		return false;
 	}
 
-	static constexpr int kProbabilityBasis = 10000;
-	static constexpr int kExitBadProbability = 5000; // average burst length ~= 2 packets.
-	int enterBadProbability = (packetLossPercent * kExitBadProbability) / (100 - packetLossPercent);
-	if (enterBadProbability < 1) {
-		enterBadProbability = 1;
-	}
-
 	auto state = m_BadStateByAddress.findForAdd(netadr);
 	if (!state.found()) {
-		m_BadStateByAddress.add(state, netadr);
+		if (!m_BadStateByAddress.add(state, netadr)) return false;
 		state->value = false;
 	}
-
-	const int roll = std::rand() % kProbabilityBasis;
-	if (!state->value) {
-		if (roll < enterBadProbability) {
-			state->value = true;
-			return true;
-		}
-
-		return false;
-	}
-
-	const bool shouldExitBad = roll < kExitBadProbability;
-	if (shouldExitBad) {
-		state->value = false;
-	}
-
-	return true;
+	const double roll = static_cast<double>(std::rand()) / (static_cast<double>(RAND_MAX) + 1.0);
+	return GilbertElliottDrop(state->value, packetLossPercent, roll);
 }
 
 void LagPacketPolicy::MaybeLogActiveProfileSocket(const _netpacket_t& packet, LagMilliseconds lagTime, PacketLossPercent packetLossPercent) const
