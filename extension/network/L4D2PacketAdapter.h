@@ -1,15 +1,15 @@
 #pragma once
 #include "net_structures.h"
 
-// Contract for the identified Linux engine: NET_GetPacket supplies a full-size
-// receive buffer and unconditionally starts the reader AFTER NET_LagPacket.
-// Reader fields at the detour are not a valid capture source.
+// Both independently identified engines supply full-size receive buffers and
+// start the reader AFTER NET_LagPacket. Reader fields are not capture sources.
+// Windows additionally preserves its unprepared stream byte without reading it.
 class L4D2PacketCodec {
 public:
     static constexpr size_t ReceiveBufferBytes = 0x37ab0;
-    static bool Capture(const _netpacket_t& packet, EnginePacketView& view);
+    static bool Capture(const _netpacket_t& packet, EnginePacketView& view, bool opaqueStream = false);
     static bool Restore(const QueuedPacket& packet, _netpacket_t& destination,
-                        size_t capacity, EngineTime deliveredAt);
+                        size_t capacity, EngineTime deliveredAt, bool opaqueStream = false);
 };
 
 class L4D2PacketAdapter final : public EnginePacketAdapter {

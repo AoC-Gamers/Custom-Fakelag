@@ -68,8 +68,11 @@ bool LagDetour_Init(const PlayerLagManager* lagManager, const double* pNetTime)
 		HMODULE owner = nullptr;
 		char path[32768];
 		if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-			reinterpret_cast<LPCSTR>(lagFunction), &owner) && GetModuleFileNameA(owner, path, sizeof(path)))
-			g_pSM->LogMessage(myself, "[custom_fakelag] Accepted engine module: %s base=%p", path, static_cast<void*>(owner));
+			reinterpret_cast<LPCSTR>(lagFunction), &owner)) {
+			const DWORD length = GetModuleFileNameA(owner, path, sizeof(path));
+			if (length && length < sizeof(path))
+				g_pSM->LogMessage(myself, "[custom_fakelag] Accepted engine module: %s base=%p", path, static_cast<void*>(owner));
+		}
 #endif
 	}
 	s_LagSystem = new LagSystem(pNetTime, &s_EngineAdapter);

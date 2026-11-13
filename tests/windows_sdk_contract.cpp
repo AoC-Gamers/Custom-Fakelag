@@ -37,6 +37,8 @@ int wmain(int argc, wchar_t** argv)
               << " packet_size=" << sizeof(netpacket_t) << " packet_alignment=" << alignof(netpacket_t)
               << " reader_size=" << sizeof(bf_read) << '\n';
     auto** table = reinterpret_cast<netpacket_t**>(base + WindowsEngineContract::TableRva);
+    auto* count = reinterpret_cast<int*>(base + WindowsEngineContract::TableRva + 12);
+    const int previousCount = *count; *count = 3;
     netpacket_t packets[3];
     auto* previousTable = *table; *table = packets;
     auto* buffer = static_cast<unsigned char*>(VirtualAlloc(nullptr, WindowsEngineContract::BufferBytes,
@@ -45,6 +47,8 @@ int wmain(int argc, wchar_t** argv)
     auto& packet = packets[1];
     packet.source = 1; packet.data = buffer; packet.received = 10;
     packet.size = 4; packet.wiresize = 8; packet.stream = false;
+    const unsigned char opaqueStream = 0xa5;
+    std::memcpy(&packet.stream, &opaqueStream, 1);
     std::memcpy(buffer, "test", 4);
     std::array<unsigned char, sizeof(bf_read)> reader;
     std::memcpy(reader.data(), &packet.message, reader.size());
@@ -56,6 +60,9 @@ int wmain(int argc, wchar_t** argv)
     packet.size = 0;
     Check(adapter.DestinationCapacity(packet, false) == WindowsEngineContract::BufferBytes,
           "no new data still has full allocation");
+    *count = 1;
+    Check(!adapter.DestinationCapacity(packet, false), "packet outside constructed vector count rejected");
+    *count = 3;
     netpacket_t foreign;
     foreign.source = 1; foreign.data = buffer;
     Check(!adapter.DestinationCapacity(foreign, false), "foreign packet rejected");
@@ -72,6 +79,8 @@ int wmain(int argc, wchar_t** argv)
           packet.pNext == nullptr && !std::memcmp(buffer, "test", 4), "SDK restore preserves buffer and native timestamp");
     std::array<unsigned char, sizeof(bf_read)> poison; poison.fill(0xa5);
     Check(!std::memcmp(&packet.message, poison.data(), poison.size()), "restore never touches stale reader");
+    Check(!std::memcmp(&packet.stream, &opaqueStream, 1), "unprepared stream byte is neither interpreted nor overwritten");
+    packet.stream = false;
     std::memcpy(&packet.message, reader.data(), reader.size());
     packet.message.StartReading(packet.data, packet.size, 0, -1);
     Check(packet.message.GetBasePointer() == buffer && packet.message.GetNumBitsRead() == 0 &&
@@ -82,6 +91,7 @@ int wmain(int argc, wchar_t** argv)
     Check(!adapter.DestinationCapacity(packet, false), "non-writable allocation rejected");
     VirtualProtect(buffer, WindowsEngineContract::BufferBytes, oldProtect, &oldProtect);
     *table = previousTable;
+    *count = previousCount;
     *time = previousTime;
     VirtualFree(buffer, 0, MEM_RELEASE);
     // Alter only this non-executing mapped image, never code in a live server.

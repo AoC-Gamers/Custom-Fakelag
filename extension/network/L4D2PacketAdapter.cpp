@@ -7,7 +7,7 @@
 #include <link.h>
 #endif
 
-bool L4D2PacketCodec::Capture(const _netpacket_t& packet, EnginePacketView& view)
+bool L4D2PacketCodec::Capture(const _netpacket_t& packet, EnginePacketView& view, bool opaqueStream)
 {
     if (!packet.data || packet.size < 0 || size_t(packet.size) > ReceiveBufferBytes ||
         packet.source < 0 || packet.source > 2 || !std::isfinite(packet.received)) return false;
@@ -17,13 +17,15 @@ bool L4D2PacketCodec::Capture(const _netpacket_t& packet, EnginePacketView& view
     view.data = packet.data;
     view.size = packet.size;
     view.wiresize = packet.wiresize;
-    view.stream = packet.stream;
+    // Windows datagram/loopback paths leave this byte unprepared. It remains
+    // opaque in the live table entry; do not evaluate a potentially invalid bool.
+    view.stream = opaqueStream ? false : packet.stream;
     view.reader = {packet.size, packet.size * 8, 0}; // Future reader, constructed by the caller.
     return true;
 }
 
 bool L4D2PacketCodec::Restore(const QueuedPacket& packet, _netpacket_t& destination,
-                             size_t capacity, EngineTime deliveredAt)
+                             size_t capacity, EngineTime deliveredAt, bool opaqueStream)
 {
     const auto& source = packet.metadata;
     if (source.size < 0 || size_t(source.size) > capacity || capacity > ReceiveBufferBytes ||
@@ -36,7 +38,7 @@ bool L4D2PacketCodec::Restore(const QueuedPacket& packet, _netpacket_t& destinat
     destination.received = deliveredAt.value; // Verified native NET_LagPacket semantics.
     destination.size = source.size;
     destination.wiresize = source.wiresize;
-    destination.stream = source.stream;
+    if (!opaqueStream) destination.stream = source.stream;
 #ifndef UNIT_TEST
     destination.pNext = nullptr;
 #endif
@@ -145,11 +147,14 @@ bool L4D2PacketAdapter::IsEnginePacket(const _netpacket_t& packet) const
     // retains the full-size NET_ProcessSocket buffer across all receive paths.
     // Neither packet.size nor reader fields establish allocation capacity.
     if (!m_Validated || !m_PacketTable ||
-        !WindowsEngineContract::Region(m_PacketTable, sizeof(*m_PacketTable)) || !*m_PacketTable ||
+        !WindowsEngineContract::Region(m_PacketTable, 16) || !*m_PacketTable ||
         !WindowsEngineContract::Region(&packet, sizeof(packet), true) ||
         packet.source < 0 || packet.source > 2 ||
         reinterpret_cast<uintptr_t>(&packet) != reinterpret_cast<uintptr_t>(*m_PacketTable) + size_t(packet.source) * sizeof(packet) ||
         reinterpret_cast<uintptr_t>(packet.data) % alignof(uint32_t) != 0) return false;
+    int count = 0;
+    std::memcpy(&count, reinterpret_cast<const unsigned char*>(m_PacketTable) + 12, sizeof(count));
+    if (count < 1 || count > 3 || packet.source >= count) return false;
     return WindowsEngineContract::Region(packet.data, WindowsEngineContract::BufferBytes, true);
 #else
     return m_Validated && m_PacketTable && *m_PacketTable && packet.source >= 0 && packet.source <= 2 &&
@@ -159,7 +164,13 @@ bool L4D2PacketAdapter::IsEnginePacket(const _netpacket_t& packet) const
 }
 bool L4D2PacketAdapter::Capture(const _netpacket_t& packet, EnginePacketView& view) const
 {
-    return IsEnginePacket(packet) && L4D2PacketCodec::Capture(packet, view);
+    return IsEnginePacket(packet) && L4D2PacketCodec::Capture(packet, view,
+#if defined(_WIN32) && !defined(UNIT_TEST)
+        true
+#else
+        false
+#endif
+    );
 }
 size_t L4D2PacketAdapter::DestinationCapacity(const _netpacket_t& packet, bool) const
 {
@@ -168,5 +179,11 @@ size_t L4D2PacketAdapter::DestinationCapacity(const _netpacket_t& packet, bool) 
 bool L4D2PacketAdapter::Restore(const QueuedPacket& packet, _netpacket_t& destination, size_t capacity) const
 {
     return IsEnginePacket(destination) && capacity == L4D2PacketCodec::ReceiveBufferBytes && m_NetTime &&
-        L4D2PacketCodec::Restore(packet, destination, capacity, EngineTime(*m_NetTime));
+        L4D2PacketCodec::Restore(packet, destination, capacity, EngineTime(*m_NetTime),
+#if defined(_WIN32) && !defined(UNIT_TEST)
+            true
+#else
+            false
+#endif
+        );
 }
