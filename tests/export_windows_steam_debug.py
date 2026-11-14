@@ -24,6 +24,20 @@ def export(source, destination):
     clean['events']=[]
     for event in data['events']:
         selected={k:v for k,v in event.items() if k not in ('console','observation','userid')}
+        if 'console' in event:
+            text=event['console']
+            if event.get('command')=='status':
+                latest=text.rsplit('hostname:',1)[-1]
+                maps=re.findall(r'map\s*:\s*(\S+)',latest)
+                humans=re.findall(r'players\s*:\s*(\d+) humans',latest)
+                authenticated=re.findall(r'^#\s*(\d+)\s+\d+\s+".*?"\s+STEAM_[01]:[01]:\d+',latest,re.M)
+                active=re.findall(r'^#\s*(\d+)\s+\d+\s+".*?"\s+STEAM_[01]:[01]:\d+\s+\S+\s+\d+\s+\d+\s+active\b',latest,re.M)
+                selected['status']={'map':maps[-1] if maps else None,'humans':int(humans[-1]) if humans else None,
+                    'authenticated_humans':len(set(authenticated)),'active_authenticated_humans':len(set(active))}
+            if event.get('command') in ('sv_lan','sm_steam_lifecycle_debug'):
+                name=event['command'];values=re.findall('"'+name+r'"\s*=\s*"([012])"',text)
+                selected['convar']={'name':name,'value':int(values[-1]) if values else None,
+                    'unknown_command_reported':('Unknown command "'+name+'"') in text}
         if selected.get('command','') and selected['command'].startswith('kickid '):
             selected['command']='kickid <current-userid> private_steam_lifecycle_trial'
         if 'observation' in event: selected['modules']=modules(event['observation'])
