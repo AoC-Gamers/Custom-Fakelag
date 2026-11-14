@@ -285,6 +285,12 @@ fuentes exactas nuevas, bundle incremental y patches sobre la base especificada.
 La reconstrucción independiente y el árbol final se certifican en
 `reconstruction-verification.json`; la revisión final está fuera del historial
 en `REVISION_FINAL.json` para evitar una autorreferencia de commit.
+Para reconstruir los bytes exactos del overlay, usa `core.autocrlf=false` en
+el repositorio nuevo antes del checkout o extrae `codigo-fuente.zip`.
+La primera comprobación detectó conversión CRLF de C++ con el valor global
+true de Git para Windows; el árbol Git ya coincidía, pero esa conversión impedía
+comparar bytes con el ZIP. La verificación final desactiva la conversión solo
+en sus repositorios privados; no cambia la configuración global del usuario.
 El manifiesto SHA-256 incluye este informe, DLL, PDB, fuentes y evidencias.
 No se exportaron dumps, consolas crudas, identidades de jugador ni runtime Valve.
 No se añadió publicación o despliegue de producción.
