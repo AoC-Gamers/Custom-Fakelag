@@ -16,11 +16,23 @@ def export(source, destination):
         'activity_definition','fixed_hashes','server_pid','collector_pid','effective_components',
         'observer_mode','quit_requested','supervisor_quit_requested','server_exit_code',
         'server_exit_hex','win32_exit_code','process_handle_signaled','exit_codes_agree',
-        'collector_error','state','registry_window_seconds')
+        'collector_error','state','registry_window_seconds','environment')
     clean={k:data[k] for k in allowed if k in data}
+    instrumentation=source/'external-instrumentation.json'
+    if instrumentation.exists():
+        external=json.loads(instrumentation.read_text(encoding='utf-8-sig'))
+        assert set(external)=={'debugger_attached','debugger_pid','receipt_sha256','capture_ready_verified','interventions'}
+        clean['collector_declared_debugger']=clean.get('debugger')
+        clean['external_instrumentation']=external
+        clean['debugger']=external['debugger_attached']
     clean['registry_restored_exactly']=data.get('registry_original')==data.get('registry_restored')
     clean['loaded_modules']=modules(data.get('ready_observation',{}))
-    clean['runtime_loaded']={k:data.get('runtime_loaded',{}).get(k) for k in ('name','base','bytes')}
+    clean['runtime_loaded']={k:data.get('runtime_loaded',{}).get(k) for k in ('name','path','base','bytes')}
+    argv=list(data.get('argv',[]))
+    if argv:
+        argv[0]='%PRIVATE_SRCDS%/srcds.exe'
+        if '-ip' in argv: argv[argv.index('-ip')+1]='<private-lan-address>'
+    clean['argv_sanitized']=argv
     clean['events']=[]
     for event in data['events']:
         selected={k:v for k,v in event.items() if k not in ('console','observation','userid')}

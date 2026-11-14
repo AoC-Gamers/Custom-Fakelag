@@ -24,6 +24,7 @@ $firstDump = (Join-Path $private "$tag.first-chance.dmp").Replace('\','/')
 if ((Test-Path -LiteralPath $script) -or (Test-Path -LiteralPath $dump)) { throw 'Never overwrite diagnostic evidence' }
 # Symbol downloads and disassembly are done offline, after the owned child exits.
 $symbols = Join-Path $private 'symbols'
+New-Item -ItemType Directory -Path $symbols -Force | Out-Null
 $capture = ".echo FINAL_SECOND_CHANCE;.dump /ma $dump;.exr -1;r;kv;~* kb;lm;gn"
 $firstCapture = '.echo FIRST_CHANCE_AV;.if (@$t0 == 0) {.dump /ma ' + $firstDump + ';r @$t0=1;};.exr -1;r;kv;~* kb;gn'
 $first = if ($TraceFirstChance) { '-c "' + $firstCapture + '" ' } else { '' }
