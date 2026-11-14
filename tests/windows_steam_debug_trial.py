@@ -98,7 +98,8 @@ def main():
         return int(counts[-1]) if counts else None
     def authenticated():
         text=record('status')
-        resolved=bool(re.search(r'^#\s*\d+\s+\d+\s+".*?"\s+STEAM_[01]:[01]:\d+',text,re.M))
+        latest=text.rsplit('hostname:',1)[-1]
+        resolved=bool(re.search(r'^#\s*\d+\s+\d+\s+".*?"\s+STEAM_[01]:[01]:\d+\s+\S+\s+\d+\s+\d+\s+active\b',latest,re.M))
         return humans(text)==1 and resolved and 'STEAM USERID validated' in rawlog()
     def wait_client(stage, new_auth_count):
         save(stage)
@@ -111,6 +112,12 @@ def main():
             time.sleep(1)
         raise RuntimeError('Child exited while waiting for client')
     def activity(phase):
+        deadline=time.monotonic()+60
+        while alive() and not authenticated():
+            if time.monotonic()>deadline: raise TimeoutError('Gameplay active-state timeout')
+            time.sleep(.5)
+        if not alive(): raise RuntimeError('Child exited before active gameplay')
+        event('gameplay_active_verified',phase=phase)
         start=time.time(); save(phase)
         for _ in range(15):
             if not alive(): raise RuntimeError('Child exited during activity')
@@ -228,10 +235,17 @@ def main():
             save('after_kick');time.sleep(3)
             if alive():
                 text=record('status')
-                if humans(text)!=0: raise RuntimeError('Kick did not leave zero humans')
-                event('disconnect_verified',humans=0)
-                wait_client('ready_for_reconnect',2);activity('reconnected_activity')
-                result['quit_requested']=time.time();record('sv_lan');console.command('quit');save('waiting_for_actual_exit')
+                if humans(text)!=0:
+                    # During abnormal DLL teardown console output can already be
+                    # stale while the child handle has not yet become signaled.
+                    deadline=time.monotonic()+10
+                    while alive() and time.monotonic()<deadline: time.sleep(.1)
+                    if alive(): raise RuntimeError('Kick did not leave zero humans')
+                if alive():
+                    event('disconnect_verified',humans=0)
+                    wait_client('ready_for_reconnect',2);activity('reconnected_activity')
+                    result['quit_requested']=time.time();record('sv_lan');console.command('quit');save('waiting_for_actual_exit')
+                else: event('exit_during_disconnect')
         deadline=time.monotonic()+90
         while alive():
             if time.monotonic()>deadline:
