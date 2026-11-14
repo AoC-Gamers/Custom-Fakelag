@@ -123,11 +123,15 @@ objetos ilegibles, overflow, cambios de estado, flush, append y rotación de log
 
 ## Validación y siguiente prueba
 
-Compilación local Linux ELF32 y pruebas aisladas ASan/UBSan aprobadas. La carga,
-recarga y observación real de este módulo en SRCDS Windows están pendientes;
-las pruebas anteriores de Custom-Fakelag no validan esta extensión nueva.
+Compilación local Linux ELF32 y pruebas aisladas ASan/UBSan aprobadas. La
+[validación Windows del 14-11-2026](../../docs/WINDOWS_STEAM_DEBUG_VALIDATION.md)
+comprobó compilación MSVC x86, fixture nativo, modos 0/1/2, carga/descarga/recarga
+y predeterminado 2. En 18 ensayos con cliente real, LAN 1 falló 9/9 y LAN 0 cerró
+correctamente 9/9, tanto en vanilla como con SourceMod y con el observador.
+Los logs detectaron las cadenas fuera de Steam después del mapa bajo LAN 1.
+Es diagnóstico de ese binario/entorno, no un fix ni una validación de producción.
 
-En Windows comprueba: ConVar disponible sin Custom-Fakelag; modo 2 al cargar;
+Para repetir en Windows comprueba: ConVar disponible sin Custom-Fakelag; modo 2 al cargar;
 modo 0 sin crecimiento del log ni nuevas muestras; modos 1/2 y retorno a 0; carga/descarga/recarga; rechazo de
 un módulo desconocido sin lecturas por RVA; identidad correcta y observación
 con cliente real, mapa y desconexión bajo LAN 1 y LAN 0 en procesos nuevos.
