@@ -28,9 +28,13 @@ sí solo no acredita una liberación ni sustituye el contexto de excepción.
 El caso CDB vanilla conserva ejecución inválida en cero con retorno a
 server+0x1e1226 y detección posterior durante teardown en engine+0x161316.
 No se observó ni se atribuyó el subcódigo histórico de 0xc0000409.
-El predeterminado solicitado sigue en 2; modo 0, modos 1/2 y descarga/recarga
-quedaron comprobados externamente. No se implementa un fix ni se cambia código
-de producción de Custom-Fakelag.
+La DLL histórica tenía predeterminado 2; modo 0, modos 1/2 y descarga/recarga
+quedaron comprobados externamente. Tras revisar la entrega, el usuario pidió
+restaurar predeterminado 0: el código actual carga apagado y el recolector
+activa 2 explícitamente durante las pruebas. Se conserva una opción para repetir
+la DLL histórica sin confundir revisiones. El nuevo valor requiere su propia
+comprobación de carga real; los 18 ensayos corresponden al binario anterior.
+No se implementa un fix ni se cambia código de producción de Custom-Fakelag.
 
 ## Validación local y CI
 

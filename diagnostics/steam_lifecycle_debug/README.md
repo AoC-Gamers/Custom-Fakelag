@@ -18,12 +18,12 @@ La extensión registra su propia ConVar, sin necesitar un plugin SourcePawn:
 
 | Valor | Registro |
 |---|---|
-| `0` | Apagado: sin muestras, lecturas del contexto ni archivo abierto |
+| `0` (predeterminado) | Apagado: sin muestras, lecturas del contexto ni archivo abierto |
 | `1` | Muestras en cambio de modo, LevelInit/LevelShutdown pre y post, conexión/desconexión y descarga de extensión |
-| `2` (predeterminado) | Lo anterior y muestreo a 10 Hz; escribe solo cambios, con heartbeat cada 10 segundos |
+| `2` | Lo anterior y muestreo a 10 Hz; escribe solo cambios, con heartbeat cada 10 segundos |
 
-El diagnóstico se activa automáticamente al cargar la extensión. Una
-configuración del servidor que asigne otro valor a la ConVar puede cambiarlo.
+El diagnóstico carga apagado. Para una prueba focal activa explícitamente el
+modo 1 o 2; una configuración del servidor puede asignar otro valor a la ConVar.
 
 Para detenerlo, usa `sm_steam_lifecycle_debug 0`. Si falla la apertura/escritura,
 se suspende el registro y se informa una vez al error log de SourceMod. Volver
@@ -126,14 +126,21 @@ objetos ilegibles, overflow, cambios de estado, flush, append y rotación de log
 Compilación local Linux ELF32 y pruebas aisladas ASan/UBSan aprobadas. La
 [validación Windows del 14-11-2026](../../docs/WINDOWS_STEAM_DEBUG_VALIDATION.md)
 comprobó compilación MSVC x86, fixture nativo, modos 0/1/2, carga/descarga/recarga
-y predeterminado 2. En 18 ensayos con cliente real, LAN 1 falló 9/9 y LAN 0 cerró
+y predeterminado 2 en aquella DLL de pruebas. El código actual vuelve a 0 por
+defecto; no se atribuye retroactivamente una prueba de ese cambio a la DLL
+anterior. En 18 ensayos con cliente real, LAN 1 falló 9/9 y LAN 0 cerró
 correctamente 9/9, tanto en vanilla como con SourceMod y con el observador.
 Los logs detectaron las cadenas fuera de Steam después del mapa bajo LAN 1.
 Es diagnóstico de ese binario/entorno, no un fix ni una validación de producción.
 
-Para repetir en Windows comprueba: ConVar disponible sin Custom-Fakelag; modo 2 al cargar;
+Para repetir en Windows comprueba: ConVar disponible sin Custom-Fakelag; modo 0 al cargar;
 modo 0 sin crecimiento del log ni nuevas muestras; modos 1/2 y retorno a 0; carga/descarga/recarga; rechazo de
 un módulo desconocido sin lecturas por RVA; identidad correcta y observación
 con cliente real, mapa y desconexión bajo LAN 1 y LAN 0 en procesos nuevos.
 Mantén CDB/monitor externo y compara con los ensayos sin este observador. No
 declares arreglado un fallo por la última línea del log o por ausencia de crash.
+
+El recolector `tests/windows_steam_debug_trial.py` verifica por defecto 0 al
+cargar y recargar y activa 2 explícitamente para la fila diagnóstica. Para
+reproducir con la DLL histórica cuyo predeterminado era 2, añade
+`--expected-default 2` y conserva su hash/revisión en los resultados.

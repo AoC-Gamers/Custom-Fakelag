@@ -20,7 +20,7 @@ extern ISmmAPI* g_SMAPI;
 namespace {
 void ModeChanged(IConVar*, const char*, float);
 void Frame(bool);
-ConVar debugMode("sm_steam_lifecycle_debug", "2", 0,
+ConVar debugMode("sm_steam_lifecycle_debug", "0", 0,
     "Steam lifecycle trace: 0=off, 1=lifecycle snapshots, 2=also sample changes at 10Hz (10s heartbeat).",
     true, 0.0f, true, 2.0f);
 using Clock = std::chrono::steady_clock;

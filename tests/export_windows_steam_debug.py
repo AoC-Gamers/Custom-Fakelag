@@ -14,7 +14,7 @@ def export(source, destination):
         'collector_source_sha256','diagnostic_sha256','runtime_sha256','forced_termination',
         'debugger','preflight','cfg_sha256','original_cfg_sha256','cfg_only_sv_lan_changed',
         'activity_definition','fixed_hashes','server_pid','collector_pid','effective_components',
-        'observer_mode','quit_requested','supervisor_quit_requested','server_exit_code',
+        'observer_mode','observer_default','quit_requested','supervisor_quit_requested','server_exit_code',
         'server_exit_hex','win32_exit_code','process_handle_signaled','exit_codes_agree',
         'collector_error','state','registry_window_seconds','environment')
     clean={k:data[k] for k in allowed if k in data}

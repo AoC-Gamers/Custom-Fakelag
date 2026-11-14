@@ -33,6 +33,8 @@ def main():
     p.add_argument('--lan', type=int, choices=[0,1], required=True)
     p.add_argument('--id', required=True)
     p.add_argument('--preflight', action='store_true')
+    p.add_argument('--expected-default', type=int, choices=[0,2], default=0,
+                   help='Expected DLL default; use 2 only to replay the historical test build')
     p.add_argument('--gate-before-map', action='store_true', help='Pause after activity for an owned debugger attachment')
     a = p.parse_args()
     root = a.root.resolve(); game = root / 'left4dead2'
@@ -145,15 +147,17 @@ def main():
             text=record('sm_steam_lifecycle_debug')
             values=re.findall(r'"sm_steam_lifecycle_debug"\s*=\s*"([012])"',text)
             if values:
-                if values[-1]!='2': raise RuntimeError('Observed default is not 2')
+                if int(values[-1]) != a.expected_default:
+                    raise RuntimeError(f'Observed default is not {a.expected_default}')
+                result['observer_default'] = int(values[-1])
                 return text
             if time.monotonic()>deadline: raise TimeoutError('Default query response timeout')
             time.sleep(.25)
         raise RuntimeError('Child exited during default query')
     def preflight():
         def trace_bytes(): return trace.read_bytes() if trace.exists() else b''
-        default=record('sm_steam_lifecycle_debug')
-        if not re.search(r'"sm_steam_lifecycle_debug"\s*=\s*"2"',default): raise RuntimeError('Default is not 2')
+        active=record('sm_steam_lifecycle_debug')
+        if not re.search(r'"sm_steam_lifecycle_debug"\s*=\s*"2"',active): raise RuntimeError('Explicit test mode is not 2')
         time.sleep(1)
         if b'context=identified_windows_server identified=1' not in trace_bytes(): raise RuntimeError('Server identity not recognized')
         record('sm_steam_lifecycle_debug 0'); before=trace_bytes(); time.sleep(2)
@@ -180,9 +184,9 @@ def main():
         record('changelevel c1m2_streets'); wait_map('c1m2_streets'); time.sleep(2)
         if trace_bytes()!=before: raise RuntimeError('Unloaded observer wrote trace')
         event('unload_verified',actual_id=int(ids[-1]),module_absent=True,convar_absent=True,trace_stable=True)
-        record('sm exts load steam_lifecycle_debug'); query=record('sm_steam_lifecycle_debug')
-        if not re.search(r'"sm_steam_lifecycle_debug"\s*=\s*"2"',query): raise RuntimeError('Reload default is not 2')
-        event('reload_verified',default=2)
+        record('sm exts load steam_lifecycle_debug'); verify_default()
+        result['observer_mode'] = a.expected_default
+        event('reload_verified',default=a.expected_default)
     try:
         env=dict(os.environ,SteamAppId='550',SteamGameId='222860',SteamOverlayGameId='222860',SteamClientLaunch='1')
         result['environment']={k:env[k] for k in ('SteamAppId','SteamGameId','SteamOverlayGameId','SteamClientLaunch')}
@@ -212,6 +216,7 @@ def main():
         if a.row=='C':
             record('sm exts load steam_lifecycle_debug')
             verify_default()
+            record('sm_steam_lifecycle_debug 2')
             result['observer_mode'] = 2
         for command in ('meta list','sm exts list','sm plugins list','status'): record(command)
         snapshot=observe(console.process.pid); result['ready_observation']=snapshot
