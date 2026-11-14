@@ -109,14 +109,52 @@ public Action CFakeLag_OnSetPlayerLatency(int client, float oldLag, float &newLa
 	return result;
 }
 
+public void CFakeLag_OnLanPolicyChanged(bool blocked)
+{
+	if (!blocked || g_PlayerLatencyByAccountId == null)
+	{
+		return;
+	}
+	g_PlayerLatencyByAccountId.Clear();
+	g_PlayerPacketLossByAccountId.Clear();
+	g_PlayerDisconnectedByAccountId.Clear();
+	g_ModeChangeRestorePending = false;
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		g_ModeChangeRestoreLag[client] = 0.0;
+		g_ModeChangeRestoreLoss[client] = 0;
+		g_ModeChangeRestoreUserId[client] = 0;
+		g_ForgetLatencyOnNextClear[client] = false;
+	}
+	// Invalidate the old vote before cancellation can deliver callbacks.
+	bool hadVote = g_FakeLagBalanceVote != null;
+	g_FakeLagBalanceVote = null;
+	g_BalanceVoteMode = 0;
+	if (hadVote && GetFeatureStatus(FeatureType_Native, "CancelBuiltinVote") == FeatureStatus_Available
+		&& GetFeatureStatus(FeatureType_Native, "IsBuiltinVoteInProgress") == FeatureStatus_Available
+		&& IsBuiltinVoteInProgress())
+	{
+		CancelBuiltinVote();
+	}
+}
+
 public void CFakeLag_OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason)
 {
+	bool lanBlocked = CFakeLag_IsLanBlocked();
+	if (lanBlocked)
+	{
+		CFakeLag_OnLanPolicyChanged(true);
+	}
 	if (oldLag != newLag)
 	{
 		FakelagResetClientLatencySamples(client);
 	}
 
-	if (newLag > 0.0 || newPacketLossPercent > 0)
+	PlayerNetworkProfile current;
+	bool stillApplied = !lanBlocked && CFakeLag_IsClientSupported(client)
+		&& FakelagGetNetworkProfile(client, current)
+		&& current.lagMs == newLag && current.packetLossPercent == newPacketLossPercent;
+	if ((newLag > 0.0 || newPacketLossPercent > 0) && stillApplied)
 	{
 		FakelagStoreProfileForClient(client, newLag, newPacketLossPercent);
 		if (reason != CFakeLagChange_Disconnect)
@@ -124,13 +162,13 @@ public void CFakeLag_OnPlayerProfileChanged(int client, float oldLag, int oldPac
 			FakelagSetDisconnectedState(client, false);
 		}
 	}
-	else if (g_ForgetLatencyOnNextClear[client])
+	else if (lanBlocked || reason == CFakeLagChange_LanPolicy || g_ForgetLatencyOnNextClear[client])
 	{
 		g_ForgetLatencyOnNextClear[client] = false;
 		FakelagForgetStoredLatency(client);
 		if (FakelagIsDebugEnabled())
 		{
-			LogMessage("[player_fakelag] Cleared persisted fakelag for %L due to explicit clear command", client);
+			LogMessage("[player_fakelag] Cleared persisted fakelag for %L (reason=%d)", client, reason);
 		}
 	}
 	else if (FakelagIsDebugEnabled())

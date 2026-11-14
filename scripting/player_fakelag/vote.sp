@@ -18,6 +18,7 @@ stock bool FakelagTryCollectBalance(int client, int targets[MAXPLAYERS + 1], flo
 
 stock bool FakelagCanStartBalanceVote(int client)
 {
+	if (!FakelagRequireAllowed(client)) return false;
 	if (!FakelagCanUseBuiltinVotes())
 	{
 		CReplyToCommand(client, "%t %t", "Tag", "BalanceVoteUnavailable");
@@ -147,6 +148,7 @@ public void FakeLagBalanceVoteHandler(Handle vote, BuiltinVoteAction action, int
 
 public void FakeLagBalanceVoteResultHandler(Handle vote, int numVotes, int numClients, const int[][] clientInfo, int numItems, const int[][] itemInfo)
 {
+	if (vote != g_FakeLagBalanceVote || CFakeLag_IsLanBlocked()) return;
 	if (numItems < 1 || itemInfo[0][BUILTINVOTEINFO_ITEM_INDEX] != BUILTINVOTES_VOTE_YES)
 	{
 		if (g_BalanceVoteMode == 1)

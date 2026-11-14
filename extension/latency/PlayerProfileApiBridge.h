@@ -10,6 +10,7 @@ private:
 	IForward* m_OnSetPlayerLatency = nullptr;
 	IForward* m_OnPlayerProfileChanged = nullptr;
 	IForward* m_OnPacketLossModeChanged = nullptr;
+	IForward* m_OnLanPolicyChanged = nullptr;
 
 public:
 	~PlayerProfileApiBridge() override = default;
@@ -20,4 +21,5 @@ public:
 	LatencyForwardResult OnSetPlayerLatency(int client, float oldLag, float* requestedLag, CFakeLagChangeReason reason) override;
 	void OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason) override;
 	void OnPacketLossModeChanged(CFakeLagPacketLossMode oldMode, CFakeLagPacketLossMode newMode) const;
+	void OnLanPolicyChanged(bool blocked) const;
 };

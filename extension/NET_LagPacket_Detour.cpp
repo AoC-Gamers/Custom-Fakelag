@@ -82,6 +82,7 @@ bool LagDetour_Init(const PlayerLagManager* lagManager, const double* pNetTime)
 
 bool LagDetour_Enable()
 {
+	if (CFakeLag_IsLanBlocked()) return false;
 	if (!s_EngineAdapter.IsRuntimeValidated()) {
 		g_pSM->LogError(myself, "[custom_fakelag] Activation refused: engine ABI, reader reconstruction and destination capacity are unverified. See docs/SDK_RUNTIME_REFERENCES.md.");
 		return false;

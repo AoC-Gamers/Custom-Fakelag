@@ -248,6 +248,10 @@ stock PlayerNetworkProfile FakelagBuildNetworkProfile(float lagMs, int packetLos
 
 stock void FakelagApplyNetworkProfile(int client, const PlayerNetworkProfile profile)
 {
+	if (CFakeLag_IsLanBlocked())
+	{
+		return;
+	}
 	CFakeLag_SetPlayerProfile(client, profile.lagMs, profile.packetLossPercent);
 }
 

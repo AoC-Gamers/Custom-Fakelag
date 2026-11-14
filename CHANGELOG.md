@@ -4,6 +4,14 @@ Todos los cambios importantes de este proyecto se documentan en este archivo.
 
 ## [Unreleased]
 
+### Política LAN
+- Fakelag queda bloqueado con `sv_lan 1`, salvo excepción explícita
+  `sm_custom_fakelag_allow_lan 1` (predeterminado 0). Se limpian perfiles, colas y
+  pérdida, con prioridad sobre el modo always-on; volver a LAN 0 no restaura nada.
+- `player_fakelag` descarta persistencia, restauraciones y votos pendientes.
+  Nueva consulta `CFakeLag_IsLanBlocked`, forward `CFakeLag_OnLanPolicyChanged`
+  y razón de limpieza `CFakeLagChange_LanPolicy`.
+
 ### Compatibilidad de carga Windows
 - Se permite inicializar/reinicializar el adaptador con el detour de entrada
   conocido de Left4DHooks en FillServerInfo, sin retirarlo ni alterar sus bytes.

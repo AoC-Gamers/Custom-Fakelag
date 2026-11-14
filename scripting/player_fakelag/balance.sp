@@ -888,6 +888,12 @@ stock void FakelagPreviewBalance(FakelagConsoleReport report, int admin, Console
 
 stock bool FakelagApplyBalanceSilent(float &targetPing, int &highestClient, int &playerCount, int &adjustedCount, int &clearedCount)
 {
+	if (CFakeLag_IsLanBlocked())
+	{
+		targetPing = 0.0;
+		highestClient = playerCount = adjustedCount = clearedCount = 0;
+		return false;
+	}
 	int	  targets[MAXPLAYERS + 1];
 	float pings[MAXPLAYERS + 1];
 

@@ -6,6 +6,7 @@
 #include <limits>
 #include <functional>
 #include "../extension/network/WindowsCodeCompatibility.h"
+#include "../extension/network/LanPolicy.h"
 #include "../extension/cdetour/MemoryProtection.h"
 #include "../extension/cdetour/MemoryPatch.h"
 #include "../extension/network/LagSystem.h"
@@ -16,12 +17,15 @@
 
 // Injectable boundaries: these tests never patch engine memory.
 bool enabled = false, activationWorks = true, removalWorks = true, alwaysOn = false, changingMode = false;
+bool lanMode = false, allowLan = false;
+bool CFakeLag_IsLanBlocked() { return CFakeLag_LanPolicyBlocks(lanMode, allowLan); }
 int activations = 0;
 CFakeLagPacketLossMode lossMode = CFakeLagPacketLossMode::GilbertElliott;
 CFakeLagPacketLossMode CFakeLag_GetPacketLossMode() { return lossMode; }
 LagSystem* activeQueue = nullptr;
+LagPacketPolicy* activePacketPolicy = nullptr;
 bool LagDetour_Enable() { ++activations; if (!activationWorks) return false; return enabled = true; }
-void LagDetour_ClearAll() { if (activeQueue) activeQueue->ClearAll(); }
+void LagDetour_ClearAll() { if (activeQueue) activeQueue->ClearAll(); if (activePacketPolicy) activePacketPolicy->ClearPacketLossState(); }
 bool LagDetour_Disable() { if (!removalWorks) return false; enabled = false; LagDetour_ClearAll(); return true; }
 bool LagDetour_IsEnabled() { return enabled; }
 void LagDetour_ClearPacketLossState() {}
@@ -178,8 +182,9 @@ public:
     std::function<void()> post;
     int notifications = 0;
     LatencyForwardResult forwardResult = LatencyForwardResult::Continue;
+    CFakeLagChangeReason lastReason = CFakeLagChangeReason::Manual;
     LatencyForwardResult OnSetPlayerLatency(int, float, float* lag, CFakeLagChangeReason) override { if (pre) pre(lag); return forwardResult; }
-    void OnPlayerProfileChanged(int, float, int, float, int, CFakeLagChangeReason) override { ++notifications; if (post) post(); }
+    void OnPlayerProfileChanged(int, float, int, float, int, CFakeLagChangeReason reason) override { ++notifications; lastReason = reason; if (post) post(); }
 };
 void TestProfilesResetReconnectAndFailures()
 {
@@ -266,6 +271,61 @@ void TestProfilesResetReconnectAndFailures()
     Expect(service.ClearAllPlayerProfiles() && !enabled, "successful retirement retry recovers after reset");
     activeQueue = nullptr;
 }
+void TestLanPolicy()
+{
+    SyntheticAdapter adapter; double now = 1; LagSystem queue(&now, &adapter); activeQueue = &queue;
+    Resolver resolver; Events events; Registry registry; Hooks hooks;
+    PlayerLagManager manager(&resolver, &events);
+    PlayerProfileService service(&manager, &hooks, &registry);
+    lanMode = allowLan = alwaysOn = enabled = false; activationWorks = removalWorks = true;
+    Expect(service.SetPlayerProfile(1, 100, 20) == ProfileChangeResult::Applied, "Internet profile accepted");
+    dumb_netadr_t address{}; resolver.TryResolveClientNetAdr(1, &address); PacketFixture packet;
+    queue.LagPacket(&packet.packet, Milliseconds(100), manager.GetSession(address));
+    LagPacketPolicy policy(&manager, &queue, &adapter);
+    activePacketPolicy = &policy;
+    resolver.TryResolveClientNetAdr(1, &packet.packet.from);
+    policy.HandlePacket(true, &packet.packet);
+    Expect(policy.GetLossStateCount() == 1, "active Gilbert-Elliott state before LAN transition");
+    lanMode = true; alwaysOn = true;
+    const auto pending = queue.GetPendingCount();
+    Expect(policy.HandlePacket(true, &packet.packet).state == PacketDispatchState::Bypass &&
+           policy.HandlePacket(false, &packet.packet).state == PacketDispatchState::Bypass &&
+           queue.GetPendingCount() == pending, "LAN bypasses new and retained traffic before cleanup");
+    hooks.forwardResult = LatencyForwardResult::Vetoed;
+    hooks.post = [&] { Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(2, 100, 1)), "LAN cleanup cannot be repopulated reentrantly"); };
+    Expect(service.EnforceLanPolicy(), "LAN policy cleanup bypasses latency veto");
+    Expect(manager.GetLagCount() == 0 && queue.GetPendingCount() == 0 && queue.GetRetainedBytes() == 0 && policy.GetLossStateCount() == 0 && !enabled,
+           "LAN clears profiles and packets and overrides always-on detour");
+    Expect(hooks.lastReason == CFakeLagChangeReason::LanPolicy, "LAN cleanup has explicit reason");
+    hooks.post = {}; hooks.forwardResult = LatencyForwardResult::Continue;
+    const int before = activations;
+    Expect(service.SetPlayerProfile(1, 100, 0) == ProfileChangeResult::LanBlocked &&
+           service.SetPlayerProfile(1, 0, 25) == ProfileChangeResult::LanBlocked && activations == before,
+           "LAN rejects latency and loss without activating hook");
+    Expect(service.SetPlayerProfile(1, 0, 0) == ProfileChangeResult::Unchanged, "zero clear allowed while LAN blocked");
+    allowLan = true;
+    Expect(service.SetPlayerProfile(1, 100, 20) == ProfileChangeResult::Applied, "explicit override permits LAN testing");
+    queue.LagPacket(&packet.packet, Milliseconds(100), manager.GetSession(address));
+    allowLan = false; removalWorks = false;
+    Expect(!service.EnforceLanPolicy() && enabled && manager.GetLagCount() == 0 && queue.GetPendingCount() == 0,
+           "failed removal still clears state and reports retained hook");
+    removalWorks = true;
+    Expect(service.EnforceLanPolicy() && !enabled, "cleanup removal retry succeeds");
+    lanMode = false;
+    Expect(service.EnforceLanPolicy() && manager.GetLagCount() == 0 && queue.GetPendingCount() == 0 && !enabled,
+           "return to Internet does not restore profiles or queues");
+    alwaysOn = false;
+    hooks.pre = [&](float*) { lanMode = true; service.EnforceLanPolicy(); lanMode = false; };
+    Expect(!ProfileChangeSucceeded(service.SetPlayerProfile(1, 50, 1)) && manager.GetLagCount() == 0,
+           "LAN round trip during forward invalidates transaction");
+    hooks.pre = [&](float*) { lanMode = true; };
+    Expect(service.SetPlayerProfile(1, 50, 1) == ProfileChangeResult::LanBlocked && !enabled,
+           "policy rechecked after forward");
+    lanMode = false; hooks.pre = {};
+    Expect(service.SetPlayerProfile(1, 50, 1) == ProfileChangeResult::Applied, "new explicit Internet profile accepted");
+    service.ClearAllPlayerProfiles(); activeQueue = nullptr; activePacketPolicy = nullptr;
+}
+
 void TestPolicyPreservesUnprofiledAndClearsLoss()
 {
     SyntheticAdapter adapter;
@@ -429,7 +489,7 @@ void TestWindowsLoadedCodeCompatibility()
 int main()
 {
     TestWindowsLoadedCodeCompatibility();
-    TestQueueOwnershipAndOrdering(); TestVerifiedEngineCodec(); TestRestoreFailureAndLimits(); TestProfilesResetReconnectAndFailures(); TestPolicyPreservesUnprofiledAndClearsLoss(); TestHookRemovalFailures(); TestMemoryProtectionFailures(); TestLossModel();
+    TestQueueOwnershipAndOrdering(); TestVerifiedEngineCodec(); TestRestoreFailureAndLimits(); TestProfilesResetReconnectAndFailures(); TestLanPolicy(); TestPolicyPreservesUnprofiledAndClearsLoss(); TestHookRemovalFailures(); TestMemoryProtectionFailures(); TestLossModel();
     if (failures) { std::cerr << failures << " failures\n"; return 1; }
     std::cout << "All tests passed (synthetic transport, no engine ABI claim).\n";
 }

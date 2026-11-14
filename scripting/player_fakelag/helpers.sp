@@ -1,3 +1,13 @@
+stock bool FakelagRequireAllowed(int client)
+{
+	if (!CFakeLag_IsLanBlocked())
+	{
+		return true;
+	}
+	CReplyToCommand(client, "%t %t", "Tag", "FakelagBlockedLan");
+	return false;
+}
+
 stock void FakelagReplyPlayerStatus(int client, int target)
 {
 	if (!CFakeLag_IsClientSupported(target))
@@ -326,7 +336,7 @@ stock bool FakelagIsBalanceAudienceClient(int client)
 
 stock bool FakelagCanApplyLatencyToClient(int client)
 {
-	if (!IsHumanInGame(client) || !CFakeLag_IsClientSupported(client))
+	if (CFakeLag_IsLanBlocked() || !IsHumanInGame(client) || !CFakeLag_IsClientSupported(client))
 	{
 		return false;
 	}

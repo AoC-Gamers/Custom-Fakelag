@@ -8,7 +8,7 @@ class IGamePlayer;
 class IPluginContext;
 #endif
 
-enum class ProfileChangeResult { Applied, Unchanged, Vetoed, Error };
+enum class ProfileChangeResult { Applied, Unchanged, Vetoed, Error, LanBlocked };
 inline bool ProfileChangeSucceeded(ProfileChangeResult result) {
     return result == ProfileChangeResult::Applied || result == ProfileChangeResult::Unchanged;
 }
@@ -21,7 +21,8 @@ inline LatencyForwardResult ClassifyLatencyForwardResult(int executeError, int a
 enum class CFakeLagChangeReason {
 	Manual = 0,
 	Clear,
-	Disconnect
+	Disconnect,
+	LanPolicy
 };
 
 enum class ClientEligibility {
@@ -76,7 +77,8 @@ public:
 	ProfileChangeResult SetPlayerProfile(ClientIndex client, LagMilliseconds lagTime, PacketLossPercent packetLossPercent);
 	bool SetPlayerPacketLoss(ClientIndex client, PacketLossPercent packetLossPercent);
 	void ClearPlayerPacketLoss(ClientIndex client);
-	bool ClearAllPlayerProfiles();
+	bool ClearAllPlayerProfiles(CFakeLagChangeReason reason = CFakeLagChangeReason::Clear);
+	bool EnforceLanPolicy();
 	void ClearAllPlayerLatencies();
 
 	LagMilliseconds GetPlayerLatency(ClientIndex client) const;

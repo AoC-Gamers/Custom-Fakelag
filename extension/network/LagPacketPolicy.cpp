@@ -3,6 +3,7 @@
 #include "../extension.h"
 #endif
 #include "LossModel.h"
+#include "LanPolicy.h"
 
 #ifndef UNIT_TEST
 namespace {
@@ -119,7 +120,7 @@ void LagPacketPolicy::MaybeLogHeldPacket(const _netpacket_t& packet, LagMillisec
 
 PacketDispatchResult LagPacketPolicy::HandlePacket(bool newdata, _netpacket_t* packet) const
 {
-	if (!IsReady() || packet == nullptr || m_Adapter == nullptr) {
+	if (CFakeLag_IsLanBlocked() || !IsReady() || packet == nullptr || m_Adapter == nullptr) {
 		return { PacketDispatchState::Bypass };
 	}
 

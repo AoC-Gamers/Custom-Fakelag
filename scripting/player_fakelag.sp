@@ -98,6 +98,7 @@ public void OnPluginStart()
 	g_CvarSampleWindow.AddChangeHook(FakelagOnSamplingSettingsChanged);
 	g_CvarSampleInterval.AddChangeHook(FakelagOnSamplingSettingsChanged);
 	g_CvarDefaultPacketLossMode.AddChangeHook(FakelagOnDefaultPacketLossModeChanged);
+	CFakeLag_OnLanPolicyChanged(CFakeLag_IsLanBlocked());
 
 	FakelagStartLatencySampling();
 	AutoExecConfig(true, "player_fakelag");
@@ -270,6 +271,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 
 public Action BalanceLagCmd(int client, int args)
 {
+	if (!FakelagRequireAllowed(client)) return Plugin_Handled;
 	if (args < 1)
 	{
 		CReplyToCommand(client, "%t %t {green}sm_fakelag_balance <global|pairs>{default}", "Tag", "Use");
@@ -366,6 +368,7 @@ public Action BalanceLagVoteCmd(int client, int args)
 
 public Action FakeLagCmd(int client, int args)
 {
+	if (!FakelagRequireAllowed(client)) return Plugin_Handled;
 	if (!FakelagCommandRequiresClient(client))
 	{
 		return Plugin_Handled;

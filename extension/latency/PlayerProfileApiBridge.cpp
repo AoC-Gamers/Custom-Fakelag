@@ -37,7 +37,8 @@ bool PlayerProfileApiBridge::Initialize()
 		Param_Cell,
 		Param_Cell);
 
-	if (m_OnSetPlayerLatency == nullptr || m_OnPlayerProfileChanged == nullptr || m_OnPacketLossModeChanged == nullptr) {
+	m_OnLanPolicyChanged = forwards->CreateForward("CFakeLag_OnLanPolicyChanged", ET_Ignore, 1, nullptr, Param_Cell);
+	if (m_OnSetPlayerLatency == nullptr || m_OnPlayerProfileChanged == nullptr || m_OnPacketLossModeChanged == nullptr || m_OnLanPolicyChanged == nullptr) {
 		Shutdown();
 		return false;
 	}
@@ -47,6 +48,10 @@ bool PlayerProfileApiBridge::Initialize()
 
 void PlayerProfileApiBridge::Shutdown()
 {
+	if (m_OnLanPolicyChanged) {
+		forwards->ReleaseForward(m_OnLanPolicyChanged);
+		m_OnLanPolicyChanged = nullptr;
+	}
 	if (m_OnSetPlayerLatency != nullptr) {
 		forwards->ReleaseForward(m_OnSetPlayerLatency);
 		m_OnSetPlayerLatency = nullptr;
@@ -61,6 +66,13 @@ void PlayerProfileApiBridge::Shutdown()
 		forwards->ReleaseForward(m_OnPacketLossModeChanged);
 		m_OnPacketLossModeChanged = nullptr;
 	}
+}
+
+void PlayerProfileApiBridge::OnLanPolicyChanged(bool blocked) const
+{
+	if (!m_OnLanPolicyChanged) return;
+	m_OnLanPolicyChanged->PushCell(blocked ? 1 : 0);
+	m_OnLanPolicyChanged->Execute(nullptr);
 }
 
 LatencyForwardResult PlayerProfileApiBridge::OnSetPlayerLatency(int client, float oldLag, float* requestedLag, CFakeLagChangeReason reason)

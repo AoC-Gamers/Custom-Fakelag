@@ -1,6 +1,7 @@
 #include "PlayerProfileService.h"
 
 #include "../NET_LagPacket_Detour.h"
+#include "../network/LanPolicy.h"
 
 bool CFakeLag_IsAlwaysOnDetourMode();
 bool CFakeLag_IsModeChanging();
@@ -15,6 +16,7 @@ constexpr float kNoLag = 0.0f;
 
 bool SyncLagDetourState(const PlayerLagManager* lagManager)
 {
+	if (CFakeLag_IsLanBlocked()) return LagDetour_Disable();
 	if (CFakeLag_IsAlwaysOnDetourMode()) {
 		return LagDetour_Enable();
 	}
@@ -136,7 +138,12 @@ void PlayerProfileService::ClearPlayerPacketLoss(int client)
 	ApplyPlayerProfileChange(client, m_LagManager->GetPlayerLag(client), 0, CFakeLagChangeReason::Clear, false);
 }
 
-bool PlayerProfileService::ClearAllPlayerProfiles()
+bool PlayerProfileService::EnforceLanPolicy()
+{
+	return !CFakeLag_IsLanBlocked() || ClearAllPlayerProfiles(CFakeLagChangeReason::LanPolicy);
+}
+
+bool PlayerProfileService::ClearAllPlayerProfiles(CFakeLagChangeReason reason)
 {
 	if (!m_LagManager) return false;
 	if (m_Clearing) return true;
@@ -154,7 +161,7 @@ bool PlayerProfileService::ClearAllPlayerProfiles()
 	LagDetour_ClearAll();
 	const bool synchronized = SyncLagDetourState(m_LagManager);
 	for (const auto& old : previous)
-		NotifyPlayerProfileChanged(old.client, old.lag, old.loss, 0, 0, CFakeLagChangeReason::Clear);
+		NotifyPlayerProfileChanged(old.client, old.lag, old.loss, 0, 0, reason);
 	return synchronized;
 }
 
@@ -210,6 +217,7 @@ ProfileChangeResult PlayerProfileService::ApplyPlayerProfileChange(ClientIndex c
 {
 	if (!m_LagManager || m_ApplyingChange || m_Clearing || CFakeLag_IsModeChanging() || !IsClientSupported(client) ||
 		!ValidLatency(lagTime) || packetLossPercent < 0 || packetLossPercent > 100) return ProfileChangeResult::Error;
+	if (CFakeLag_IsLanBlocked() && (lagTime > 0 || packetLossPercent > 0)) return ProfileChangeResult::LanBlocked;
 	MutationGuard applying(m_ApplyingChange);
 	const auto revision = m_LagManager->Revision();
 	const float oldLag = m_LagManager->GetPlayerLag(client);
@@ -221,6 +229,7 @@ ProfileChangeResult PlayerProfileService::ApplyPlayerProfileChange(ClientIndex c
 		if (forward == LatencyForwardResult::Error) return ProfileChangeResult::Error;
 	}
 	// A forward may disconnect, reset, or attempt a nested mutation.
+	if (CFakeLag_IsLanBlocked() && (requestedLag > 0 || packetLossPercent > 0)) return ProfileChangeResult::LanBlocked;
 	if (!ValidLatency(requestedLag) || !IsClientSupported(client) || revision != m_LagManager->Revision()) return ProfileChangeResult::Error;
 	if (oldLag == requestedLag && oldLoss == packetLossPercent) return ProfileChangeResult::Unchanged;
 	const bool wasEnabled = LagDetour_IsEnabled();

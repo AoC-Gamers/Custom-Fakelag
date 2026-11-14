@@ -1,5 +1,11 @@
 "Phrases"
 {
+	"FakelagBlockedLan"
+	{
+		"en"        "Fakelag is disabled while LAN mode is active."
+		"es"        "Fakelag está desactivado mientras el modo LAN esté activo."
+	}
+
 	"Tag"
 	{
 		"en"        "[{olive}Fakelag{default}]"

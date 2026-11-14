@@ -2,6 +2,7 @@
 #include "NET_LagPacket_Detour.h"
 #include "tier1/convar.h"
 #include <cstdlib>
+#include <cstring>
 
 extern ISmmAPI* g_SMAPI;
 extern CustomFakelag g_Sample;
@@ -9,7 +10,15 @@ SH_DECL_HOOK0_void(IServerGameDLL, LevelShutdown, SH_NOATTRIB, 0);
 namespace {
 void LossModeChanged(IConVar*, const char*, float oldValue) { g_Sample.OnLossModeChanged(static_cast<int>(oldValue)); }
 void DetourModeChanged(IConVar*, const char*, float oldValue) { g_Sample.OnDetourModeChanged(static_cast<int>(oldValue)); }
+void LanPolicyChanged(IConVar* var, const char*, float) {
+	if (!std::strcmp(var->GetName(), "sv_lan") || !std::strcmp(var->GetName(), "sm_custom_fakelag_allow_lan"))
+		g_Sample.OnLanPolicyChanged();
 }
+void LanPolicyFrame(bool) { g_Sample.CheckLanPolicy(); }
+}
+
+ConVar sm_custom_fakelag_allow_lan("sm_custom_fakelag_allow_lan", "0", FCVAR_NOTIFY,
+	"Allow artificial latency/loss with sv_lan 1 for explicit testing. Disabling clears all profiles.", true, 0.0f, true, 1.0f);
 
 ConVar sm_custom_fakelag_loss_mode(
 	"sm_custom_fakelag_loss_mode",
@@ -85,6 +94,25 @@ bool CFakeLag_IsAlwaysOnDetourMode()
 }
 
 bool CFakeLag_IsModeChanging() { return g_Sample.IsModeChanging(); }
+bool CFakeLag_IsLanBlocked() { return g_Sample.IsLanBlocked(); }
+bool CustomFakelag::IsLanBlocked() const {
+	return CFakeLag_LanPolicyBlocks(m_Lan == nullptr || m_Lan->GetBool(), sm_custom_fakelag_allow_lan.GetBool());
+}
+void CustomFakelag::OnLanPolicyChanged()
+{
+	if (!m_Loaded) return;
+	if (m_ChangingLanPolicy) { m_LanPolicyDirty = true; return; }
+	m_LanPolicyDirty = false;
+	const bool blocked = IsLanBlocked();
+	if (blocked == m_LanBlocked) return;
+	m_ChangingLanPolicy = true;
+	m_LanBlocked = blocked;
+	if (blocked && m_PlayerProfileService && !m_PlayerProfileService->EnforceLanPolicy())
+		g_pSM->LogError(myself, "[custom_fakelag] LAN profiles/queues cleared, but hook removal failed; infrastructure retained and packet simulation bypassed.");
+	if (m_PlayerProfileApiBridge) m_PlayerProfileApiBridge->OnLanPolicyChanged(blocked);
+	g_pSM->LogMessage(myself, "[custom_fakelag] LAN policy blocked=%d; cleared profiles are never restored automatically.", blocked);
+	m_ChangingLanPolicy = false;
+}
 void CustomFakelag::OnSessionInvalidated(SessionId session) { LagDetour_ClearSession(session); }
 void CustomFakelag::OnLevelShutdown() { ResetState(); }
 
@@ -183,6 +211,12 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 	}
 	g_pCVar = cvarIface;
 #endif
+	m_Lan = g_pCVar->FindVar("sv_lan");
+	if (!m_Lan) {
+		ReleaseResources();
+		ke::SafeSprintf(error, maxlen, "Could not find sv_lan for fakelag LAN policy.");
+		return false;
+	}
 	ConVar_Register(0, this);
 
 	if (CFakeLag_IsDebugEnabled()) {
@@ -194,7 +228,7 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 			CFakeLag_GetDebugHoldInterval());
 	}
 
-	if (CFakeLag_IsAlwaysOnDetourMode() && !LagDetour_Enable()) {
+	if (!CFakeLag_IsLanBlocked() && CFakeLag_IsAlwaysOnDetourMode() && !LagDetour_Enable()) {
 		ConVar_Unregister();
 		ReleaseResources();
 		ke::SafeSprintf(error, maxlen, "Could not enable NET_LagPacket detour in always-on mode.");
@@ -207,6 +241,9 @@ bool CustomFakelag::SDK_OnLoad(char* error, size_t maxlen, bool late)
 	SH_ADD_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_MEMBER(this, &CustomFakelag::OnLevelShutdown), false);
 	g_pSM->LogMessage(myself, "[custom_fakelag] Packet adapter initialized; unsupported engine identities will reject profile activation.");
 	m_Loaded = true;
+	g_pCVar->InstallGlobalChangeCallback(LanPolicyChanged);
+	g_pSM->AddGameFrameHook(LanPolicyFrame);
+	OnLanPolicyChanged();
 	sm_custom_fakelag_loss_mode.InstallChangeCallback(LossModeChanged);
 	sm_custom_fakelag_detour_mode.InstallChangeCallback(DetourModeChanged);
 	return true;
@@ -223,6 +260,8 @@ bool CustomFakelag::RegisterConCommandBase(ConCommandBase* pVar)
 
 void CustomFakelag::SDK_OnUnload() {
 	m_Loaded = false;
+	g_pCVar->RemoveGlobalChangeCallback(LanPolicyChanged);
+	g_pSM->RemoveGameFrameHook(LanPolicyFrame);
 	SH_REMOVE_HOOK(IServerGameDLL, LevelShutdown, gamedll, SH_MEMBER(this, &CustomFakelag::OnLevelShutdown), false);
 	playerhelpers->RemoveClientListener(this);
 
@@ -401,6 +440,8 @@ cell_t CFakeLag_SetPlayerProfile(IPluginContext* pContext, const cell_t* params)
 	}
 
 	const auto result = g_Sample.SetPlayerProfile(client, lagTime, packetLossPercent);
+	if (result == ProfileChangeResult::LanBlocked)
+		return pContext->ThrowNativeError("Fakelag is blocked by sv_lan 1. Use sm_custom_fakelag_allow_lan 1 only for explicit tests.");
 	if (result == ProfileChangeResult::Vetoed) return 0;
 	if (result == ProfileChangeResult::Error)
 		return pContext->ThrowNativeError("Profile was not applied: invalid latency, forward execution error, unresolved address, reentrant mutation or detour operation failed.");
@@ -494,6 +535,7 @@ cell_t CFakeLag_GetProfiledClientCount(IPluginContext* pContext, const cell_t* p
 
 sp_nativeinfo_t g_CFakeLagNatives[] =
 {
+	{"CFakeLag_IsLanBlocked", [](IPluginContext*, const cell_t*) -> cell_t { return CFakeLag_IsLanBlocked() ? 1 : 0; }},
 	{"CFakeLag_SetPlayerProfile", CFakeLag_SetPlayerProfile},
 	{"CFakeLag_GetPlayerProfile", CFakeLag_GetPlayerProfile},
 	{"CFakeLag_HasPlayerProfile", CFakeLag_HasPlayerProfile},

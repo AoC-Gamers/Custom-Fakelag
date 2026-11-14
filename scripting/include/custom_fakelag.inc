@@ -9,7 +9,8 @@ enum CFakeLagChangeReason
 {
 	CFakeLagChange_Manual = 0,
 	CFakeLagChange_Clear,
-	CFakeLagChange_Disconnect
+	CFakeLagChange_Disconnect,
+	CFakeLagChange_LanPolicy
 };
 
 enum CFakeLagPacketLossMode
@@ -28,12 +29,24 @@ enum struct CFakeLagNetworkProfile
  * @brief Set the full fakelag profile for the given player.
  *
  * Applies artificial latency and artificial packet loss in a single operation.
+ * Nonzero profiles throw a native error when sv_lan is enabled without the
+ * explicit sm_custom_fakelag_allow_lan override. Clearing remains available.
  *
  * @param client			Client index of the player to affect.
  * @param lagTime			Artificial latency in milliseconds.
  * @param packetLossPercent	Artificial packet loss percentage to apply, from 0 to 100.
  */
 native void CFakeLag_SetPlayerProfile(int client, float lagTime, int packetLossPercent);
+
+/** Whether sv_lan currently blocks artificial latency and packet loss. */
+native bool CFakeLag_IsLanBlocked();
+
+/**
+ * Called when the LAN restriction changes. On blocking, active profiles, queues
+ * and loss state have been cleared without a veto forward. Consumers must discard
+ * saved/pending profiles. Unblocking does not restore any profile.
+ */
+forward void CFakeLag_OnLanPolicyChanged(bool blocked);
 
 /**
  * @brief Read the full fakelag profile for the given player.

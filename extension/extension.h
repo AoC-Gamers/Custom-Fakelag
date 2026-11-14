@@ -8,6 +8,7 @@
 #include "latency/PlayerProfileService.h"
 
 #include "network/NetworkConfig.h"
+#include "network/LanPolicy.h"
 
 extern ConVar sm_custom_fakelag_loss_mode;
 extern ConVar sm_custom_fakelag_debug;
@@ -28,6 +29,10 @@ class CustomFakelag : public SDKExtension,
 private:
 	bool m_ChangingMode = false;
 	bool m_Loaded = false;
+	bool m_ChangingLanPolicy = false;
+	bool m_LanPolicyDirty = false;
+	bool m_LanBlocked = false;
+	ConVar* m_Lan = nullptr;
 	EngineClientNetAdrResolver* m_NetAdrResolver = nullptr;
 	PlayerLagManager* m_LagManager = nullptr;
 	PlayerProfileService* m_PlayerProfileService = nullptr;
@@ -47,7 +52,10 @@ public:
 	bool GetPlayerProfile(int client, float& lagTime, int& packetLossPercent) const;
 	bool HasPlayerProfile(int client) const;
 	ProfileChangeResult ClearPlayerProfile(int client);
-	bool IsModeChanging() const { return m_ChangingMode; }
+	bool IsModeChanging() const { return m_ChangingMode || m_ChangingLanPolicy; }
+	bool IsLanBlocked() const;
+	void OnLanPolicyChanged();
+	void CheckLanPolicy() { if (m_LanPolicyDirty) OnLanPolicyChanged(); }
 	void OnLossModeChanged(int oldMode);
 	void OnDetourModeChanged(int oldMode);
 	void SetPacketLossMode(CFakeLagPacketLossMode mode);

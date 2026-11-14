@@ -278,6 +278,7 @@ sm_custom_fakelag_loss_mode
 sm_custom_fakelag_debug
 sm_custom_fakelag_debug_hold_interval
 sm_custom_fakelag_detour_mode
+sm_custom_fakelag_allow_lan
 ```
 
 ### `sm_custom_fakelag_loss_mode`
@@ -345,14 +346,28 @@ En modo `0`, la extensión no mantiene detoureado `NET_LagPacket` todo el
 tiempo. El detour se activa solo cuando existe al menos un perfil activo y se
 desactiva cuando ya no queda ninguno.
 
-En modo `1`, la extensión vuelve al comportamiento anterior y deja el detour
-activo mientras esté cargada.
+En modo `1`, la extensión mantiene el detour activo mientras esté cargada y la
+política LAN lo permita. El bloqueo LAN tiene prioridad sobre ambos modos.
 
 Para producción, el modo recomendado es:
 
 ```text
 sm_custom_fakelag_detour_mode 0
 ```
+
+### Política LAN
+
+Con `sv_lan 1`, fakelag queda bloqueado por defecto: se retiran perfiles,
+paquetes retenidos y estados de pérdida; `player_fakelag` también descarta su
+persistencia y restauraciones/votos pendientes. Volver a `sv_lan 0` no recupera
+perfiles anteriores. Para una prueba explícita se puede usar
+`sm_custom_fakelag_allow_lan 1` (predeterminado `0`); retirar esa excepción bajo
+LAN vuelve a limpiar el estado. La excepción conserva la validación del motor.
+
+La API expone `CFakeLag_IsLanBlocked()` y el forward
+`CFakeLag_OnLanPolicyChanged(bool blocked)` para que otros consumidores descarten
+su estado guardado. Véase [política y validación](docs/LAN_POLICY.md).
+Esta restricción no corrige el fallo de interfaces Steam reproducido en vanilla.
 
 ## Plugin `player_fakelag`
 
