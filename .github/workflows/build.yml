@@ -82,6 +82,17 @@ jobs:
         shell: bash
         run: make build-smx
 
+      - name: Check shutdown evidence exporter and compile opt-in consumers
+        shell: bash
+        run: |
+          python3 -m unittest discover -s tests -p test_windows_shutdown_export.py
+          compiler=.deps/smx/sourcemod-package/addons/sourcemod/scripting/spcomp
+          includes=.deps/smx/sourcemod-package/addons/sourcemod/scripting/include
+          mkdir -p .build/shutdown-consumers
+          for consumer in windows_shutdown_consumer windows_shutdown_fill_consumer; do
+            "$compiler" "tests/$consumer.sp" -iscripting/include -i"$includes" -o".build/shutdown-consumers/$consumer.smx"
+          done
+
       - name: Upload SMX build tree
         uses: actions/upload-artifact@v7
         with:
@@ -235,6 +246,17 @@ jobs:
       - name: Compile Windows SDK contract harness
         shell: pwsh
         run: pwsh -NoProfile -File scripts/test-windows-sdk-contract.ps1 -BuildOnly
+
+      - name: Verify real Windows exit collection including DLL detach
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $installation) { throw 'MSVC toolchain not found' }
+          $vcvars = Join-Path $installation 'VC\Auxiliary\Build\vcvarsall.bat'
+          $python = (Get-Command python.exe -ErrorAction Stop).Source
+          $private = Join-Path $env:RUNNER_TEMP 'shutdown-collection'
+          pwsh -NoProfile -File scripts/test-windows-shutdown-collection.ps1 -PrivateDirectory $private -Python $python -VcVars $vcvars
 
       - name: Build Windows extension package
         shell: pwsh

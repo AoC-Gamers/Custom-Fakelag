@@ -198,6 +198,13 @@ vanilla de la entrega anterior sí había registrado `0xc0000409`. No se afirma
 que todos los cierres fallen ni que el fallo esté resuelto. Su causa permanece
 abierta y no se atribuye a esta excepción por compartir un código de salida.
 
+La [investigación posterior del cierre](WINDOWS_SHUTDOWN_INVESTIGATION.md)
+reprodujo un fallo del ciclo de vida de interfaces Steam en vanilla tras cambiar
+de mapa con `sv_lan 1`. La intervención `sv_lan 0` evitó esa reproducción y
+restaurar LAN 1 la reintrodujo. Esto no recupera el subcódigo ni demuestra la
+causa de los antiguos `0xc0000409`; los resultados de esta entrega permanecen
+históricos y separados de los nuevos ensayos.
+
 No se repitió un runtime Linux en este encargo, ni se desplegó en servidores de
 uso real, ni se creó PR/push. La aprobación funcional se limita al motor exacto
 y versiones registrados. Los casos aislados, el build y el cliente real se
