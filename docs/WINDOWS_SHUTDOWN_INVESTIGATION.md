@@ -1,5 +1,9 @@
 # Windows SRCDS shutdown investigation
 
+> Informe histórico de las revisiones indicadas. Estado vigente y pendientes:
+> [matriz de validación](VALIDATION.md). La política LAN actual y el debug
+> apagado por defecto no se atribuyen retroactivamente a estos ensayos.
+
 The current failure has a reproducible configuration/lifetime mechanism: with `sv_lan 1`, a map transition invalidates Steam interface objects still cached by `server.dll`; subsequent use can fault before any `quit` command. Vanilla reproduces it without any plugin. Changing only the private configuration to `sv_lan 0` preserves the sampled interfaces and permits clean disconnect/quit; restoring `sv_lan 1` reproduces `0xc0000005`. This establishes the current configuration-dependent reproduction, not a universal explanation for every historical exit code. No production fix is included. The functional acceptance from the previous load-order investigation remains separate.
 
 ## Scope and fixed inputs

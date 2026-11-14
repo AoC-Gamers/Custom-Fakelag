@@ -1,5 +1,9 @@
 # Integración del motor y resultados de operación
 
+> Informe histórico de las revisiones indicadas. Estado vigente y pendientes:
+> [matriz de validación](VALIDATION.md). La política LAN actual y el debug
+> apagado por defecto no se atribuyen retroactivamente a estos ensayos.
+
 > Informe histórico de Linux. El trabajo Windows posterior y sus pendientes
 > están en [WINDOWS_ENGINE_VALIDATION.md](WINDOWS_ENGINE_VALIDATION.md).
 

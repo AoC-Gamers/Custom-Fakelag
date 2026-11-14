@@ -1,5 +1,9 @@
 # Aceptación Windows: carga y recarga con Left4DHooks activo
 
+> Informe histórico de las revisiones indicadas. Estado vigente y pendientes:
+> [matriz de validación](VALIDATION.md). La política LAN actual y el debug
+> apagado por defecto no se atribuyen retroactivamente a estos ensayos.
+
 Prueba ejecutada el 13-11-2026 con un cliente Steam real. **La aceptación funcional
 pasó en ambos órdenes de carga. El cierre completo del proceso no queda aprobado.**
 No se modificó el comparador de producción ni se amplió la excepción de código.

@@ -1,840 +1,113 @@
 # Custom Fakelag
 
-> El adaptador real está habilitado para el motor Linux x86 identificado por
-> build ID `b152439170af081a0d31fc357364a4cd4caa56ac` (L4D2 2.2.4.3).
-> El adaptador Windows PE32 para SHA `8a6d4680…bf7ba86` se comprobó en SRCDS
-> 2.2.4.3 con UDP y un cliente Steam real. Solo se admite esa identidad.
-> El detour de entrada conocido de Left4DHooks se admite al cargar/recargar;
-> [política y pruebas](docs/WINDOWS_LOAD_ORDER.md).
-> Véase [validación Windows y límites](docs/WINDOWS_ENGINE_VALIDATION.md), incluido
-> un fallo de cierre de SRCDS que también se reproduce sin mods, y
-> [evidencia Linux](docs/ENGINE_INTEGRATION_VALIDATION.md).
-
-Extensión de SourceMod para aplicar fake lag por jugador en **Left 4 Dead 2**.
-
-El proyecto permite agregar latencia artificial a jugadores humanos específicos,
-principalmente para pruebas, administración competitiva o balance de diferencias
-de ping entre jugadores.
-
-A diferencia de un plugin SourcePawn simple, este repositorio contiene una
-extensión nativa en C++ que intercepta el manejo interno de paquetes del motor
-Source y una capa SourcePawn que expone comandos, natives, forwards y lógica de
-balance.
-
-## Origen y créditos
-
-Este repositorio deriva del proyecto original publicado por `ProdigySim`:
-
-- https://github.com/ProdigySim/custom_fakelag
-
-La base original de la extensión, su idea y la implementación inicial
-corresponden a ese trabajo.
-
-Este repositorio toma como base histórica la versión `1.0.0` del proyecto
-original.
-
-## Estado del proyecto
-
-El código base de la extensión proviene de una implementación antigua, pero el
-repositorio fue reorganizado para permitir un flujo de build reproducible antes
-de modernizar más profundamente la lógica interna.
-
-El objetivo actual del repositorio es mantener una base compilable, ordenada y
-más fácil de extender.
-
-Flujo recomendado en Linux:
-
-```bash
-make deps-smx
-make deps-exts-linux
-make build-smx
-make build-exts-linux
-make package-smx
-make package-exts-linux
-make release-linux
-```
-
-En Linux, el paquete final incluye solo `custom_fakelag.ext.so`. La extension
-depende de las bibliotecas del gameserver (`libtier0_srv.so`,
-`libvstdlib_srv.so`) normalmente presentes en `left4dead2/bin` o `linux/bin`,
-por lo que no se empaquetan dentro de `addons/sourcemod/extensions`.
-
-Flujo recomendado en Windows:
-
-```powershell
-make deps-smx
-make deps-exts-windows
-make build-smx
-make build-exts-windows
-make package-smx
-make package-exts-windows
-make release-windows
-```
-
-Documentacion del sistema de build:
-
-- [docs/build-system.md](docs/build-system.md)
-
-## Qué hace técnicamente
-
-Custom Fakelag aplica latencia artificial retrasando paquetes entrantes de un
-jugador.
-
-La extensión carga `custom_fakelag.games`, localiza símbolos internos del motor
-como `NET_LagPacket` y `net_time`, y crea un detour sobre `NET_LagPacket`.
-
-Cuando llega un paquete de red:
-
-1. La extensión revisa si el origen del paquete pertenece a un jugador con fake
-   lag configurado.
-2. Si el jugador no tiene fake lag, el paquete se despacha normalmente.
-3. Si el jugador tiene fake lag, el paquete se copia a una cola interna.
-4. El campo de tiempo de recepción del paquete se desplaza hacia el futuro.
-5. El paquete se libera cuando `net_time` alcanza el tiempo simulado.
-
-En términos simples: no cambia solamente un valor visual de ping. Retrasa el
-procesamiento real de paquetes para ese jugador.
-
-Además, la extensión ahora puede simular packet loss artificial por jugador.
-Ese packet loss puede distribuirse con dos modelos:
-
-- `Bernoulli uniforme`
-- `Gilbert-Elliott`
-
-## Arquitectura
-
-El repositorio está dividido en dos capas principales.
-
-### Extensión nativa C++
-
-La extensión nativa vive en:
-
-```text
-extension/
-```
-
-Componentes relevantes:
-
-```text
-extension/
-├── extension.cpp
-├── NET_LagPacket_Detour.cpp
-├── latency/
-│   ├── PlayerProfileApiBridge.cpp
-│   ├── PlayerProfileService.cpp
-│   └── PlayerLagManager.cpp
-└── network/
-    ├── LagPacketPolicy.cpp
-    └── LagSystem.cpp
-```
-
-Responsabilidades principales:
-
-- cargar gamedata;
-- resolver direcciones de red de clientes;
-- registrar natives de SourcePawn;
-- crear forwards para hooks de plugins;
-- interceptar `NET_LagPacket`;
-- retrasar paquetes mediante colas internas;
-- simular packet loss artificial por jugador;
-- limpiar estado al desconectar jugadores o descargar la extensión.
-
-La extensión no decide persistencia ni restauración de perfiles entre
-desconexiones. Su rol es ejecutar y limpiar estado activo del motor.
-
-### Plugin SourcePawn
-
-El plugin SourcePawn vive en:
-
-```text
-scripting/player_fakelag.sp
-scripting/player_fakelag/
-```
-
-Este plugin entrega la capa administrativa y de uso práctico:
-
-- comandos para aplicar y limpiar fake lag;
-- comandos de estado y comparación de ping;
-- balance global de latencia;
-- balance por pares Survivor/Infected;
-- resolución heurística de packet loss para balances;
-- votaciones para aplicar balance;
-- persistencia temporal por Steam Account ID;
-- muestreo estable de ping para evitar decisiones basadas en picos aislados.
-
-El plugin es el dueño de la gobernanza del sistema:
-
-- decide cuándo aplicar un perfil;
-- decide cuándo olvidarlo;
-- decide si debe restaurarse tras reconexión;
-- y al descargarse ordena a la extensión eliminar todo el estado residual.
-
-## Gamedata
-
-La extensión depende de firmas y direcciones declaradas en:
-
-```text
-gamedata/custom_fakelag.games.txt
-```
-
-Actualmente se usan firmas para:
-
-- `NET_LagPacket`
-- `net_time`
-
-Si una actualización del binario del servidor cambia esas firmas, la extensión
-podría dejar de cargar o fallar al inicializar el detour.
-
-## API SourcePawn
-
-El include principal está en:
-
-```text
-scripting/include/custom_fakelag.inc
-```
-
-Natives disponibles:
-
-```sourcepawn
-enum CFakeLagPacketLossMode
-{
-    CFakeLagPacketLoss_BernoulliUniform = 0,
-    CFakeLagPacketLoss_GilbertElliott
-};
-
-enum struct CFakeLagNetworkProfile
-{
-    float lagMs;
-    int packetLossPercent;
-};
-
-native void CFakeLag_SetPlayerProfile(int client, float lagTime, int packetLossPercent);
-native bool CFakeLag_GetPlayerProfile(int client, CFakeLagNetworkProfile profile);
-native bool CFakeLag_HasPlayerProfile(int client);
-native void CFakeLag_ClearPlayerProfile(int client);
-
-native void CFakeLag_SetPacketLossMode(CFakeLagPacketLossMode mode);
-native CFakeLagPacketLossMode CFakeLag_GetPacketLossMode();
-
-native void CFakeLag_ClearAllPlayerProfiles();
-native void CFakeLag_ResetState();
-native int CFakeLag_GetProfiledClientCount();
-native bool CFakeLag_IsClientSupported(int client);
-```
-
-Helpers stock relevantes:
-
-```sourcepawn
-stock CFakeLagNetworkProfile CFakeLag_BuildNetworkProfile(float lagMs, int packetLossPercent);
-```
-
-Notas:
-
-- la API pública gira alrededor de `CFakeLagNetworkProfile`.
-- `CFakeLag_ResetState()` deja la extensión como si nunca hubiera aplicado fakelag.
-- `CFakeLag_ClearAllPlayerProfiles()` limpia todos los perfiles activos.
-- `CFakeLag_GetProfiledClientCount()` devuelve la cantidad de perfiles activos.
-
-Forwards disponibles:
-
-```sourcepawn
-forward Action CFakeLag_OnSetPlayerLatency(
-    int client,
-    float oldLag,
-    float &newLag,
-    CFakeLagChangeReason reason
-);
-
-forward void CFakeLag_OnPlayerProfileChanged(
-    int client,
-    float oldLag,
-    int oldPacketLossPercent,
-    float newLag,
-    int newPacketLossPercent,
-    CFakeLagChangeReason reason
-);
-
-forward void CFakeLag_OnPacketLossModeChanged(
-    CFakeLagPacketLossMode oldMode,
-    CFakeLagPacketLossMode newMode
-);
-```
-
-`CFakeLag_OnSetPlayerLatency` permite modificar o bloquear un cambio antes de
-que se aplique.
-
-`CFakeLag_OnPlayerProfileChanged` notifica después de que el perfil fue aplicado,
-incluyendo `lag` y `packet loss`.
-
-`CFakeLag_OnPacketLossModeChanged` notifica después de que la extensión cambia
-de modelo de pérdida y resetea el estado activo.
-
-## Packet Loss Modes
-
-La extensión expone las siguientes ConVars:
-
-```text
-sm_custom_fakelag_loss_mode
-sm_custom_fakelag_debug
-sm_custom_fakelag_debug_hold_interval
-sm_custom_fakelag_detour_mode
-sm_custom_fakelag_allow_lan
-```
-
-### `sm_custom_fakelag_loss_mode`
-
-Valores:
-
-- `0`: `Bernoulli uniforme`
-- `1`: `Gilbert-Elliott`
-
-El plugin decide cuánto `%` de packet loss aplicar. La extensión decide cómo
-materializar ese `%` en el flujo real de paquetes.
-
-Cambiar `sm_custom_fakelag_loss_mode` en vivo es posible, pero el cambio es
-estricto: si el modo cambia, la extensión limpia todo el estado activo de
-fakelag antes de aplicar el nuevo modo. Esto evita mezclar perfiles y estado
-interno entre modelos distintos durante la misma sesión.
-
-Para evitar depender del orden de carga del servidor, `player_fakelag` expone
-su propio valor por defecto en:
-
-```text
-sm_fakelag_loss_mode_default
-```
-
-Ese valor se aplica en `OnConfigsExecuted()` desde el autoexec del plugin
-(`cfg/sourcemod/player_fakelag.cfg`), por lo que es la forma recomendada de
-fijar el modo persistente del servidor.
-
-### `sm_custom_fakelag_debug`
-
-Valores:
-
-- `0`: desactivado
-- `1`: activa logging de diagnóstico seguro para producción
-
-Cuando está activa, la extensión registra eventos internos relevantes como:
-
-- activación y desactivación del detour;
-- sockets con perfiles activos detectados por primera vez;
-- paquetes retenidos por lag o packet loss;
-- fallos al restaurar paquetes encolados;
-- fallos al resolver `netadr`.
-
-No está pensada para loggear cada paquete. Su objetivo es ayudar a diagnosticar
-congelones o comportamiento extraño sin volver ruidoso el servidor.
-
-### `sm_custom_fakelag_debug_hold_interval`
-
-Valor por defecto:
-
-- `5.0`
-
-Define el intervalo mínimo, en segundos, entre logs repetidos de paquetes
-retenidos para un mismo socket. Sirve para limitar spam cuando hay actividad de
-red alta.
-
-### `sm_custom_fakelag_detour_mode`
-
-Valores:
-
-- `0`: `lazy/on-demand`
-- `1`: `always-on`
-
-En modo `0`, la extensión no mantiene detoureado `NET_LagPacket` todo el
-tiempo. El detour se activa solo cuando existe al menos un perfil activo y se
-desactiva cuando ya no queda ninguno.
-
-En modo `1`, la extensión mantiene el detour activo mientras esté cargada y la
-política LAN lo permita. El bloqueo LAN tiene prioridad sobre ambos modos.
-
-Para producción, el modo recomendado es:
-
-```text
-sm_custom_fakelag_detour_mode 0
-```
-
-### Política LAN
-
-Con `sv_lan 1`, fakelag queda bloqueado por defecto: se retiran perfiles,
-paquetes retenidos y estados de pérdida; `player_fakelag` también descarta su
-persistencia y restauraciones/votos pendientes. Volver a `sv_lan 0` no recupera
-perfiles anteriores. Para una prueba explícita se puede usar
-`sm_custom_fakelag_allow_lan 1` (predeterminado `0`); retirar esa excepción bajo
-LAN vuelve a limpiar el estado. La excepción conserva la validación del motor.
-
-La API expone `CFakeLag_IsLanBlocked()` y el forward
-`CFakeLag_OnLanPolicyChanged(bool blocked)` para que otros consumidores descarten
-su estado guardado. Véase [política y validación](docs/LAN_POLICY.md).
-Esta restricción no corrige el fallo de interfaces Steam reproducido en vanilla.
-
-## Plugin `player_fakelag`
-
-Además de la extensión, el repositorio incluye un plugin SourcePawn de uso
-administrativo llamado:
-
-```text
-player_fakelag.sp
-```
-
-Este plugin usa la extensión `custom_fakelag` y agrega comandos de administración
-y balance.
-
-### Comandos administrativos
-
-```text
-sm_fakelag <#userid|name> <milliseconds|0>
-```
-
-Aplica fake lag a un jugador. Usar `0` limpia el fake lag existente.
-
-```text
-sm_fakelag_balance <global|pairs>
-```
-
-Aplica balance automático de latencia.
-
-Modos:
-
-- `global`: iguala a todos los jugadores humanos elegibles al ping base más alto.
-- `pairs`: empareja Survivors e Infected por ping y compensa al jugador con menor
-  ping dentro de cada par.
-
-```text
-sm_fakelag_preview <global|pairs>
-```
-
-Muestra una vista previa del balance sin aplicarlo.
-
-```text
-sm_fakelag_clear_all
-```
-
-Limpia todas las entradas activas de fake lag.
-
-```text
-sm_fakelag_list
-```
-
-Lista jugadores con fake lag activo.
-
-### Comandos de jugador
-
-```text
-sm_fakelag_clear
-```
-
-Permite limpiar el fake lag propio. Con permisos administrativos también puede
-limpiar el de otro jugador.
-
-```text
-sm_fakelag_status
-```
-
-Muestra el estado de fake lag propio. Con permisos administrativos también puede
-consultar a otro jugador.
-
-```text
-sm_fakelag_compare <#userid|name> [#userid|name]
-```
-
-Compara la latencia medida entre jugadores.
-
-```text
-sm_fakelag_vote <global|pairs>
-```
-
-Inicia una votación para aplicar balance de fake lag.
-
-## Balance de latencia
-
-El plugin mide ping usando muestras periódicas de latencia saliente mediante
-SourceMod.
-
-Para evitar decisiones inestables:
-
-- mantiene una ventana de muestras;
-- descarta extremos cuando hay suficientes muestras;
-- descuenta el fake lag ya aplicado para estimar el ping base real;
-- puede estimar una lectura similar a net graph usando `cl_updaterate`.
-
-ConVars relevantes:
-
-```text
-sm_fakelag_debug "0"
-sm_fakelag_sample_window "5"
-sm_fakelag_sample_interval "1.0"
-```
-
-### Balance global
-
-El modo global busca el jugador humano elegible con mayor ping base y aplica
-fake lag a los demás hasta igualarlos a ese valor.
-
-Ejemplo conceptual:
-
-```text
-Jugador A: 80 ms
-Jugador B: 45 ms
-Jugador C: 60 ms
-```
-
-Resultado:
-
-```text
-Jugador A: 0 ms fake lag
-Jugador B: 35 ms fake lag
-Jugador C: 20 ms fake lag
-```
-
-### Balance por pares
-
-El modo por pares separa jugadores por equipo:
-
-- Survivors
-- Infected
-
-Luego ordena ambos grupos por ping descendente y empareja jugadores por posición.
-Dentro de cada par, aplica fake lag al jugador con menor ping para igualarlo al
-otro.
-
-Los jugadores que quedan sin pareja tienen su fake lag limpiado.
-
-## Persistencia temporal
-
-El plugin mantiene perfiles de fakelag por Steam Account ID usando `StringMap`.
-
-Ese perfil incluye:
-
-- `lagMs`
-- `packetLossPercent`
-
-Esto permite restaurar el fake lag cuando un jugador vuelve a ser elegible, por
-ejemplo después de reconectar o cambiar de equipo.
-
-Esta persistencia:
-
-- es temporal;
-- vive solo en memoria mientras `player_fakelag` está cargado;
-- no usa base de datos;
-- no pertenece a la extensión.
-
-Cuando `player_fakelag` se descarga, el plugin llama `CFakeLag_ResetState()`.
-La regla operativa es simple:
-
-- si el plugin no está cargado, no debe quedar fakelag activo ni estado interno
-  residual en la extensión.
-
-## Gobernanza
-
-La separación de responsabilidades es intencional:
-
-- la extensión aplica `lag` y `packet loss` a clientes activos;
-- la extensión no decide si un jugador debe recuperar su perfil;
-- la extensión no conserva intención de restauración por su cuenta;
-- el plugin decide persistencia, restauración y olvido por `Steam Account ID`;
-- el plugin ordena el reset total al final de su ciclo de vida.
-
-Esto evita mover lógica competitiva o administrativa a la capa nativa y mantiene
-la extensión como un motor reutilizable.
-
-## Requisitos
-
-### Generales
-
-- `bash`
-- `git`
-- `make`
-- `python3`
-- SourceMod compatible
-- MetaMod:Source compatible
-- HL2SDK para L4D2
-- AMBuild
-
-Las dependencias de SourceMod, MetaMod:Source, HL2SDK y AMBuild son descargadas
-por los scripts del repositorio dentro de `.deps/`.
-
-## Compilación local
-
-### Linux
-
-Para compilar en Linux nativo necesitas:
-
-- `bash`
-- `git`
-- `make`
-- `python3`
-- `python3-venv`
-- compilador con soporte 32-bit
-- librerías multilib instaladas
-
-En Ubuntu/Debian:
-
-```bash
-sudo dpkg --add-architecture i386
-sudo apt-get update
-sudo apt-get install -y python3 python3-venv make gcc-multilib g++-multilib clang zip
-```
-
-Luego:
-
-```bash
-make deps-smx
-make deps-exts-linux
-make build-smx
-make build-exts-linux
-```
-
-Artefactos generados:
-
-```text
-.build/plugins/addons/sourcemod/plugins/player_fakelag.smx
-.build/linux-l4d2/package/addons/sourcemod/extensions/custom_fakelag.ext.so
-```
-
-### Windows
-
-Para compilar en Windows nativo necesitas:
-
-- `git`
-- `make`
-- `PowerShell 7+`
-- `python` 3.x
-- Visual Studio Build Tools o Visual Studio con soporte C++
-- toolchain MSVC x86/x64 disponible
-
-El build Windows usa `AMBuild` con `cl.exe`, por lo que no basta con tener solo
-Python o Make.
-
-Comandos:
-
-```powershell
-make deps-smx
-make deps-exts-windows
-make build-smx
-make build-exts-windows
-```
-
-Artefactos generados:
-
-```text
-.build/plugins/addons/sourcemod/plugins/player_fakelag.smx
-.build/windows-l4d2/package/addons/sourcemod/extensions/custom_fakelag.ext.dll
-```
-
-Si `cl.exe` no está disponible en el entorno actual, el script intenta localizar
-`vswhere.exe` y cargar `vcvarsall.bat` automáticamente.
-
-Si tu instalación de Visual Studio está en una ruta poco común, puedes copiar
-`.env.example` a `.env` y definir overrides locales.
-
-Ejemplo:
-
-```dotenv
-VCVARSALL_PATH=C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Auxiliary\Build\vcvarsall.bat
-```
-
-### WSL
-
-WSL2 con Ubuntu es una opción recomendada para compilar el artefacto Linux desde
-Windows.
-
-Ejemplo:
-
-```bash
-cd /mnt/c/GitHub/Custom-Fakelag
-make deps-smx
-make deps-exts-linux
-make build-smx
-make build-exts-linux
-```
-
-## Targets disponibles
-
-```text
-make help
-make deps-smx
-make deps-exts-linux
-make deps-exts-windows
-make build-smx
-make build-exts-linux
-make build-exts-windows
-make package-smx
-make package-exts-linux
-make package-exts-windows
-make release-linux
-make release-windows
-make test-exts-linux
-make test-exts-windows
-make clean-linux
-make clean-windows
-```
-
-## Manifiesto de build y artifact
-
-El repositorio usa:
-
-```text
-plugin-package-map.json
-```
-
-para declarar:
-
-- que plugins `.smx` se construyen;
-- que extensiones `.ext.so` / `.ext.dll` se construyen;
-- que runtime entra al artifact final.
-
-La separacion actual es:
-
-- `deps-smx`: resuelve el `sourcemod-package` correcto para `spcomp`
-- `build-smx`: compila plugins SourcePawn una sola vez
-- `package-smx`: prepara el arbol runtime compartido del lado `.smx`
-- `deps-exts-*`: resuelve el toolchain nativo de la extension
-- `build-exts-*`: compila la extension por plataforma
-- `package-exts-*`: prepara el arbol runtime del lado nativo
-- `release-linux` / `release-windows`: ensamblan el ZIP final combinando ambos lados
-
-## Dependencias resueltas por script
-
-Los scripts de dependencias preparan:
-
-- `alliedmodders/hl2sdk`, rama `l4d2`
-- `alliedmodders/sourcemod`, rama `1.12-dev`
-- `alliedmodders/metamod-source`, rama `1.12-dev`
-- `alliedmodders/ambuild`
-
-Todo se instala localmente dentro de:
-
-```text
-.deps/
-```
-
-También se crea un entorno virtual de Python para AMBuild.
-
-## Contenido empaquetado
-
-El paquete final incluye:
-
-```text
-addons/sourcemod/extensions/custom_fakelag.ext.so
-addons/sourcemod/extensions/custom_fakelag.ext.dll
-addons/sourcemod/plugins/player_fakelag.smx
-addons/sourcemod/scripting/player_fakelag.sp
-addons/sourcemod/scripting/player_fakelag/
-addons/sourcemod/scripting/include/custom_fakelag.inc
-addons/sourcemod/scripting/include/player_fakelag.inc
-addons/sourcemod/gamedata/custom_fakelag.games.txt
-addons/sourcemod/translations/player_fakelag.phrases.txt
-```
-
-El binario exacto depende de la plataforma compilada.
-
-## Instalación en servidor
-
-Copiar el contenido de:
-
-```text
-dist/sourcemod/artifact/
-```
-
-sobre el directorio del servidor donde vive `addons/sourcemod`.
-
-Si quieres además el ZIP listo para distribución, genera:
-
-- `make release-linux`
-- `make release-windows`
-
-Eso deja los paquetes finales en:
-
-```text
-dist/release/
-```
-
-En Linux, el archivo principal de la extensión queda en:
-
-```text
-addons/sourcemod/extensions/custom_fakelag.ext.so
-```
-
-El plugin administrativo queda en:
-
-```text
-addons/sourcemod/plugins/player_fakelag.smx
-```
-
-El gamedata debe quedar en:
-
-```text
-addons/sourcemod/gamedata/custom_fakelag.games.txt
-```
-
-## Consideraciones importantes
-
-Esta extensión depende de internals del motor Source. Si cambian las firmas de
-`NET_LagPacket` o `net_time`, puede fallar al cargar.
-
-El fake lag se aplica a jugadores humanos soportados. Los fake clients/bots no
-son targets válidos.
-
-El sistema trabaja retrasando paquetes por dirección de red. Si no se puede
-resolver la dirección de red de un cliente, no se aplica fake lag para ese
-cliente.
-
-El plugin `player_fakelag` está pensado para L4D2 y usa lógica de equipos
-Survivor/Infected mediante Left 4 DHooks.
-
-## Documentación adicional
-
-Ver:
-
-```text
-docs/DEVELOPMENT.md
-```
-
-## Consideraciones importantes
-
-Esta extensión depende de internals del motor Source. Si cambian las firmas de
-`NET_LagPacket` o `net_time`, puede fallar al cargar.
-
-El fake lag se aplica a jugadores humanos soportados. Los fake clients/bots no
-son targets válidos.
-
-El sistema trabaja retrasando paquetes por dirección de red. Si no se puede
-resolver la dirección de red de un cliente, no se aplica fake lag para ese
-cliente.
-
-El plugin `player_fakelag` está pensado para L4D2 y usa lógica de equipos
-Survivor/Infected mediante Left 4 DHooks.
-
-## Documentación adicional
-
-Ver:
-
-```text
-docs/DEVELOPMENT.md
-```
-
-## Compilación con Ubuntu 26.04
-
-El build Linux x86 admite GCC 15. Con GCC 14 o posterior se conserva `-Werror`
-y se degrada únicamente `template-id-cdtor`, emitida por los constructores
-antiguos del HL2SDK. La excepción no se aplica a Clang ni a versiones de GCC
-anteriores. El SDK y el código de la extensión conservan el resto de sus gates.
-
-La definicion `_stricmp=stricmp` coincide con el SDK L4D2 actual y evita una
-redefinicion fatal; `stricmp` sigue resolviendose a `strcasecmp`. El build se
-comprueba tambien con el SDK anterior, que no declara ese alias.
-
-Compatibilidad comprobada: ejecución en Ubuntu 26.04 amd64 con las bibliotecas
-i386 del motor L4D2 y compilación ELF32 con GCC/G++ 15.2.0 y multilib. El entorno
-verificado usa glibc 2.43, libstdc++6 y libgcc-s1 en ambas arquitecturas; sus
-paquetes de runtime proceden de GCC 16 y no cambian el compilador GCC 15 usado
-para generar el candidato. Python 3.14.4 y AMBuild conducen la compilación;
-SourceMod 1.12, Metamod 1.12 y HL2SDK L4D2 son dependencias de desarrollo.
-
-Los ZIP Linux publicados por CI se generan en Ubuntu 22.04 con GCC 11.4.0;
-son artefactos distintos de los candidatos compilados localmente con GCC 15.2.
-Ambos se validan como ELF32: compatibilidad de carga no acredita pruebas con
-jugadores ni establece esas versiones como mínimos del producto. Registrar el
-commit de cada SDK y los SHA256 del ZIP al repetir una validación.
+Extensión SourceMod para añadir latencia y pérdida de paquetes a jugadores
+humanos de **Left 4 Dead 2**. Incluye `player_fakelag`, con comandos, balance,
+votaciones y persistencia temporal. Deriva de
+[ProdigySim/custom_fakelag](https://github.com/ProdigySim/custom_fakelag).
+
+## Estado actual
+
+- Motores admitidos: L4D2 2.2.4.3 x86, Linux y Windows, únicamente las
+  [identidades verificadas](docs/SDK_RUNTIME_REFERENCES.md). Una firma encontrada
+  no basta para habilitar otro binario.
+- Carga y recarga con Left4DHooks activo comprobadas en Windows para ese motor.
+- Con `sv_lan 1` se bloquea fakelag y se limpian perfiles, colas y pérdida.
+  La excepción `sm_custom_fakelag_allow_lan 1` permite pruebas explícitas.
+  Volver a LAN 0 no recupera perfiles ni persistencia del plugin.
+- La política LAN tiene regresiones y CI aprobados; su aceptación en SRCDS real
+  sigue pendiente. El fallo de interfaces Steam también se reproduce en vanilla:
+  bloquear fakelag no lo corrige.
+
+La [matriz de validación](docs/VALIDATION.md) separa compilación, pruebas aisladas
+y pruebas en servidor, e identifica las revisiones correspondientes.
+
+## Instalación
+
+Usa el ZIP de la plataforma adecuada o compílalo según
+[desarrollo local](docs/DEVELOPMENT.md). Copia `addons/` sobre el servidor y
+actualiza **extensión, plugin e includes juntos**. El paquete contiene:
+
+- `extensions/custom_fakelag.ext.so` o `.ext.dll`.
+- `plugins/player_fakelag.smx`, sus fuentes e includes propios.
+- `gamedata/custom_fakelag.games.txt` y traducciones.
+
+Las rutas anteriores son relativas a `addons/sourcemod/`. El diagnóstico Steam
+es independiente y se publica como artefacto separado, sin autoload.
+
+Entorno comprobado: SourceMod 1.12 y Metamod 1.12. El plugin usa BuiltinVotes y
+Left4DHooks; la extensión puede utilizarse desde otros plugins sin esa capa.
+Los includes externos de desarrollo y el runtime de Valve no se distribuyen
+dentro del ZIP. En Linux se requieren las bibliotecas i386 del gameserver.
+
+## Configuración
+
+| ConVar de extensión | Predeterminado | Función |
+|---|---:|---|
+| `sm_custom_fakelag_allow_lan` | 0 | Excepción explícita para pruebas con LAN 1 |
+| `sm_custom_fakelag_loss_mode` | 0 | 0: Bernoulli; 1: Gilbert-Elliott |
+| `sm_custom_fakelag_detour_mode` | 0 | 0: bajo demanda; 1: siempre activo si LAN lo permite |
+| `sm_custom_fakelag_debug` | 0 | Log interno de paquetes |
+| `sm_custom_fakelag_debug_hold_interval` | 5.0 | Intervalo mínimo de logs repetidos por socket, en segundos |
+
+El plugin genera `cfg/sourcemod/player_fakelag.cfg`. Sus ajustes de muestreo son
+`sm_fakelag_sample_window=5`, `sm_fakelag_sample_interval=1.0` y
+`sm_fakelag_debug=0`. Aplica `sm_fakelag_loss_mode_default=1` al ejecutar configs;
+por tanto el modo efectivo puede diferir del valor inicial de la extensión.
+Los parámetros de pérdida están en [la fórmula del plugin](docs/PLAYER_FAKELAG_PACKET_LOSS_MODEL.md).
+
+Cambiar el modo de pérdida resetea el estado de la extensión. `player_fakelag`
+puede reconstruir sus perfiles tras ese cambio; el bloqueo LAN descarta también
+esas restauraciones y tiene prioridad sobre `always-on`.
+
+## Comandos
+
+| Comando | Uso |
+|---|---|
+| `sm_fakelag <jugador> <ms>` | Asignar latencia; requiere permiso de configuración |
+| `sm_fakelag_balance <global\|pairs>` | Aplicar balance global o por parejas |
+| `sm_fakelag_preview <global\|pairs>` | Previsualizar balance |
+| `sm_fakelag_clear_all` / `sm_fakelag_list` | Limpiar todos los perfiles / listar activos |
+| `sm_fakelag_clear [jugador]` | Limpiar el propio; otro jugador requiere permisos |
+| `sm_fakelag_status [jugador]` | Consultar el propio; otro jugador requiere permisos |
+| `sm_fakelag_compare <jugador> [jugador]` | Comparar latencias |
+| `sm_fakelag_vote <global\|pairs>` | Solicitar votación de balance |
+
+Los objetivos admiten nombre o `#userid`. El balance global toma el mayor ping
+base elegible; el balance por parejas ordena Survivors/Infected por ping y
+compensa al de menor latencia de cada pareja. Los que quedan sin pareja se limpian.
+
+Los perfiles se guardan por Account ID en memoria del plugin, sin base de datos,
+para reconexión o cambio de equipo. El bloqueo LAN los olvida, incluso si el
+cliente ya se desconectó, y cancela restauraciones/votos pendientes. La descarga
+del plugin pide reset total de la extensión.
+
+## API y arquitectura
+
+- La extensión posee perfiles activos por sesión, paquetes propios y modelo de
+  pérdida. Intercepta `NET_LagPacket`, retiene tráfico entrante y restaura sobre
+  el buffer prestado del motor. No copia el lector sin preparar.
+- El plugin decide balance y persistencia. Las declaraciones completas están en
+  [custom_fakelag.inc](https://github.com/AoC-Gamers/Custom-Fakelag/blob/develop/scripting/include/custom_fakelag.inc) y
+  [player_fakelag.inc](https://github.com/AoC-Gamers/Custom-Fakelag/blob/develop/scripting/include/player_fakelag.inc).
+
+La API principal permite asignar/consultar/limpiar perfiles, resetear, consultar
+clientes y elegir modelo de pérdida. El forward previo de latencia puede vetar
+normalmente con Handled/Stop; errores de ejecución o valores inválidos abortan
+la operación. Latencia válida: 0–10000 ms; pérdida: 0–100 %.
+
+`CFakeLag_IsLanBlocked()` consulta la política. Al entrar en ella,
+`CFakeLag_OnLanPolicyChanged(true)` avisa después de limpiar; los consumidores
+con persistencia deben descartarla. Las asignaciones no nulas bloqueadas generan
+un error nativo. Más detalles: [política LAN](docs/LAN_POLICY.md).
+
+## Documentación
+
+| Tema | Referencia |
+|---|---|
+| Compilar, probar y empaquetar | [Desarrollo](docs/DEVELOPMENT.md), [build](docs/build-system.md) |
+| Estado, CI y evidencia | [Validación](docs/VALIDATION.md) |
+| Política LAN | [Contrato y límites](docs/LAN_POLICY.md) |
+| Medición de latencia | [Referencia](docs/PLAYER_FAKELAG_LATENCY_REFERENCE.md) |
+| Pérdida: severidad y distribución | [Plugin](docs/PLAYER_FAKELAG_PACKET_LOSS_MODEL.md), [extensión](docs/CUSTOM_FAKELAG_PACKET_LOSS_MODES.md) |
+| ABI y buffers | [SDK/runtime](docs/SDK_RUNTIME_REFERENCES.md) |
+| Diagnóstico Steam opcional | [Steam Lifecycle Debug](https://github.com/AoC-Gamers/Custom-Fakelag/blob/develop/diagnostics/steam_lifecycle_debug/README.md) |

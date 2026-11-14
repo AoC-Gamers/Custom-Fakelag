@@ -1,5 +1,9 @@
 # Steam Lifecycle Debug: validación Windows
 
+> Informe histórico de las revisiones indicadas. Estado vigente y pendientes:
+> [matriz de validación](VALIDATION.md). La política LAN actual y el debug
+> apagado por defecto no se atribuyen retroactivamente a estos ensayos.
+
 14-11-2026, America/Santiago. Extensión diagnóstica independiente, Windows x86.
 
 ## Resultado

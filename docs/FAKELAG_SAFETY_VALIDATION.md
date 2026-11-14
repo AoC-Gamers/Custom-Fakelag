@@ -1,5 +1,9 @@
 # Custom-Fakelag: cambios y validación
 
+> Informe histórico de las revisiones indicadas. Estado vigente y pendientes:
+> [matriz de validación](VALIDATION.md). La política LAN actual y el debug
+> apagado por defecto no se atribuyen retroactivamente a estos ensayos.
+
 > Informe histórico de la primera entrega (`9ab5632`). El estado actual,
 > incluido el adaptador Linux y las pruebas posteriores en SRCDS, está en
 > [integración del motor](ENGINE_INTEGRATION_VALIDATION.md). Las referencias a

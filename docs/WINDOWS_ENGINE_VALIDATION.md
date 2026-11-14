@@ -1,5 +1,9 @@
 # Validación del adaptador Windows
 
+> Informe histórico de las revisiones indicadas. Estado vigente y pendientes:
+> [matriz de validación](VALIDATION.md). La política LAN actual y el debug
+> apagado por defecto no se atribuyen retroactivamente a estos ensayos.
+
 Fecha: 2026-11-13. Base `develop`: `7c72156974257b5a2d460af049409b04176c5332`.
 Rama local: `feat/windows-engine-validation`. Se clonó el repositorio bajo
 `work/Custom-Fakelag`: no se encontró checkout previo en las ubicaciones

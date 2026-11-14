@@ -1,6 +1,6 @@
 # Referencias SDK y runtime
 
-Actualizado: 2026-11-13. Existe un adaptador real para **un módulo Linux x86
+Actualizado: 2026-11-14. Existe un adaptador real para **un módulo Linux x86
 identificado**. Windows tiene un adaptador PE32 para una identidad exacta, comprobado en SRCDS
 Windows con UDP y un cliente Steam real. Otros módulos se rechazan.
 Véase [validación Windows](WINDOWS_ENGINE_VALIDATION.md). No hay una ConVar que salte esta comprobación.
@@ -96,8 +96,9 @@ direcciones, regiones y SDK. Firmas Windows únicas: gamedata no cambió.
 [Manifiesto Windows](runtime/windows-engine-2.2.4.3.json),
 [evidencia runtime](runtime/windows-runtime-2026-11-13.json) y
 [validación y límites](WINDOWS_ENGINE_VALIDATION.md).
-El cierre del proceso completo falla también en una instancia nueva sin mods;
-no se presenta como aprobado. La validación permite ahora el detour E9 de cinco
+La investigación posterior reprodujo el fallo tras mapa/desconexión con LAN 1
+también en vanilla; LAN 0 cerró correctamente en los ensayos comparativos. Los
+antiguos c0000409 siguen sin atribución completa; véase [validación](VALIDATION.md). La validación permite ahora el detour E9 de cinco
 bytes de Left4DHooks en FillServerInfo sin exigir su descarga: el resto del código,
 la identidad de disco y el contrato de paquetes siguen exactos.
 [Política, regresiones y repetición de aceptación](WINDOWS_LOAD_ORDER.md).
@@ -106,4 +107,4 @@ Para admitir otro módulo se debe registrar su identidad, verificar callers,
 capacidad y lector, extender explícitamente el adaptador y repetir pruebas.
 Cambiar únicamente `IsRuntimeValidated()` a true sigue siendo incorrecto.
 
-Matriz y evidencia: [informe de integración](ENGINE_INTEGRATION_VALIDATION.md).
+Matriz vigente y evidencia por revisión: [VALIDATION.md](VALIDATION.md).
