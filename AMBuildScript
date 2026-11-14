@@ -469,7 +469,9 @@ BuildScripts = [
   os.path.join('extension', 'AMBuilder'),
 ]
 
-if builder.backend == 'amb2':
+if builder.options.steam_lifecycle_debug:
+  BuildScripts = [os.path.join('diagnostics', 'steam_lifecycle_debug', 'AMBuilder')]
+elif builder.backend == 'amb2':
   BuildScripts += [
     'PackageScript',
   ]

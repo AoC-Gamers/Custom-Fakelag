@@ -1,0 +1,11 @@
+import os
+
+project = Extension.HL2Project(builder, 'steam_lifecycle_debug.ext')
+project.sources += ['extension.cpp', os.path.join(Extension.sm_root, 'public', 'smsdk_ext.cpp')]
+for sdk_name in Extension.sdks:
+    sdk = Extension.sdks[sdk_name]
+    Extension.HL2Config(project, 'steam_lifecycle_debug.ext.' + sdk.ext, sdk)
+tasks = builder.Add(project)
+destination = builder.AddFolder(os.path.join('package', 'addons', 'sourcemod', 'extensions'))
+for task in tasks:
+    builder.AddCopy(task.binary, destination)
