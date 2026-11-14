@@ -139,6 +139,17 @@ def main():
         values=re.findall(r'"sv_lan"\s*=\s*"([01])"',text)
         if not values or int(values[-1])!=a.lan: raise RuntimeError('Actual sv_lan mismatch')
         event('lan_verified',phase=phase,value=int(values[-1]))
+    def verify_default():
+        deadline=time.monotonic()+10
+        while alive():
+            text=record('sm_steam_lifecycle_debug')
+            values=re.findall(r'"sm_steam_lifecycle_debug"\s*=\s*"([012])"',text)
+            if values:
+                if values[-1]!='2': raise RuntimeError('Observed default is not 2')
+                return text
+            if time.monotonic()>deadline: raise TimeoutError('Default query response timeout')
+            time.sleep(.25)
+        raise RuntimeError('Child exited during default query')
     def preflight():
         def trace_bytes(): return trace.read_bytes() if trace.exists() else b''
         default=record('sm_steam_lifecycle_debug')
@@ -200,8 +211,7 @@ def main():
         wait_map('c1m1_hotel'); verify_lan('initial')
         if a.row=='C':
             record('sm exts load steam_lifecycle_debug')
-            query = record('sm_steam_lifecycle_debug')
-            if not re.search(r'"sm_steam_lifecycle_debug"\s*=\s*"2"',query): raise RuntimeError('Default is not 2')
+            verify_default()
             result['observer_mode'] = 2
         for command in ('meta list','sm exts list','sm plugins list','status'): record(command)
         snapshot=observe(console.process.pid); result['ready_observation']=snapshot
