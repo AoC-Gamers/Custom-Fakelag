@@ -33,6 +33,7 @@ def main():
     p.add_argument('--lan', type=int, choices=[0,1], required=True)
     p.add_argument('--id', required=True)
     p.add_argument('--preflight', action='store_true')
+    p.add_argument('--gate-before-map', action='store_true', help='Pause after activity for an owned debugger attachment')
     a = p.parse_args()
     root = a.root.resolve(); game = root / 'left4dead2'
     assert (game / '.custom-fakelag-isolated').is_file()
@@ -208,9 +209,20 @@ def main():
             preflight();result['quit_requested']=time.time();console.command('quit');save('waiting_for_actual_exit')
         else:
             wait_client('ready_for_client',1);activity('initial_activity')
+            if a.gate_before_map:
+                save('ready_for_debugger_before_map')
+                deadline=time.monotonic()+600
+                while alive() and '@map' not in commands.read_text():
+                    if time.monotonic()>deadline: raise TimeoutError('Debugger gate timeout')
+                    time.sleep(.2)
+                event('debugger_gate_released')
             event('changelevel_requested',map='c1m2_streets');record('changelevel c1m2_streets')
             wait_map('c1m2_streets');verify_lan('after_changelevel');activity('map_activity')
-            text=record('status');users=re.findall(r'^#\s*(\d+)\s+\d+\s+".*?"\s+STEAM_[01]:[01]:\d+',text,re.M)
+            text=record('status')
+            # Console snapshots include previous commands in their scrollback.
+            # Parse only the latest status response, never count stale rows.
+            latest=text.rsplit('hostname:',1)[-1]
+            users=re.findall(r'^#\s*(\d+)\s+\d+\s+".*?"\s+STEAM_[01]:[01]:\d+',latest,re.M)
             if len(users)!=1: raise RuntimeError('Exactly one authenticated userid required for kick')
             event('kick_requested',userid=int(users[0]));record('kickid '+users[0]+' private_steam_lifecycle_trial')
             save('after_kick');time.sleep(3)
