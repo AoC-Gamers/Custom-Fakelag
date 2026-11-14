@@ -41,6 +41,9 @@ class OwnedSteamProcess:
         if created < datetime.fromisoformat(receipt['started_utc']).timestamp():
             raise RuntimeError('Refusing a process predating the owned Steam launch')
     def poll(self):
+        # ExitProcess may publish its requested status before DLL detach has
+        # finished. Only a signaled process handle proves actual completion.
+        if self.k.WaitForSingleObject(self.handle, 0) == 258: return None
         code = W.DWORD()
         if not self.k.GetExitCodeProcess(self.handle, C.byref(code)): raise C.WinError(C.get_last_error())
         return None if code.value == 259 else code.value

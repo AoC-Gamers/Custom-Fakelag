@@ -21,6 +21,20 @@ from windows_load_order_session import observe
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
+def actual_exit(process):
+    """Read a completed child; never turn a live process or timeout into success."""
+    code = process.poll()
+    if code is None: return None
+    kernel = C.WinDLL('kernel32', use_last_error=True)
+    kernel.GetExitCodeProcess.argtypes = [W.HANDLE, C.POINTER(W.DWORD)]
+    kernel.WaitForSingleObject.argtypes = [W.HANDLE, W.DWORD]
+    native = W.DWORD()
+    if not kernel.GetExitCodeProcess(int(process._handle), C.byref(native)): raise C.WinError(C.get_last_error())
+    return {'server_exit_code': code, 'server_exit_hex': f'0x{code & 0xffffffff:08x}',
+            'win32_exit_code': native.value,
+            'process_handle_signaled': kernel.WaitForSingleObject(int(process._handle), 0) == 0,
+            'exit_codes_agree': native.value == (code & 0xffffffff)}
+
 def configure(game, row):
     if not (game / '.custom-fakelag-isolated').is_file(): raise RuntimeError('Private marker missing')
     mm = game / 'addons/metamod.vdf'
@@ -157,6 +171,36 @@ def main():
             for command in pending.splitlines():
                 if command == '@run': should_run = True
                 elif command == '@snapshot': record(None); save(result['state'])
+                elif command.startswith('@wait '):
+                    seconds = float(command.split()[1])
+                    if not 0 <= seconds <= 10: raise ValueError('Wait must be between zero and ten seconds')
+                    event('sequence_wait', seconds=seconds); time.sleep(seconds)
+                elif command == '@disconnect_human':
+                    text = record('status')
+                    users = re.findall(r'^#\s*(\d+)\s+\d+\s+".*?"\s+STEAM_[01]:[01]:\d+', text, re.M)
+                    if not users: raise RuntimeError('No authenticated human to disconnect')
+                    record('kickid ' + users[-1] + ' private_shutdown_sequence')
+                    time.sleep(2)
+                    text = record('status')
+                    matches = re.findall(r'players\s*:\s*(\d+) humans', text)
+                    if not matches or int(matches[-1]) != 0: raise RuntimeError('Sequence disconnect not confirmed')
+                    event('sequence_disconnect_verified', humans=0); save(result['state'])
+                elif command == '@reload_cf':
+                    record('sm plugins unload disabled/windows_shutdown_consumer')
+                    listing = record('sm exts list')
+                    ids = re.findall(r'^\[(\d+)\] Custom Fakelag \(', listing, re.M)
+                    if not ids: raise RuntimeError('Actual Custom-Fakelag extension id not found')
+                    before = observe(console.process.pid)
+                    record('sm exts unload ' + str(int(ids[-1])))
+                    after = observe(console.process.pid)
+                    if any(m['name'].lower() == 'custom_fakelag.ext.dll' for m in after['modules']):
+                        raise RuntimeError('Custom-Fakelag did not actually unload')
+                    if after['lag']['bytes'][:10] != '558bec5157': raise RuntimeError('Lag entry not restored on unload')
+                    if after['fill']['bytes'] != before['fill']['bytes']: raise RuntimeError('Left4DHooks Fill entry changed during CF unload')
+                    event('reload_unloaded_verified', observation=after)
+                    record('sm exts load custom_fakelag')
+                    record('sm plugins load disabled/windows_shutdown_consumer')
+                    record('cf_shutdown_state'); save(result['state'])
                 elif command.strip(): record(command); save(result['state'])
             if should_run:
                 should_run = False
@@ -188,7 +232,11 @@ def main():
                     text = record('status')
                     matches = re.findall(r'players\s*:\s*(\d+) humans', text)
                     result['humans_after_disconnect'] = int(matches[-1]) if matches else None
-                    if result['humans_after_disconnect'] != 0: raise RuntimeError('Disconnect not confirmed')
+                    if result['humans_after_disconnect'] != 0:
+                        try: console.process.wait(timeout=5)
+                        except subprocess.TimeoutExpired: raise RuntimeError('Disconnect not confirmed')
+                        result['shutdown_trigger'] = 'unexpected exit during real-client disconnect, before quit'
+                        event('unexpected_exit_during_disconnect'); break
                 result['before_quit_observation'] = observe(console.process.pid)
                 result['quit_requested'] = time.time(); result['who_terminated'] = 'server quit command'
                 console.command('quit'); save('waiting_for_actual_exit')
@@ -216,6 +264,11 @@ def main():
         return 0
     except Exception as error:
         result['collector_error'] = str(error)
+        if console:
+            try: console.process.wait(timeout=5)
+            except subprocess.TimeoutExpired: pass
+            finished_exit = actual_exit(console.process)
+            if finished_exit: result.update(finished_exit)
         result['server_still_alive'] = console is not None and console.process.poll() is None
         event('collector_error', error=str(error)); save('collector_error')
         # Never silently turn a collector error into a successful server exit,
