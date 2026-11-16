@@ -8,11 +8,12 @@ no se atribuyen automáticamente a commits posteriores.
 
 La [entrega original del 16-11](PLUGIN_PENDING_VALIDATION.md) se integró en
 `develop` como `77f1200`; su [CI pasó](https://github.com/AoC-Gamers/Custom-Fakelag/actions/runs/43904516633).
-La revisión posterior de tablas se corrigió localmente:
-[FL-02, informes efectivos](BALANCE_REPORT_VALIDATION.md). Tiene 177 aserciones
-por idioma, las 44 regresiones anteriores y cinco pruebas del muestreador.
-CI nuevo, clientes Linux/Windows y BuiltinVotes real siguen pendientes.
-No se publicó ni desplegó esa nueva rama.
+La revisión posterior de tablas se integró como `3006a70`:
+[FL-02, informes efectivos](BALANCE_REPORT_VALIDATION.md), con
+[CI aprobado](https://github.com/AoC-Gamers/Custom-Fakelag/actions/runs/43915079651) y canal develop publicado.
+Tiene 177 aserciones por idioma, las 44 regresiones anteriores y cinco pruebas
+del muestreador en el arnés aislado. Clientes Linux/Windows y BuiltinVotes real
+siguen pendientes. No se desplegó en servidores.
 
 ## Estado actual
 

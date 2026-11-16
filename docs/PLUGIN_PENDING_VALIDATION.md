@@ -14,9 +14,10 @@ entrega local original. Después se integró `77f1200` en `develop` y pasó el
 No equivale a aceptación con clientes.
 
 La revisión posterior detectó el remanente FL-02 de las tablas. Su
-[corrección y evidencia nuevas](BALANCE_REPORT_VALIDATION.md) están en una rama
-local: CI remoto nuevo y pruebas con clientes reales siguen pendientes.
-El runner de la receta inferior incorpora ahora las comprobaciones de tablas.
+[corrección y evidencia nuevas](BALANCE_REPORT_VALIDATION.md) se integraron después
+en `develop` como `3006a70`, con [CI aprobado](https://github.com/AoC-Gamers/Custom-Fakelag/actions/runs/43915079651).
+Las pruebas con clientes reales siguen pendientes. El runner de la receta
+inferior incorpora ahora las comprobaciones de tablas.
 
 ## Correcciones
 

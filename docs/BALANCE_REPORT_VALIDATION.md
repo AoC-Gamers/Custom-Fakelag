@@ -2,7 +2,10 @@
 
 Base: `77f1200512f81380e6e9b829c17f14efaf00f3b2`, coincidente con `develop`
 al iniciar. Corrección: `baab61b`; arnés: `aafa0f5`. Trabajo local en
-`codex/fakelag-effective-tables`. No se publicó ni desplegó esta entrega.
+`codex/fakelag-effective-tables`. Ese fue el estado de la entrega local.
+Tras autorización, se integró `3006a70` en `develop` y pasó el
+[CI de Linux, Windows y SourcePawn](https://github.com/AoC-Gamers/Custom-Fakelag/actions/runs/43915079651),
+incluida la publicación automática del canal. No se desplegó en servidores.
 
 ## Reproducción y corrección
 
@@ -108,7 +111,9 @@ El consumidor controla un userid y se desarma al desconectar o cambiar mapa. No
 omite la validación del motor ni el bloqueo LAN. Sus comandos son de consola de
 servidor. No fue ejecutado aquí con humanos: solo se verificó su compilación.
 
-CI nuevo **no ejecutado**: el encargo excluye publicar releases y el push a
-`develop` publica el canal automáticamente. El CI de `77f1200` es evidencia de la
-entrega anterior, no de esta rama. La implementación de FL-02 queda cubierta por
-compilación y filas comprobadas; la aceptación operativa completa sigue pendiente.
+Al cerrar la fase local, el CI nuevo no se había ejecutado porque el encargo
+excluía publicar releases. La autorización posterior de push permitió ejecutar el
+workflow `43915079651` de `3006a70`, aprobado en todos sus jobs. El CI compila los
+consumidores y ejecuta las suites nativas; no ejecuta el SRCDS privado del arnés.
+La implementación de FL-02 queda cubierta por compilación y filas comprobadas;
+la aceptación operativa con clientes reales sigue pendiente.
