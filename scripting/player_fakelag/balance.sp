@@ -1,517 +1,4 @@
-const int FAKELAG_GLOBAL_TABLE_INNER_WIDTH = 64;
-const int FAKELAG_PAIR_TABLE_INNER_WIDTH   = 88;
-const int FAKELAG_GLOBAL_NAME_WIDTH		   = 12;
-const int FAKELAG_PAIR_NAME_WIDTH		   = 14;
-
-enum struct FakelagConsoleName
-{
-	char display[64];
-	bool usesUserIdFallback;
-	int	 client;
-}
-
-enum struct FakelagConsoleReport
-{
-	int innerWidth;
-	int legendClients[MAXPLAYERS + 1];
-	int legendCount;
-}
-
-enum FakelagBalanceAction
-{
-	FakelagBalanceAction_Same = 0,
-	FakelagBalanceAction_Clear,
-	FakelagBalanceAction_Adjust
-}
-
-stock void
-	FakelagResetConsoleReport(FakelagConsoleReport report)
-{
-	report.innerWidth  = FAKELAG_GLOBAL_TABLE_INNER_WIDTH;
-	report.legendCount = 0;
-}
-
-stock void FakelagRegisterConsoleLegendClient(FakelagConsoleReport report, int client)
-{
-	if (client <= 0 || client > MaxClients)
-	{
-		return;
-	}
-
-	for (int index = 0; index < report.legendCount; index++)
-	{
-		if (report.legendClients[index] == client)
-		{
-			return;
-		}
-	}
-
-	if (report.legendCount >= sizeof(report.legendClients))
-	{
-		return;
-	}
-
-	report.legendClients[report.legendCount++] = client;
-}
-
-stock void FakelagPopulateConsolePanelFooter(ConsolePanel panel, int client, FakelagConsoleReport report)
-{
-	char legendAvg[256];
-	char legendRaw[256];
-	SetGlobalTransTarget(client);
-	Format(legendAvg, sizeof(legendAvg), "%t", "BalanceTableLegendAvg");
-	Format(legendRaw, sizeof(legendRaw), "%t", "BalanceTableLegendRaw");
-	ConsolePanel_AddFooterLine(panel, legendAvg);
-	ConsolePanel_AddFooterLine(panel, legendRaw);
-
-	for (int index = 0; index < report.legendCount; index++)
-	{
-		int legendClient = report.legendClients[index];
-		if (!IsClientInGame(legendClient))
-		{
-			continue;
-		}
-
-		char originalName[64];
-		char trimmedOriginalName[96];
-		char legendLine[192];
-		GetClientName(legendClient, originalName, sizeof(originalName));
-		ReplaceString(originalName, sizeof(originalName), "|", "/");
-		ReplaceString(originalName, sizeof(originalName), "\n", " ");
-		ReplaceString(originalName, sizeof(originalName), "\r", " ");
-		ConsolePanel_BuildUtf8TrimmedText(originalName, trimmedOriginalName, sizeof(trimmedOriginalName), 24);
-		Format(legendLine, sizeof(legendLine), "#%d = (%s)", GetClientUserId(legendClient), trimmedOriginalName);
-		ConsolePanel_AddFooterUtf8Line(panel, legendLine);
-	}
-}
-
-stock void FakelagInitializeGlobalConsolePanel(ConsolePanel panel, FakelagConsoleReport report, int client, const char[] title)
-{
-	char columnPlayer[32];
-	char columnAvg[16];
-	char columnRaw[16];
-	char columnResult[32];
-	char columnLoss[16];
-	Format(columnPlayer, sizeof(columnPlayer), "%T", "ConsoleColumnPlayer", client);
-	Format(columnAvg, sizeof(columnAvg), "%T", "ConsoleColumnAvg", client);
-	Format(columnRaw, sizeof(columnRaw), "%T", "ConsoleColumnRaw", client);
-	Format(columnResult, sizeof(columnResult), "%T", "ConsoleColumnResult", client);
-	Format(columnLoss, sizeof(columnLoss), "%T", "ConsoleColumnLoss", client);
-
-	ConsolePanel_Reset(panel);
-	ConsolePanel_SetWidth(panel, FAKELAG_GLOBAL_TABLE_INNER_WIDTH);
-	ConsolePanel_AddHeaderLine(panel, title);
-	panel.table.columnCount = 0;
-	panel.table.rowCount = 0;
-	panel.table.buildingRow = false;
-
-	strcopy(panel.table.columns[0].title, sizeof(panel.table.columns[0].title), columnPlayer);
-	panel.table.columns[0].width = 12;
-	panel.table.columns[0].alignment = ConsoleTableAlignment_Left;
-	panel.table.columns[0].typeHint = ConsoleTableCellType_String;
-
-	strcopy(panel.table.columns[1].title, sizeof(panel.table.columns[1].title), columnAvg);
-	panel.table.columns[1].width = 5;
-	panel.table.columns[1].alignment = ConsoleTableAlignment_Right;
-	panel.table.columns[1].typeHint = ConsoleTableCellType_Float;
-
-	strcopy(panel.table.columns[2].title, sizeof(panel.table.columns[2].title), columnRaw);
-	panel.table.columns[2].width = 5;
-	panel.table.columns[2].alignment = ConsoleTableAlignment_Right;
-	panel.table.columns[2].typeHint = ConsoleTableCellType_Float;
-
-	strcopy(panel.table.columns[3].title, sizeof(panel.table.columns[3].title), columnResult);
-	panel.table.columns[3].width = 12;
-	panel.table.columns[3].alignment = ConsoleTableAlignment_Left;
-	panel.table.columns[3].typeHint = ConsoleTableCellType_String;
-
-	strcopy(panel.table.columns[4].title, sizeof(panel.table.columns[4].title), columnLoss);
-	panel.table.columns[4].width = 4;
-	panel.table.columns[4].alignment = ConsoleTableAlignment_Right;
-	panel.table.columns[4].typeHint = ConsoleTableCellType_Int;
-	panel.table.columnCount = 5;
-	FakelagPopulateConsolePanelFooter(panel, client, report);
-}
-
-stock void FakelagAddGlobalConsolePanelRow(ConsolePanel panel, FakelagConsoleReport report, int client, int target, float displayPing, float rawPing, FakelagBalanceAction action, float compensation)
-{
-	char name[64];
-	char result[32];
-	int packetLossPercent = 0;
-	FakelagGetConsoleClientName(report, target, name, sizeof(name), FAKELAG_GLOBAL_NAME_WIDTH);
-
-	SetGlobalTransTarget(client);
-	switch (action)
-	{
-		case FakelagBalanceAction_Adjust:
-		{
-			Format(result, sizeof(result), "%t", "BalanceTableActionAdjust", RoundToNearest(compensation));
-			packetLossPercent = FakelagResolvePacketLossPercent(rawPing, compensation, rawPing + compensation);
-		}
-		case FakelagBalanceAction_Clear:
-		{
-			Format(result, sizeof(result), "%t", "BalanceTableActionClear");
-		}
-		default:
-		{
-			Format(result, sizeof(result), "%t", "BalanceTableActionSame");
-		}
-	}
-
-	int rowIndex = panel.table.rowCount;
-	panel.table.rows[rowIndex].cellCount = 5;
-
-	panel.table.rows[rowIndex].cells[0].type = ConsoleTableCellType_String;
-	strcopy(panel.table.rows[rowIndex].cells[0].stringValue, sizeof(panel.table.rows[rowIndex].cells[0].stringValue), name);
-
-	panel.table.rows[rowIndex].cells[1].type = ConsoleTableCellType_Float;
-	panel.table.rows[rowIndex].cells[1].floatValue = displayPing;
-	panel.table.rows[rowIndex].cells[1].floatPrecision = 1;
-
-	panel.table.rows[rowIndex].cells[2].type = ConsoleTableCellType_Float;
-	panel.table.rows[rowIndex].cells[2].floatValue = rawPing;
-	panel.table.rows[rowIndex].cells[2].floatPrecision = 1;
-
-	panel.table.rows[rowIndex].cells[3].type = ConsoleTableCellType_String;
-	strcopy(panel.table.rows[rowIndex].cells[3].stringValue, sizeof(panel.table.rows[rowIndex].cells[3].stringValue), result);
-
-	panel.table.rows[rowIndex].cells[4].type = ConsoleTableCellType_Int;
-	panel.table.rows[rowIndex].cells[4].intValue = packetLossPercent;
-
-	panel.table.rowCount++;
-}
-
-stock void FakelagInitializePairConsolePanel(ConsolePanel panel, FakelagConsoleReport report, int client, const char[] title)
-{
-	char columnSurvivor[32];
-	char columnInfected[32];
-	char columnAvg[16];
-	char columnRaw[16];
-	char columnResult[32];
-	char columnLoss[16];
-	Format(columnSurvivor, sizeof(columnSurvivor), "%T", "ConsoleColumnSurvivor", client);
-	Format(columnInfected, sizeof(columnInfected), "%T", "ConsoleColumnInfected", client);
-	Format(columnAvg, sizeof(columnAvg), "%T", "ConsoleColumnAvg", client);
-	Format(columnRaw, sizeof(columnRaw), "%T", "ConsoleColumnRaw", client);
-	Format(columnResult, sizeof(columnResult), "%T", "ConsoleColumnResult", client);
-	Format(columnLoss, sizeof(columnLoss), "%T", "ConsoleColumnLoss", client);
-
-	ConsolePanel_Reset(panel);
-	ConsolePanel_SetWidth(panel, FAKELAG_PAIR_TABLE_INNER_WIDTH);
-	ConsolePanel_AddHeaderLine(panel, title);
-	panel.table.columnCount = 0;
-	panel.table.rowCount = 0;
-	panel.table.buildingRow = false;
-
-	strcopy(panel.table.columns[0].title, sizeof(panel.table.columns[0].title), columnSurvivor);
-	panel.table.columns[0].width = 12;
-	panel.table.columns[0].alignment = ConsoleTableAlignment_Left;
-	panel.table.columns[0].typeHint = ConsoleTableCellType_String;
-
-	strcopy(panel.table.columns[1].title, sizeof(panel.table.columns[1].title), columnAvg);
-	panel.table.columns[1].width = 5;
-	panel.table.columns[1].alignment = ConsoleTableAlignment_Right;
-	panel.table.columns[1].typeHint = ConsoleTableCellType_Float;
-
-	strcopy(panel.table.columns[2].title, sizeof(panel.table.columns[2].title), columnRaw);
-	panel.table.columns[2].width = 5;
-	panel.table.columns[2].alignment = ConsoleTableAlignment_Right;
-	panel.table.columns[2].typeHint = ConsoleTableCellType_Float;
-
-	strcopy(panel.table.columns[3].title, sizeof(panel.table.columns[3].title), columnInfected);
-	panel.table.columns[3].width = 12;
-	panel.table.columns[3].alignment = ConsoleTableAlignment_Left;
-	panel.table.columns[3].typeHint = ConsoleTableCellType_String;
-
-	strcopy(panel.table.columns[4].title, sizeof(panel.table.columns[4].title), columnAvg);
-	panel.table.columns[4].width = 5;
-	panel.table.columns[4].alignment = ConsoleTableAlignment_Right;
-	panel.table.columns[4].typeHint = ConsoleTableCellType_Float;
-
-	strcopy(panel.table.columns[5].title, sizeof(panel.table.columns[5].title), columnRaw);
-	panel.table.columns[5].width = 5;
-	panel.table.columns[5].alignment = ConsoleTableAlignment_Right;
-	panel.table.columns[5].typeHint = ConsoleTableCellType_Float;
-
-	strcopy(panel.table.columns[6].title, sizeof(panel.table.columns[6].title), columnResult);
-	panel.table.columns[6].width = 18;
-	panel.table.columns[6].alignment = ConsoleTableAlignment_Left;
-	panel.table.columns[6].typeHint = ConsoleTableCellType_String;
-
-	strcopy(panel.table.columns[7].title, sizeof(panel.table.columns[7].title), columnLoss);
-	panel.table.columns[7].width = 4;
-	panel.table.columns[7].alignment = ConsoleTableAlignment_Right;
-	panel.table.columns[7].typeHint = ConsoleTableCellType_Int;
-	panel.table.columnCount = 8;
-	FakelagPopulateConsolePanelFooter(panel, client, report);
-}
-
-stock void FakelagAddPairConsolePanelRow(ConsolePanel panel, FakelagConsoleReport report, int client, int survivor, float survivorDisplay, float survivorRaw, int infected, float infectedDisplay, float infectedRaw, FakelagBalanceAction action, float compensation, int adjustedClient)
-{
-	char survivorName[64];
-	char infectedName[64];
-	char result[40];
-	int packetLossPercent = 0;
-	FakelagGetConsoleClientName(report, survivor, survivorName, sizeof(survivorName), 12);
-	FakelagGetConsoleClientName(report, infected, infectedName, sizeof(infectedName), 12);
-
-	SetGlobalTransTarget(client);
-	if (action != FakelagBalanceAction_Adjust)
-	{
-		Format(result, sizeof(result), "%t", "BalanceTableActionSame");
-	}
-	else
-	{
-		char adjustedName[64];
-		FakelagGetConsoleClientName(report, adjustedClient, adjustedName, sizeof(adjustedName), 10);
-		Format(result, sizeof(result), "%t", "PairBalanceTableActionAdjust", adjustedName, RoundToNearest(compensation));
-		float adjustedRawPing = adjustedClient == survivor ? survivorRaw : infectedRaw;
-		packetLossPercent = FakelagResolvePacketLossPercent(adjustedRawPing, compensation, adjustedRawPing + compensation);
-	}
-
-	int rowIndex = panel.table.rowCount;
-	panel.table.rows[rowIndex].cellCount = 8;
-
-	panel.table.rows[rowIndex].cells[0].type = ConsoleTableCellType_String;
-	strcopy(panel.table.rows[rowIndex].cells[0].stringValue, sizeof(panel.table.rows[rowIndex].cells[0].stringValue), survivorName);
-
-	panel.table.rows[rowIndex].cells[1].type = ConsoleTableCellType_Float;
-	panel.table.rows[rowIndex].cells[1].floatValue = survivorDisplay;
-	panel.table.rows[rowIndex].cells[1].floatPrecision = 1;
-
-	panel.table.rows[rowIndex].cells[2].type = ConsoleTableCellType_Float;
-	panel.table.rows[rowIndex].cells[2].floatValue = survivorRaw;
-	panel.table.rows[rowIndex].cells[2].floatPrecision = 1;
-
-	panel.table.rows[rowIndex].cells[3].type = ConsoleTableCellType_String;
-	strcopy(panel.table.rows[rowIndex].cells[3].stringValue, sizeof(panel.table.rows[rowIndex].cells[3].stringValue), infectedName);
-
-	panel.table.rows[rowIndex].cells[4].type = ConsoleTableCellType_Float;
-	panel.table.rows[rowIndex].cells[4].floatValue = infectedDisplay;
-	panel.table.rows[rowIndex].cells[4].floatPrecision = 1;
-
-	panel.table.rows[rowIndex].cells[5].type = ConsoleTableCellType_Float;
-	panel.table.rows[rowIndex].cells[5].floatValue = infectedRaw;
-	panel.table.rows[rowIndex].cells[5].floatPrecision = 1;
-
-	panel.table.rows[rowIndex].cells[6].type = ConsoleTableCellType_String;
-	strcopy(panel.table.rows[rowIndex].cells[6].stringValue, sizeof(panel.table.rows[rowIndex].cells[6].stringValue), result);
-
-	panel.table.rows[rowIndex].cells[7].type = ConsoleTableCellType_Int;
-	panel.table.rows[rowIndex].cells[7].intValue = packetLossPercent;
-
-	panel.table.rowCount++;
-}
-
-stock void FakelagAddUnpairedConsolePanelRow(ConsolePanel panel, FakelagConsoleReport report, int client, int target, float displayPing, float rawPing, bool survivorSide)
-{
-	char name[64];
-	char result[32];
-	FakelagGetConsoleClientName(report, target, name, sizeof(name), 12);
-
-	SetGlobalTransTarget(client);
-	Format(result, sizeof(result), "%t", "BalanceTableActionClear");
-
-	int rowIndex = panel.table.rowCount;
-	panel.table.rows[rowIndex].cellCount = 8;
-	if (survivorSide)
-	{
-		panel.table.rows[rowIndex].cells[0].type = ConsoleTableCellType_String;
-		strcopy(panel.table.rows[rowIndex].cells[0].stringValue, sizeof(panel.table.rows[rowIndex].cells[0].stringValue), name);
-		panel.table.rows[rowIndex].cells[1].type = ConsoleTableCellType_Float;
-		panel.table.rows[rowIndex].cells[1].floatValue = displayPing;
-		panel.table.rows[rowIndex].cells[1].floatPrecision = 1;
-		panel.table.rows[rowIndex].cells[2].type = ConsoleTableCellType_Float;
-		panel.table.rows[rowIndex].cells[2].floatValue = rawPing;
-		panel.table.rows[rowIndex].cells[2].floatPrecision = 1;
-		panel.table.rows[rowIndex].cells[3].type = ConsoleTableCellType_String;
-		strcopy(panel.table.rows[rowIndex].cells[3].stringValue, sizeof(panel.table.rows[rowIndex].cells[3].stringValue), "-");
-		panel.table.rows[rowIndex].cells[4].type = ConsoleTableCellType_String;
-		strcopy(panel.table.rows[rowIndex].cells[4].stringValue, sizeof(panel.table.rows[rowIndex].cells[4].stringValue), "-");
-		panel.table.rows[rowIndex].cells[5].type = ConsoleTableCellType_String;
-		strcopy(panel.table.rows[rowIndex].cells[5].stringValue, sizeof(panel.table.rows[rowIndex].cells[5].stringValue), "-");
-	}
-	else
-	{
-		panel.table.rows[rowIndex].cells[0].type = ConsoleTableCellType_String;
-		strcopy(panel.table.rows[rowIndex].cells[0].stringValue, sizeof(panel.table.rows[rowIndex].cells[0].stringValue), "-");
-		panel.table.rows[rowIndex].cells[1].type = ConsoleTableCellType_String;
-		strcopy(panel.table.rows[rowIndex].cells[1].stringValue, sizeof(panel.table.rows[rowIndex].cells[1].stringValue), "-");
-		panel.table.rows[rowIndex].cells[2].type = ConsoleTableCellType_String;
-		strcopy(panel.table.rows[rowIndex].cells[2].stringValue, sizeof(panel.table.rows[rowIndex].cells[2].stringValue), "-");
-		panel.table.rows[rowIndex].cells[3].type = ConsoleTableCellType_String;
-		strcopy(panel.table.rows[rowIndex].cells[3].stringValue, sizeof(panel.table.rows[rowIndex].cells[3].stringValue), name);
-		panel.table.rows[rowIndex].cells[4].type = ConsoleTableCellType_Float;
-		panel.table.rows[rowIndex].cells[4].floatValue = displayPing;
-		panel.table.rows[rowIndex].cells[4].floatPrecision = 1;
-		panel.table.rows[rowIndex].cells[5].type = ConsoleTableCellType_Float;
-		panel.table.rows[rowIndex].cells[5].floatValue = rawPing;
-		panel.table.rows[rowIndex].cells[5].floatPrecision = 1;
-	}
-	panel.table.rows[rowIndex].cells[6].type = ConsoleTableCellType_String;
-	strcopy(panel.table.rows[rowIndex].cells[6].stringValue, sizeof(panel.table.rows[rowIndex].cells[6].stringValue), result);
-	panel.table.rows[rowIndex].cells[7].type = ConsoleTableCellType_Int;
-	panel.table.rows[rowIndex].cells[7].intValue = 0;
-	panel.table.rowCount++;
-}
-
-stock void FakelagRenderConsolePanelToBalanceAudience(ConsolePanel panel, int excludedClient = 0)
-{
-	for (int audience = 1; audience <= MaxClients; audience++)
-	{
-		if (audience == excludedClient)
-		{
-			continue;
-		}
-
-		if (!FakelagIsBalanceAudienceClient(audience))
-		{
-			continue;
-		}
-
-		ConsolePanel_RenderToClient(panel, audience);
-	}
-}
-
-stock void FakelagNotifyGlobalBalanceTarget(int target, float compensation)
-{
-	if (!IsHumanInGame(target))
-	{
-		return;
-	}
-
-	if (FakelagHasNetworkProfile(target))
-	{
-		int packetLossPercent = FakelagGetAppliedPacketLossPercent(target);
-		int compensationMs = RoundToNearest(compensation);
-		if (packetLossPercent > 0)
-		{
-			CPrintToChat(target, "%t %t", "Tag", "BalanceTargetAdjustedWithLoss", compensationMs, packetLossPercent);
-		}
-		else
-		{
-			CPrintToChat(target, "%t %t", "Tag", "BalanceTargetAdjusted", compensationMs);
-		}
-	}
-	else
-	{
-		CPrintToChat(target, "%t %t", "Tag", "TargetSelfCleared");
-	}
-}
-
-stock void FakelagNotifyGlobalBalancePreviewTarget(int target, int initiator, float compensation)
-{
-	if (!IsHumanInGame(target))
-	{
-		return;
-	}
-
-	if (compensation > 0.0 && initiator > 0 && initiator != target)
-	{
-		float basePingMs = FakelagGetClientAveragePingRawMs(target);
-		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
-		int compensationMs = RoundToNearest(compensation);
-		if (packetLossPercent > 0)
-		{
-			CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjustedByAdminWithLoss", initiator, compensationMs, packetLossPercent);
-		}
-		else
-		{
-			CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjustedByAdmin", initiator, compensationMs);
-		}
-	}
-	else if (compensation > 0.0)
-	{
-		float basePingMs = FakelagGetClientAveragePingRawMs(target);
-		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
-		int compensationMs = RoundToNearest(compensation);
-		if (packetLossPercent > 0)
-		{
-			CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjustedWithLoss", compensationMs, packetLossPercent);
-		}
-		else
-		{
-			CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetAdjusted", compensationMs);
-		}
-	}
-	else if (initiator > 0 && initiator != target)
-	{
-		CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetUnchangedByAdmin", initiator);
-	}
-	else
-	{
-		CPrintToChat(target, "%t %t", "Tag", "BalancePreviewTargetUnchanged");
-	}
-}
-
-stock void FakelagNotifyPairBalanceTarget(int target, int partner, float compensation)
-{
-	if (!IsHumanInGame(target) || !IsHumanInGame(partner))
-	{
-		return;
-	}
-
-	if (FakelagHasNetworkProfile(target))
-	{
-		int packetLossPercent = FakelagGetAppliedPacketLossPercent(target);
-		int compensationMs = RoundToNearest(compensation);
-		if (packetLossPercent > 0)
-		{
-			CPrintToChat(target, "%t %t", "Tag", "PairBalanceTargetAdjustedWithLoss", partner, compensationMs, packetLossPercent);
-		}
-		else
-		{
-			CPrintToChat(target, "%t %t", "Tag", "PairBalanceTargetAdjusted", partner, compensationMs);
-		}
-	}
-	else
-	{
-		CPrintToChat(target, "%t %t", "Tag", "TargetSelfCleared");
-	}
-}
-
-stock void FakelagNotifyPairBalancePreviewTarget(int target, int partner, int initiator, float compensation)
-{
-	if (!IsHumanInGame(target) || !IsHumanInGame(partner))
-	{
-		return;
-	}
-
-	if (compensation > 0.0 && initiator > 0 && initiator != target)
-	{
-		float basePingMs = FakelagGetClientAveragePingRawMs(target);
-		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
-		int compensationMs = RoundToNearest(compensation);
-		if (packetLossPercent > 0)
-		{
-			CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjustedByAdminWithLoss", initiator, partner, compensationMs, packetLossPercent);
-		}
-		else
-		{
-			CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjustedByAdmin", initiator, partner, compensationMs);
-		}
-	}
-	else if (compensation > 0.0)
-	{
-		float basePingMs = FakelagGetClientAveragePingRawMs(target);
-		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
-		int compensationMs = RoundToNearest(compensation);
-		if (packetLossPercent > 0)
-		{
-			CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjustedWithLoss", partner, compensationMs, packetLossPercent);
-		}
-		else
-		{
-			CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetAdjusted", partner, compensationMs);
-		}
-	}
-	else
-	{
-		CPrintToChat(target, "%t %t", "Tag", "PairBalancePreviewTargetUnchanged", partner);
-	}
-}
-
-stock void FakelagGetConsoleClientName(FakelagConsoleReport report, int client, char[] buffer, int maxlen, int maxWidth)
+stock void FakelagGetConsoleClientName(int client, char[] buffer, int maxlen, int maxWidth)
 {
 	char original[64];
 	GetClientName(client, original, sizeof(original));
@@ -565,7 +52,6 @@ stock void FakelagGetConsoleClientName(FakelagConsoleReport report, int client, 
 
 	if (consoleSafe[0] == '\0' || hadMultibyteOrUnsafe)
 	{
-		FakelagRegisterConsoleLegendClient(report, client);
 		Format(buffer, maxlen, "#%d", GetClientUserId(client));
 		return;
 	}
@@ -685,27 +171,6 @@ stock bool FakelagClearPlayerLatencyExplicit(int client, int &adjusted, int &cle
 	return true;
 }
 
-stock void FakelagApplyPairTarget(int target, int partner, float compensation, float basePing, float targetPing, int &adjusted, int &cleared)
-{
-	int partnerUserId = GetClientUserId(partner);
-	PlayerNetworkProfile effective;
-	bool changed;
-	if (compensation <= 0.0)
-	{
-		changed = FakelagClearPlayerLatencyExplicit(target, adjusted, cleared);
-		if (changed) FakelagGetNetworkProfile(target, effective);
-	}
-	else
-	{
-		changed = FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(basePing, compensation, targetPing)), effective) == FakelagProfile_Changed;
-		if (changed) adjusted++;
-	}
-	if (changed && GetClientOfUserId(partnerUserId) == partner)
-	{
-		FakelagNotifyPairBalanceTarget(target, partner, effective.lagMs);
-	}
-}
-
 stock bool FakelagPreparePairBalance(int survivorClients[MAXPLAYERS + 1], float survivorPings[MAXPLAYERS + 1], int &survivorCount, int infectedClients[MAXPLAYERS + 1], float infectedPings[MAXPLAYERS + 1], int &infectedCount, int &pairCount)
 {
 	survivorCount = FakelagCollectTeamBalanceCandidates(L4DTeam_Survivor, survivorClients, survivorPings);
@@ -722,560 +187,353 @@ stock bool FakelagPreparePairBalance(int survivorClients[MAXPLAYERS + 1], float 
 	return true;
 }
 
-stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &adjustedCount, int &clearedCount)
+// One selection and one proposed profile per session. Observations are taken
+// immediately after each native, then checked again before reporting. A later
+// forward that invalidates an observation makes it unavailable, never zero.
+enum struct FakelagBalanceParticipant
 {
-	int	  survivorClients[MAXPLAYERS + 1];
-	float survivorPings[MAXPLAYERS + 1];
-	int	  infectedClients[MAXPLAYERS + 1];
+	int client;
+	int userId;
+	int partner; // Index in the operation, -1 for an unpaired/global participant.
+	char name[64];
+	char originalName[64];
+	float rawPing;
+	float displayPing;
+	PlayerNetworkProfile proposed;
+	PlayerNetworkProfile effective;
+	FakelagProfileResult result;
+}
+
+enum struct FakelagBalanceOperation
+{
+	FakelagBalanceParticipant participants[MAXPLAYERS + 1];
+	int count;
+	int pairCount;
+	int epoch;
+	int highestClient;
+	float targetPing;
+	bool pairs;
+	bool complete;
+	int adjusted;
+	int cleared;
+	int unchanged;
+	int unavailable;
+}
+
+stock void FakelagAddBalanceParticipant(FakelagBalanceOperation operation, int client, float rawPing, float targetPing)
+{
+	int index = operation.count++;
+	operation.participants[index].client = client;
+	operation.participants[index].userId = GetClientUserId(client);
+	operation.participants[index].partner = -1;
+	operation.participants[index].rawPing = rawPing;
+	operation.participants[index].displayPing = FakelagEstimateNetGraphPingForClientMs(client, rawPing);
+	operation.participants[index].result = FakelagProfile_Unavailable;
+	float lag = targetPing > rawPing ? targetPing - rawPing : 0.0;
+	operation.participants[index].proposed = FakelagBuildNetworkProfile(lag, FakelagResolvePacketLossPercent(rawPing, lag, targetPing));
+
+	char safe[64], identity[16];
+	IntToString(operation.participants[index].userId, identity, sizeof(identity));
+	int nameWidth = 17 - 1 - strlen(identity);
+	if (nameWidth > 10) nameWidth = 10;
+	FakelagGetConsoleClientName(client, safe, sizeof(safe), nameWidth);
+	if (safe[0] == '#') strcopy(operation.participants[index].name, 64, safe);
+	else Format(operation.participants[index].name, 64, "%s#%d", safe, operation.participants[index].userId);
+	GetClientName(client, operation.participants[index].originalName, 64);
+	ReplaceString(operation.participants[index].originalName, 64, "|", "/");
+	ReplaceString(operation.participants[index].originalName, 64, "\n", " ");
+	ReplaceString(operation.participants[index].originalName, 64, "\r", " ");
+}
+
+stock bool FakelagPrepareBalanceOperation(FakelagBalanceOperation operation, bool pairs, bool preview = false)
+{
+	operation.count = operation.pairCount = 0;
+	operation.adjusted = operation.cleared = operation.unchanged = operation.unavailable = 0;
+	operation.pairs = pairs;
+	operation.complete = false;
+	operation.epoch = g_Runtime.intentEpoch;
+	operation.highestClient = 0;
+	operation.targetPing = 0.0;
+	if (g_Runtime.clearingIntent || (!preview && CFakeLag_IsLanBlocked())) return false;
+	int clients[MAXPLAYERS + 1];
+	float pings[MAXPLAYERS + 1];
+	if (!pairs)
+	{
+		int count = FakelagCollectBalanceCandidates(clients, pings, operation.targetPing, operation.highestClient);
+		for (int index = 0; index < count; index++) FakelagAddBalanceParticipant(operation, clients[index], pings[index], operation.targetPing);
+		return count > 0;
+	}
+
+	int infected[MAXPLAYERS + 1];
 	float infectedPings[MAXPLAYERS + 1];
-
-	int	  survivorCount;
-	int	  infectedCount;
-	if (!FakelagPreparePairBalance(survivorClients, survivorPings, survivorCount, infectedClients, infectedPings, infectedCount, pairCount))
+	int survivorCount, infectedCount;
+	if (!FakelagPreparePairBalance(clients, pings, survivorCount, infected, infectedPings, infectedCount, operation.pairCount)) return false;
+	for (int index = 0; index < operation.pairCount; index++)
 	{
-		playerCount	  = 0;
-		adjustedCount = 0;
-		clearedCount  = 0;
-		return false;
+		float target = pings[index] > infectedPings[index] ? pings[index] : infectedPings[index];
+		int first = operation.count;
+		FakelagAddBalanceParticipant(operation, clients[index], pings[index], target);
+		FakelagAddBalanceParticipant(operation, infected[index], infectedPings[index], target);
+		operation.participants[first].partner = first + 1;
+		operation.participants[first + 1].partner = first;
 	}
-
-	playerCount	  = survivorCount + infectedCount;
-	adjustedCount = 0;
-	clearedCount  = 0;
-
-	int epoch = g_Runtime.intentEpoch;
-	int survivorUserIds[MAXPLAYERS + 1];
-	int infectedUserIds[MAXPLAYERS + 1];
-	for (int index = 0; index < survivorCount; index++) survivorUserIds[index] = GetClientUserId(survivorClients[index]);
-	for (int index = 0; index < infectedCount; index++) infectedUserIds[index] = GetClientUserId(infectedClients[index]);
-
-	for (int index = 0; index < pairCount; index++)
-	{
-		int	  survivor	   = survivorClients[index];
-		int	  infected	   = infectedClients[index];
-		float survivorPing = survivorPings[index];
-		float infectedPing = infectedPings[index];
-
-		float targetPing = survivorPing > infectedPing ? survivorPing : infectedPing;
-		if (epoch != g_Runtime.intentEpoch) return true;
-		int survivorUserId = survivorUserIds[index];
-		int infectedUserId = infectedUserIds[index];
-		if (GetClientOfUserId(survivorUserId) != survivor || GetClientOfUserId(infectedUserId) != infected) continue;
-		FakelagApplyPairTarget(survivor, infected, targetPing - survivorPing, survivorPing, targetPing, adjustedCount, clearedCount);
-		if (epoch != g_Runtime.intentEpoch) return true;
-		if (GetClientOfUserId(survivorUserId) == survivor && GetClientOfUserId(infectedUserId) == infected)
-		{
-			FakelagApplyPairTarget(infected, survivor, targetPing - infectedPing, infectedPing, targetPing, adjustedCount, clearedCount);
-		}
-	}
-
-	for (int index = pairCount; index < survivorCount; index++)
-	{
-		if (epoch != g_Runtime.intentEpoch) return true;
-		if (GetClientOfUserId(survivorUserIds[index]) != survivorClients[index]) continue;
-		FakelagClearPlayerLatencyExplicit(survivorClients[index], adjustedCount, clearedCount);
-	}
-
-	for (int index = pairCount; index < infectedCount; index++)
-	{
-		if (epoch != g_Runtime.intentEpoch) return true;
-		if (GetClientOfUserId(infectedUserIds[index]) != infectedClients[index]) continue;
-		FakelagClearPlayerLatencyExplicit(infectedClients[index], adjustedCount, clearedCount);
-	}
-
+	for (int index = operation.pairCount; index < survivorCount; index++) FakelagAddBalanceParticipant(operation, clients[index], pings[index], pings[index]);
+	for (int index = operation.pairCount; index < infectedCount; index++) FakelagAddBalanceParticipant(operation, infected[index], infectedPings[index], infectedPings[index]);
 	return true;
 }
 
-stock void FakelagFormatGlobalBalanceConsoleTitle(FakelagConsoleReport report, int client, int initiator, int highestClient, float displayHighestPing, float highestPing, char[] buffer, int maxlen)
+stock bool FakelagBalanceSessionIsCurrent(const FakelagBalanceOperation operation, int index)
 {
-	char highestName[64];
-	FakelagGetConsoleClientName(report, highestClient, highestName, sizeof(highestName), 24);
+	int client = operation.participants[index].client;
+	if (operation.epoch != g_Runtime.intentEpoch || GetClientOfUserId(operation.participants[index].userId) != client
+		|| !FakelagCanApplyLatencyToClient(client)) return false;
+	int partner = operation.participants[index].partner;
+	return partner < 0 || GetClientOfUserId(operation.participants[partner].userId) == operation.participants[partner].client;
+}
 
-	SetGlobalTransTarget(client);
-	if (initiator > 0)
+stock void FakelagCountBalanceResults(FakelagBalanceOperation operation)
+{
+	operation.adjusted = operation.cleared = operation.unchanged = operation.unavailable = 0;
+	operation.complete = true;
+	for (int index = 0; index < operation.count; index++)
 	{
-		char initiatorName[64];
-		FakelagGetConsoleClientName(report, initiator, initiatorName, sizeof(initiatorName), 24);
-		Format(buffer, maxlen, "%t", "BalanceConsoleTitleByAdmin", initiatorName, highestName, displayHighestPing, highestPing);
+		switch (operation.participants[index].result)
+		{
+			case FakelagProfile_Changed:
+			{
+				if (FakelagProfileIsActive(operation.participants[index].effective)) operation.adjusted++;
+				else operation.cleared++;
+			}
+			case FakelagProfile_Unchanged: operation.unchanged++;
+			default:
+			{
+				operation.unavailable++;
+				operation.complete = false;
+			}
+		}
+	}
+}
+
+stock bool FakelagApplyBalanceOperation(FakelagBalanceOperation operation)
+{
+	for (int step = 0; step < operation.count; step++)
+	{
+		int index = step;
+		// Preserve the balancer's original order: clear the higher-ping member
+		// before adjusting the lower one, while retaining S/I report order.
+		if (operation.pairs && step < operation.pairCount * 2)
+		{
+			int first = step - (step % 2);
+			if (operation.participants[first + 1].rawPing > operation.participants[first].rawPing)
+				index = step % 2 == 0 ? first + 1 : first;
+		}
+		if (operation.epoch != g_Runtime.intentEpoch || CFakeLag_IsLanBlocked() || g_Runtime.clearingIntent) break;
+		if (!FakelagBalanceSessionIsCurrent(operation, index)) continue;
+		int client = operation.participants[index].client;
+		if (FakelagProfileIsActive(operation.participants[index].proposed))
+		{
+			operation.participants[index].result = FakelagApplyNetworkProfile(client, operation.participants[index].proposed, operation.participants[index].effective);
+		}
+		else operation.participants[index].result = FakelagClearNetworkProfileResult(client, operation.participants[index].effective, true);
+		// An unavailable post-forward observation cannot authorize the rest of
+		// the old operation. Normal vetoes remain observable unchanged states.
+		if (operation.participants[index].result == FakelagProfile_Unavailable) break;
+	}
+	// Do not attribute a captured result to a replacement session, or claim an
+	// earlier observation still holds after a later forward reset/modified it.
+	for (int index = 0; index < operation.count; index++)
+	{
+		if (!FakelagBalanceSessionIsCurrent(operation, index)) operation.participants[index].result = FakelagProfile_Unavailable;
+		if (operation.participants[index].result == FakelagProfile_Unavailable) continue;
+		PlayerNetworkProfile current;
+		FakelagGetNetworkProfile(operation.participants[index].client, current);
+		if (!FakelagProfilesEqual(current, operation.participants[index].effective)) operation.participants[index].result = FakelagProfile_Unavailable;
+	}
+	FakelagCountBalanceResults(operation);
+	return operation.complete;
+}
+
+stock void FakelagNotifyBalanceResults(const FakelagBalanceOperation operation)
+{
+	for (int index = 0; index < operation.count; index++)
+	{
+		if (operation.participants[index].result != FakelagProfile_Changed || !FakelagBalanceSessionIsCurrent(operation, index)) continue;
+		int client = operation.participants[index].client;
+		if (!FakelagProfileIsActive(operation.participants[index].effective)) CPrintToChat(client, "%t %t", "Tag", "TargetSelfCleared");
+		else
+		{
+			char lag[24];
+			Format(lag, sizeof(lag), "%.1f", operation.participants[index].effective.lagMs);
+			CPrintToChat(client, "%t %t", "Tag", "BalanceObservedProfile", lag, operation.participants[index].effective.packetLossPercent);
+		}
+	}
+}
+
+stock void FakelagInitializeBalancePanel(ConsolePanel panel, const FakelagBalanceOperation operation, int audience, bool preview)
+{
+	ConsolePanel_Reset(panel);
+	ConsolePanel_SetWidth(panel, operation.pairs ? 96 : 76);
+	char text[128];
+	Format(text, sizeof(text), "%T", operation.pairs ? "BalancePairsReport" : "BalanceGlobalReport", audience);
+	ConsolePanel_AddHeaderLine(panel, text);
+	Format(text, sizeof(text), "%T", preview ? "BalanceProposalHeader" : "BalanceObservationHeader", audience);
+	ConsolePanel_AddHeaderLine(panel, text);
+	if (!preview && !operation.complete)
+	{
+		Format(text, sizeof(text), "%T", "BalanceReportPartial", audience);
+		ConsolePanel_AddHeaderLine(panel, text);
+	}
+	// Both participants receive their own result row. Profile values have their
+	// own typed columns, so zero latency with positive loss remains visible.
+	char keys[7][32] = {"ConsoleColumnPlayer", "ConsoleColumnPartner", "ConsoleColumnAvg", "ConsoleColumnRaw", "ConsoleColumnResult", "ConsoleColumnLag", "ConsoleColumnLoss"};
+	int widths[7] = {17, 17, 5, 5, 19, 7, 5};
+	for (int column = 0; column < 7; column++)
+	{
+		if (column == 1 && !operation.pairs) continue;
+		Format(text, sizeof(text), "%T", keys[column], audience);
+		ConsoleTable_AddColumn(panel.table, text, widths[column], column >= 2 && column != 4 ? ConsoleTableAlignment_Right : ConsoleTableAlignment_Left, column == 6 ? ConsoleTableCellType_Int : (column >= 2 && column != 4 ? ConsoleTableCellType_Float : ConsoleTableCellType_String));
+	}
+	Format(text, sizeof(text), "%T", "BalanceTableLegendAvg", audience); ConsolePanel_AddFooterLine(panel, text);
+	Format(text, sizeof(text), "%T", "BalanceTableLegendRaw", audience); ConsolePanel_AddFooterLine(panel, text);
+	if (preview)
+	{
+		Format(text, sizeof(text), "%T", "BalanceProposalFooter", audience);
+		ConsolePanel_AddFooterLine(panel, text);
+	}
+	else
+	{
+		Format(text, sizeof(text), "%T", "BalanceObservedCounts", audience, operation.adjusted, operation.cleared);
+		ConsolePanel_AddFooterLine(panel, text);
+		Format(text, sizeof(text), "%T", "BalanceUnchangedCounts", audience, operation.unchanged, operation.unavailable);
+		ConsolePanel_AddFooterLine(panel, text);
+	}
+}
+
+stock void FakelagAddBalanceResultRow(ConsolePanel panel, const FakelagBalanceOperation operation, int index, int audience, bool preview)
+{
+	ConsoleTable_BeginRow(panel.table);
+	ConsoleTable_AddStringCell(panel.table, operation.participants[index].name);
+	if (operation.pairs)
+	{
+		int partner = operation.participants[index].partner;
+		ConsoleTable_AddStringCell(panel.table, partner < 0 ? "-" : operation.participants[partner].name);
+	}
+	ConsoleTable_AddFloatCell(panel.table, operation.participants[index].displayPing, 1);
+	ConsoleTable_AddFloatCell(panel.table, operation.participants[index].rawPing, 1);
+	char action[64];
+	PlayerNetworkProfile profile;
+	bool available = preview || operation.participants[index].result != FakelagProfile_Unavailable;
+	if (preview)
+	{
+		profile = operation.participants[index].proposed;
+		Format(action, sizeof(action), "%T", FakelagProfileIsActive(profile) ? "BalanceProposeProfile" : "BalanceProposeEmpty", audience);
+	}
+	else
+	{
+		profile = operation.participants[index].effective;
+		char key[32];
+		if (!available) strcopy(key, sizeof(key), "BalanceResultUnavailable");
+		else if (operation.participants[index].result == FakelagProfile_Unchanged) strcopy(key, sizeof(key), "BalanceResultUnchanged");
+		else strcopy(key, sizeof(key), FakelagProfileIsActive(profile) ? "BalanceResultAdjusted" : "BalanceResultCleared");
+		Format(action, sizeof(action), "%T", key, audience);
+	}
+	ConsoleTable_AddStringCell(panel.table, action);
+	if (available)
+	{
+		ConsoleTable_AddFloatCell(panel.table, profile.lagMs, 1);
+		ConsoleTable_AddIntCell(panel.table, profile.packetLossPercent);
+	}
+	else
+	{
+		ConsoleTable_AddStringCell(panel.table, "-");
+		ConsoleTable_AddStringCell(panel.table, "-");
+	}
+	ConsoleTable_EndRow(panel.table);
+}
+
+stock void FakelagRenderBalanceOperation(const FakelagBalanceOperation operation, int audience, bool preview)
+{
+	ConsolePanel panel;
+	// Pagination preserves every participant without changing the table library.
+	for (int first = 0; first < operation.count; first += CONSOLE_TABLE_MAX_ROWS)
+	{
+		FakelagInitializeBalancePanel(panel, operation, audience, preview);
+		for (int index = first; index < operation.count && index < first + CONSOLE_TABLE_MAX_ROWS; index++)
+		{
+			FakelagAddBalanceResultRow(panel, operation, index, audience, preview);
+			if (operation.participants[index].name[0] == '#')
+			{
+				char legend[128];
+				Format(legend, sizeof(legend), "#%d = %s", operation.participants[index].userId, operation.participants[index].originalName);
+				ConsolePanel_AddFooterUtf8Line(panel, legend);
+			}
+		}
+		ConsolePanel_RenderToClient(panel, audience);
+	}
+}
+
+stock void FakelagRunBalanceReport(int initiator, bool pairs, bool preview)
+{
+	FakelagBalanceOperation operation;
+	if (!FakelagPrepareBalanceOperation(operation, pairs, preview))
+	{
+		CReplyToCommand(initiator, "%t %t", "Tag", "BalanceNoPlayers");
 		return;
 	}
-
-	Format(buffer, maxlen, "%t", "BalanceConsoleTitle", highestName, displayHighestPing, highestPing);
-}
-
-stock void FakelagFormatPairBalanceConsoleTitle(FakelagConsoleReport report, int client, int initiator, int pairCount, char[] buffer, int maxlen)
-{
-	SetGlobalTransTarget(client);
-	if (initiator > 0)
+	int initiatorId = initiator > 0 ? GetClientUserId(initiator) : 0;
+	if (!preview)
 	{
-		char initiatorName[64];
-		FakelagGetConsoleClientName(report, initiator, initiatorName, sizeof(initiatorName), 24);
-		Format(buffer, maxlen, "%t", "PairBalanceConsoleTitleByAdmin", initiatorName, pairCount);
-		return;
+		FakelagApplyBalanceOperation(operation); // Native errors abort before any report.
+		if (operation.epoch != g_Runtime.intentEpoch || CFakeLag_IsLanBlocked())
+		{
+			if (initiator == 0 || GetClientOfUserId(initiatorId) == initiator) CReplyToCommand(initiator, "%t %t", "Tag", "BalanceReportInterrupted");
+			return;
+		}
+		FakelagNotifyBalanceResults(operation);
 	}
-
-	Format(buffer, maxlen, "%t", "PairBalanceConsoleTitle", pairCount);
-}
-
-stock void FakelagApplyBalance(FakelagConsoleReport report, int admin, ConsolePanel panel, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing)
-{
-	int adjusted = 0;
-	int cleared	 = 0;
-
-	int epoch = g_Runtime.intentEpoch;
-	int userIds[MAXPLAYERS + 1];
-	for (int index = 0; index < count; index++) userIds[index] = GetClientUserId(clients[index]);
-
-	for (int index = 0; index < count; index++)
+	if (initiator == 0 || GetClientOfUserId(initiatorId) == initiator) FakelagRenderBalanceOperation(operation, initiator, preview);
+	for (int audience = 1; audience <= MaxClients; audience++)
 	{
-		if (epoch != g_Runtime.intentEpoch) break;
-		int	  target		= clients[index];
-		if (GetClientOfUserId(userIds[index]) != target) continue;
-		float rawPing		= pings[index];
-		float compensation	= targetPing - rawPing;
-		float displayPing	= FakelagEstimateNetGraphPingForClientMs(target, rawPing);
-		bool  clearedClient = false;
-
-		if (compensation <= 0.0)
-		{
-			bool changed = FakelagClearPlayerLatencyExplicit(target, adjusted, cleared);
-			if (epoch != g_Runtime.intentEpoch || GetClientOfUserId(userIds[index]) != target) continue;
-			float actualLag = FakelagGetAppliedLagMs(target);
-			clearedClient = changed && !FakelagHasNetworkProfile(target);
-			if (changed) FakelagNotifyGlobalBalanceTarget(target, actualLag);
-			FakelagBalanceAction action = !changed ? FakelagBalanceAction_Same : (clearedClient ? FakelagBalanceAction_Clear : FakelagBalanceAction_Adjust);
-			FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, action, actualLag);
-			continue;
-		}
-
-		PlayerNetworkProfile effective;
-		bool changed = FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(rawPing, compensation, targetPing)), effective) == FakelagProfile_Changed;
-		if (changed)
-		{
-			adjusted++;
-			FakelagNotifyGlobalBalanceTarget(target, effective.lagMs);
-		}
-		if (epoch != g_Runtime.intentEpoch || GetClientOfUserId(userIds[index]) != target) continue;
-		FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, changed ? FakelagBalanceAction_Adjust : FakelagBalanceAction_Same, changed ? effective.lagMs : 0.0);
-	}
-}
-
-stock void FakelagPreviewBalance(FakelagConsoleReport report, int admin, ConsolePanel panel, const int clients[MAXPLAYERS + 1], const float pings[MAXPLAYERS + 1], int count, float targetPing)
-{
-	int adjusted = 0;
-
-	for (int index = 0; index < count; index++)
-	{
-		int	  target	   = clients[index];
-		float rawPing	   = pings[index];
-		float compensation = targetPing - rawPing;
-		float displayPing  = FakelagEstimateNetGraphPingForClientMs(target, rawPing);
-
-		if (compensation <= 0.0)
-		{
-			FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, FakelagHasNetworkProfile(target) ? FakelagBalanceAction_Clear : FakelagBalanceAction_Same, compensation);
-			continue;
-		}
-
-		adjusted++;
-		FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, FakelagBalanceAction_Adjust, compensation);
+		if (audience == initiator || !FakelagIsBalanceAudienceClient(audience)) continue;
+		FakelagRenderBalanceOperation(operation, audience, preview);
 	}
 }
 
 stock bool FakelagApplyBalanceSilent(float &targetPing, int &highestClient, int &playerCount, int &adjustedCount, int &clearedCount)
 {
-	if (CFakeLag_IsLanBlocked())
-	{
-		targetPing = 0.0;
-		highestClient = playerCount = adjustedCount = clearedCount = 0;
-		return false;
-	}
-	int	  targets[MAXPLAYERS + 1];
-	float pings[MAXPLAYERS + 1];
+	FakelagBalanceOperation operation;
+	bool prepared = FakelagPrepareBalanceOperation(operation, false);
+	bool result = prepared && FakelagApplyBalanceOperation(operation);
+	targetPing = operation.targetPing;
+	highestClient = operation.highestClient;
+	playerCount = operation.count;
+	adjustedCount = operation.adjusted;
+	clearedCount = operation.cleared;
+	return result;
+}
 
-	playerCount	  = FakelagCollectBalanceCandidates(targets, pings, targetPing, highestClient);
-	adjustedCount = 0;
-	clearedCount  = 0;
-
-	if (playerCount <= 0 || highestClient <= 0 || targetPing < 0.0)
-	{
-		return false;
-	}
-
-	int epoch = g_Runtime.intentEpoch;
-	int userIds[MAXPLAYERS + 1];
-	for (int index = 0; index < playerCount; index++) userIds[index] = GetClientUserId(targets[index]);
-
-	for (int index = 0; index < playerCount; index++)
-	{
-		if (epoch != g_Runtime.intentEpoch) break;
-		int	  target	   = targets[index];
-		if (GetClientOfUserId(userIds[index]) != target) continue;
-		float compensation = targetPing - pings[index];
-
-		if (compensation <= 0.0)
-		{
-			FakelagClearPlayerLatencyExplicit(target, adjustedCount, clearedCount);
-			continue;
-		}
-
-		PlayerNetworkProfile effective;
-		if (FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(pings[index], compensation, targetPing)), effective) == FakelagProfile_Changed) adjustedCount++;
-	}
-
-	return true;
+stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &adjustedCount, int &clearedCount)
+{
+	FakelagBalanceOperation operation;
+	bool result = FakelagPrepareBalanceOperation(operation, true) && FakelagApplyBalanceOperation(operation);
+	playerCount = operation.count;
+	pairCount = operation.pairCount;
+	adjustedCount = operation.adjusted;
+	clearedCount = operation.cleared;
+	return result;
 }
 
 stock bool FakelagPreviewBalanceSilent(float &targetPing, int &highestClient, int &playerCount)
 {
-	int	  targets[MAXPLAYERS + 1];
-	float pings[MAXPLAYERS + 1];
-
-	playerCount = FakelagCollectBalanceCandidates(targets, pings, targetPing, highestClient);
-	return playerCount > 0 && highestClient > 0 && targetPing >= 0.0;
+	FakelagBalanceOperation operation;
+	bool result = FakelagPrepareBalanceOperation(operation, false, true);
+	targetPing = operation.targetPing;
+	highestClient = operation.highestClient;
+	playerCount = operation.count;
+	return result;
 }
 
-stock void FakelagRunBalanceCommand(int client)
-{
-	int					 targets[MAXPLAYERS + 1];
-	float				 pings[MAXPLAYERS + 1];
-	float				 highestPing;
-	int					 highestClient;
-	int					 count;
-	bool				 consoleNoticeSent[MAXPLAYERS + 1];
-	FakelagConsoleReport report;
-	ConsolePanel		 panel;
-
-	if (!FakelagTryCollectBalance(client, targets, pings, highestPing, highestClient, count))
-	{
-		return;
-	}
-
-	FakelagResetConsoleReport(report);
-	float displayHighestPing = FakelagGetClientAveragePingMs(highestClient);
-	char  formatted[512];
-	FakelagFormatGlobalBalanceConsoleTitle(report, client, client, highestClient, displayHighestPing, highestPing, formatted, sizeof(formatted));
-	FakelagInitializeGlobalConsolePanel(panel, report, client, formatted);
-
-	for (int index = 0; index < count; index++)
-	{
-		consoleNoticeSent[targets[index]] = true;
-	}
-
-	FakelagApplyBalance(report, client, panel, targets, pings, count, highestPing);
-	ConsolePanel_RenderToClient(panel, client);
-	FakelagRenderConsolePanelToBalanceAudience(panel, client);
-
-	for (int audience = 1; audience <= MaxClients; audience++)
-	{
-		if (!FakelagIsBalanceAudienceClient(audience))
-		{
-			continue;
-		}
-
-		if (audience == client)
-		{
-			continue;
-		}
-
-		if (consoleNoticeSent[audience])
-		{
-			continue;
-		}
-
-		CPrintToChat(audience, "%t %t", "Tag", "DetailsSentToTargetConsole");
-	}
-
-	if (client != 0 && !consoleNoticeSent[client])
-	{
-		CPrintToChat(client, "%t %t", "Tag", "DetailsSentToConsole");
-	}
-}
-
-stock void FakelagRunBalancePreviewCommand(int client)
-{
-	int					 targets[MAXPLAYERS + 1];
-	float				 pings[MAXPLAYERS + 1];
-	float				 highestPing;
-	int					 highestClient;
-	int					 count;
-	FakelagConsoleReport report;
-	ConsolePanel		 panel;
-
-	if (!FakelagTryCollectBalance(client, targets, pings, highestPing, highestClient, count))
-	{
-		return;
-	}
-
-	FakelagResetConsoleReport(report);
-	float displayHighestPing = FakelagGetClientAveragePingMs(highestClient);
-	char  formatted[512];
-	bool  consoleNoticeSent[MAXPLAYERS + 1];
-	FakelagFormatGlobalBalanceConsoleTitle(report, client, client, highestClient, displayHighestPing, highestPing, formatted, sizeof(formatted));
-	FakelagInitializeGlobalConsolePanel(panel, report, client, formatted);
-
-	for (int index = 0; index < count; index++)
-	{
-		consoleNoticeSent[targets[index]] = true;
-
-		int	  target					  = targets[index];
-		float rawPing					  = pings[index];
-		float compensation				  = highestPing - rawPing;
-		float displayPing				  = FakelagEstimateNetGraphPingForClientMs(target, rawPing);
-		FakelagNotifyGlobalBalancePreviewTarget(target, client, compensation);
-		FakelagAddGlobalConsolePanelRow(panel, report, client, target, displayPing, rawPing, FakelagHasNetworkProfile(target) ? FakelagBalanceAction_Clear : FakelagBalanceAction_Same, compensation);
-	}
-
-	int adjusted = 0;
-	for (int index = 0; index < count; index++)
-	{
-		if (highestPing - pings[index] > 0.0)
-		{
-			adjusted++;
-		}
-	}
-
-	ConsolePanel_RenderToClient(panel, client);
-	FakelagRenderConsolePanelToBalanceAudience(panel, client);
-
-	if (client == 0)
-	{
-		return;
-	}
-
-	for (int audience = 1; audience <= MaxClients; audience++)
-	{
-		if (!FakelagIsBalanceAudienceClient(audience))
-		{
-			continue;
-		}
-
-		if (audience == client)
-		{
-			continue;
-		}
-
-		if (consoleNoticeSent[audience])
-		{
-			continue;
-		}
-
-		CPrintToChat(audience, "%t %t", "Tag", "DetailsSentToTargetConsole");
-	}
-
-	if (!consoleNoticeSent[client])
-	{
-		CPrintToChat(client, "%t %t", "Tag", "PreviewSentToConsole");
-	}
-}
-
-stock void FakelagRunPairBalanceCommand(int client)
-{
-	int					 survivorClients[MAXPLAYERS + 1];
-	float				 survivorPings[MAXPLAYERS + 1];
-	int					 infectedClients[MAXPLAYERS + 1];
-	float				 infectedPings[MAXPLAYERS + 1];
-	int					 survivorCount;
-	int					 infectedCount;
-	int					 pairCount;
-	FakelagConsoleReport report;
-	ConsolePanel		 panel;
-
-	if (!FakelagPreparePairBalance(survivorClients, survivorPings, survivorCount, infectedClients, infectedPings, infectedCount, pairCount))
-	{
-		CPrintToChat(client, "%t %t", "Tag", "BalanceNoPlayers");
-		return;
-	}
-
-	FakelagResetConsoleReport(report);
-	report.innerWidth = FAKELAG_PAIR_TABLE_INNER_WIDTH;
-	char formatted[512];
-	bool consoleNoticeSent[MAXPLAYERS + 1];
-	FakelagFormatPairBalanceConsoleTitle(report, client, client, pairCount, formatted, sizeof(formatted));
-	FakelagInitializePairConsolePanel(panel, report, client, formatted);
-
-	for (int index = 0; index < pairCount; index++)
-	{
-		int	  survivor		  = survivorClients[index];
-		int	  infected		  = infectedClients[index];
-		float survivorRaw	  = survivorPings[index];
-		float infectedRaw	  = infectedPings[index];
-		float survivorDisplay = FakelagEstimateNetGraphPingForClientMs(survivor, survivorRaw);
-		float infectedDisplay = FakelagEstimateNetGraphPingForClientMs(infected, infectedRaw);
-		float compensation	  = FloatAbs(survivorRaw - infectedRaw);
-
-		SetGlobalTransTarget(client);
-		consoleNoticeSent[survivor] = true;
-		consoleNoticeSent[infected] = true;
-
-		if (compensation <= 0.0)
-		{
-			FakelagAddPairConsolePanelRow(panel, report, client, survivor, survivorDisplay, survivorRaw, infected, infectedDisplay, infectedRaw, FakelagBalanceAction_Same, compensation, 0);
-		}
-		else
-		{
-			int adjustedClient = survivorRaw < infectedRaw ? survivor : infected;
-			FakelagAddPairConsolePanelRow(panel, report, client, survivor, survivorDisplay, survivorRaw, infected, infectedDisplay, infectedRaw, FakelagBalanceAction_Adjust, compensation, adjustedClient);
-		}
-	}
-
-	for (int index = pairCount; index < survivorCount; index++)
-	{
-		float rawPing	  = survivorPings[index];
-		float displayPing = FakelagEstimateNetGraphPingForClientMs(survivorClients[index], rawPing);
-		FakelagAddUnpairedConsolePanelRow(panel, report, client, survivorClients[index], displayPing, rawPing, true);
-	}
-
-	for (int index = pairCount; index < infectedCount; index++)
-	{
-		float rawPing	  = infectedPings[index];
-		float displayPing = FakelagEstimateNetGraphPingForClientMs(infectedClients[index], rawPing);
-		FakelagAddUnpairedConsolePanelRow(panel, report, client, infectedClients[index], displayPing, rawPing, false);
-	}
-
-	int playerCount;
-	int adjustedCount;
-	int clearedCount;
-
-	if (!FakelagApplyPairBalanceSilent(playerCount, pairCount, adjustedCount, clearedCount))
-	{
-		CPrintToChat(client, "%t %t", "Tag", "BalanceNoPlayers");
-		return;
-	}
-
-	ConsolePanel_RenderToClient(panel, client);
-	FakelagRenderConsolePanelToBalanceAudience(panel, client);
-
-	for (int audience = 1; audience <= MaxClients; audience++)
-	{
-		if (!FakelagIsBalanceAudienceClient(audience))
-		{
-			continue;
-		}
-
-		if (audience == client)
-		{
-			continue;
-		}
-
-		if (consoleNoticeSent[audience])
-		{
-			continue;
-		}
-
-		CPrintToChat(audience, "%t %t", "Tag", "DetailsSentToTargetConsole");
-	}
-
-	if (client != 0 && !consoleNoticeSent[client])
-	{
-		CPrintToChat(client, "%t %t", "Tag", "DetailsSentToConsole");
-		return;
-	}
-}
-
-stock void FakelagRunPairBalancePreviewCommand(int client)
-{
-	int					 survivorClients[MAXPLAYERS + 1];
-	float				 survivorPings[MAXPLAYERS + 1];
-	int					 infectedClients[MAXPLAYERS + 1];
-	float				 infectedPings[MAXPLAYERS + 1];
-	int					 survivorCount;
-	int					 infectedCount;
-	int					 pairCount;
-	FakelagConsoleReport report;
-	ConsolePanel		 panel;
-
-	if (!FakelagPreparePairBalance(survivorClients, survivorPings, survivorCount, infectedClients, infectedPings, infectedCount, pairCount))
-	{
-		CPrintToChat(client, "%t %t", "Tag", "BalanceNoPlayers");
-		return;
-	}
-
-	FakelagResetConsoleReport(report);
-	report.innerWidth = FAKELAG_PAIR_TABLE_INNER_WIDTH;
-	char formatted[512];
-	bool consoleNoticeSent[MAXPLAYERS + 1];
-	FakelagFormatPairBalanceConsoleTitle(report, client, client, pairCount, formatted, sizeof(formatted));
-	FakelagInitializePairConsolePanel(panel, report, client, formatted);
-
-	int adjustedCount = 0;
-	for (int index = 0; index < pairCount; index++)
-	{
-		int	  survivor				= survivorClients[index];
-		int	  infected				= infectedClients[index];
-		float survivorRaw			= survivorPings[index];
-		float infectedRaw			= infectedPings[index];
-		float survivorDisplay		= FakelagEstimateNetGraphPingForClientMs(survivor, survivorRaw);
-		float infectedDisplay		= FakelagEstimateNetGraphPingForClientMs(infected, infectedRaw);
-		float compensation			= FloatAbs(survivorRaw - infectedRaw);
-		int	  adjustedClient		= survivorRaw < infectedRaw ? survivor : infected;
-		consoleNoticeSent[survivor] = true;
-		consoleNoticeSent[infected] = true;
-
-		if (compensation > 0.0)
-		{
-			int partner = adjustedClient == survivor ? infected : survivor;
-			FakelagNotifyPairBalancePreviewTarget(adjustedClient, partner, client, compensation);
-			FakelagNotifyPairBalancePreviewTarget(partner, adjustedClient, client, 0.0);
-		}
-		else
-		{
-			FakelagNotifyPairBalancePreviewTarget(survivor, infected, client, 0.0);
-			FakelagNotifyPairBalancePreviewTarget(infected, survivor, client, 0.0);
-		}
-
-		FakelagAddPairConsolePanelRow(panel, report, client, survivor, survivorDisplay, survivorRaw, infected, infectedDisplay, infectedRaw, compensation <= 0.0 ? FakelagBalanceAction_Same : FakelagBalanceAction_Adjust, compensation, adjustedClient);
-
-		if (compensation > 0.0)
-		{
-			adjustedCount++;
-		}
-	}
-
-	for (int index = pairCount; index < survivorCount; index++)
-	{
-		float rawPing	  = survivorPings[index];
-		float displayPing = FakelagEstimateNetGraphPingForClientMs(survivorClients[index], rawPing);
-		FakelagAddUnpairedConsolePanelRow(panel, report, client, survivorClients[index], displayPing, rawPing, true);
-	}
-
-	for (int index = pairCount; index < infectedCount; index++)
-	{
-		float rawPing	  = infectedPings[index];
-		float displayPing = FakelagEstimateNetGraphPingForClientMs(infectedClients[index], rawPing);
-		FakelagAddUnpairedConsolePanelRow(panel, report, client, infectedClients[index], displayPing, rawPing, false);
-	}
-
-	ConsolePanel_RenderToClient(panel, client);
-	FakelagRenderConsolePanelToBalanceAudience(panel, client);
-
-	for (int audience = 1; audience <= MaxClients; audience++)
-	{
-		if (!FakelagIsBalanceAudienceClient(audience))
-		{
-			continue;
-		}
-
-		if (audience == client)
-		{
-			continue;
-		}
-
-		if (consoleNoticeSent[audience])
-		{
-			continue;
-		}
-
-		CPrintToChat(audience, "%t %t", "Tag", "DetailsSentToTargetConsole");
-	}
-
-	if (client == 0)
-	{
-		return;
-	}
-
-	if (!consoleNoticeSent[client])
-	{
-		CPrintToChat(client, "%t %t", "Tag", "PreviewSentToConsole");
-	}
-}
+stock void FakelagRunBalanceCommand(int client) { FakelagRunBalanceReport(client, false, false); }
+stock void FakelagRunPairBalanceCommand(int client) { FakelagRunBalanceReport(client, true, false); }
+stock void FakelagRunBalancePreviewCommand(int client) { FakelagRunBalanceReport(client, false, true); }
+stock void FakelagRunPairBalancePreviewCommand(int client) { FakelagRunBalanceReport(client, true, true); }

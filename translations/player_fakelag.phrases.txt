@@ -685,4 +685,97 @@
 		"en" "Cleared {1} active profiles and discarded all saved and pending profiles."
 		"es" "Se limpiaron {1} perfiles activos y se descartaron todos los perfiles guardados y pendientes."
 	}
+	"BalanceGlobalReport"
+	{
+		"en" "Global balance"
+		"es" "Balance global"
+	}
+	"BalancePairsReport"
+	{
+		"en" "Pair balance - one result per participant"
+		"es" "Balance por pares - un resultado por participante"
+	}
+	"BalanceProposalHeader"
+	{
+		"en" "PREVIEW: proposed profiles, not applied"
+		"es" "PREVIA: perfiles propuestos, sin aplicar"
+	}
+	"BalanceObservationHeader"
+	{
+		"en" "Observed profiles after the requests; changes confirmed per session."
+		"es" "Perfiles observados tras las solicitudes; resultado por usuario."
+	}
+	"BalanceProposalFooter"
+	{
+		"en" "Proposals do not modify profiles or override forward decisions."
+		"es" "Las propuestas no modifican perfiles ni deciden por los forwards."
+	}
+	"BalanceProposeProfile"
+	{
+		"en" "propose profile"
+		"es" "proponer perfil"
+	}
+	"BalanceProposeEmpty"
+	{
+		"en" "propose empty"
+		"es" "proponer cero"
+	}
+	"BalanceResultAdjusted"
+	{
+		"en" "adjusted"
+		"es" "ajustado"
+	}
+	"BalanceResultCleared"
+	{
+		"en" "cleared"
+		"es" "limpiado"
+	}
+	"BalanceResultUnchanged"
+	{
+		"en" "no change confirmed"
+		"es" "sin cambio conf."
+	}
+	"BalanceResultUnavailable"
+	{
+		"en" "unavailable"
+		"es" "no disponible"
+	}
+	"ConsoleColumnPartner"
+	{
+		"en" "Partner"
+		"es" "Pareja"
+	}
+	"ConsoleColumnLag"
+	{
+		"en" "Lag ms"
+		"es" "Lag ms"
+	}
+	"BalanceReportInterrupted"
+	{
+		"en" "Balance interrupted; previous observations are no longer valid."
+		"es" "Balance interrumpido; las observaciones anteriores ya no son válidas."
+	}
+	"BalanceObservedProfile"
+	{
+		"#format" "{1:s},{2:d}"
+		"en" "Your effective profile changed to {1} ms / {2}%% loss."
+		"es" "Tu perfil efectivo cambió a {1} ms / {2}%% de pérdida."
+	}
+	"BalanceObservedCounts"
+	{
+		"#format" "{1:d},{2:d}"
+		"en" "Confirmed: {1} adjustments, {2} clears."
+		"es" "Confirmados: {1} ajustes, {2} limpiezas."
+	}
+	"BalanceUnchangedCounts"
+	{
+		"#format" "{1:d},{2:d}"
+		"en" "No change confirmed: {1}; unavailable: {2}."
+		"es" "Sin cambio confirmado: {1}; no disponibles: {2}."
+	}
+	"BalanceReportPartial"
+	{
+		"en" "INCOMPLETE: unavailable results are not confirmed changes."
+		"es" "INCOMPLETO: lo no disponible no confirma cambios."
+	}
 }
