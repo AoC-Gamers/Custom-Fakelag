@@ -38,6 +38,8 @@ TEST_ARCH=32 SANITIZE=1 make test-exts-linux
 En Windows: `make test-exts-windows`. Cambios SourcePawn requieren `make build-smx`
 y compilación explícita de los harnesses afectados. Las pruebas standalone no
 certifican ABI ni gameplay: registra runtime y módulo exactos por separado.
+El [arnés del plugin](PLUGIN_PENDING_VALIDATION.md) ejecuta fuentes reales en
+SourceMod con transporte simulado; su receta crea un SRCDS aislado. No es gameplay.
 Para documentación basta comprobar coherencia, enlaces y diff; no cambia binarios.
 
 `.env.example` describe overrides locales. `VCVARSALL_PATH` permite seleccionar

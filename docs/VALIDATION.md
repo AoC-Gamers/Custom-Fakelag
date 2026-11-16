@@ -1,8 +1,15 @@
 # Estado y evidencia de validación
 
-Actualizado: 14-11-2026. Este índice consolida las revisiones de entregas;
+Actualizado: 16-11-2026. Este índice consolida las revisiones de entregas;
 los informes y JSON originales conservan su carácter histórico. Sus resultados
 no se atribuyen automáticamente a commits posteriores.
+
+## Cambios locales del plugin
+
+[Entrega y aceptación pendiente del 16-11](PLUGIN_PENDING_VALIDATION.md):
+muestreo por mapa, resultados efectivos, pérdida sin latencia y limpieza de
+intención diferida. Regresiones ejecutadas en SourceMod con transporte simulado;
+CI remoto y aceptación con clientes Linux/Windows pendientes. Sin publicación.
 
 ## Estado actual
 

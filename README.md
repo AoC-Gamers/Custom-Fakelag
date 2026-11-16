@@ -78,8 +78,10 @@ compensa al de menor latencia de cada pareja. Los que quedan sin pareja se limpi
 
 Los perfiles se guardan por Account ID en memoria del plugin, sin base de datos,
 para reconexión o cambio de equipo. El bloqueo LAN los olvida, incluso si el
-cliente ya se desconectó, y cancela restauraciones/votos pendientes. La descarga
-del plugin pide reset total de la extensión.
+cliente ya se desconectó, y cancela restauraciones/votos pendientes. La limpieza global descarta también perfiles de desconectados, snapshots y
+restauraciones/votos pendientes. La descarga del plugin pide reset total de la
+extensión. Los avisos y contadores reflejan cambios efectivos; un veto no confirma
+éxito. Los perfiles de solo pérdida también se restauran al recuperar elegibilidad.
 
 ## API y arquitectura
 
