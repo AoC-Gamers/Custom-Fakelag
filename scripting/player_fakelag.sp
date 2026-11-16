@@ -8,6 +8,13 @@
 #include <custom_fakelag>
 #include <left4dhooks_stocks>
 
+enum struct PluginRuntimeState
+{
+	bool lateLoad;
+	bool mapActive;
+}
+PluginRuntimeState g_Runtime;
+
 Handle		  g_FakeLagBalanceVote			  = null;
 int			  g_BalanceVoteMode				  = 0;
 StringMap	  g_PlayerLatencyByAccountId	  = null;
@@ -46,6 +53,7 @@ GlobalForward g_FwdOnPacketLossModeChanged = null;
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int errMax)
 {
+	g_Runtime.lateLoad = late;
 	CreateNative("PlayerFakelag_ApplyBalance", Native_ApplyBalance);
 	CreateNative("PlayerFakelag_PreviewBalance", Native_PreviewBalance);
 	CreateNative("PlayerFakelag_StartBalanceVote", Native_StartBalanceVote);
@@ -100,7 +108,14 @@ public void OnPluginStart()
 	g_CvarDefaultPacketLossMode.AddChangeHook(FakelagOnDefaultPacketLossModeChanged);
 	CFakeLag_OnLanPolicyChanged(CFakeLag_IsLanBlocked());
 
-	FakelagStartLatencySampling();
+	// OnMapStart has already happened when loading into an existing map,
+	// including a hibernating server where IsServerProcessing() is false.
+	if (g_Runtime.lateLoad)
+	{
+		char map[PLATFORM_MAX_PATH];
+		GetCurrentMap(map, sizeof(map));
+		if (map[0] != '\0') OnMapStart();
+	}
 	AutoExecConfig(true, "player_fakelag");
 
 	RegAdminCmd("sm_fakelag", FakeLagCmd, ADMFLAG_CONFIG, "Set fake lag for a player; use 0 to clear");
@@ -113,6 +128,21 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_fakelag_status", StatusLagCmd, "Show your fake lag status or, with admin access, another player's status");
 	RegConsoleCmd("sm_fakelag_compare", CompareLagCmd, "Compare your measured latency with another player, or compare two players");
 	RegConsoleCmd("sm_fakelag_vote", BalanceLagVoteCmd, "Start a fake lag balance vote using a required mode: global or pairs");
+}
+
+public void OnMapStart()
+{
+	if (g_Runtime.mapActive) return;
+	g_Runtime.mapActive = true;
+	FakelagStartLatencySampling();
+}
+
+public void OnMapEnd()
+{
+	g_Runtime.mapActive = false;
+	// SourceMod calls OnMapEnd before removing NO_MAPCHANGE timers.
+	delete g_LatencySamplingTimer;
+	FakelagStopLatencySampling();
 }
 
 public void OnConfigsExecuted()

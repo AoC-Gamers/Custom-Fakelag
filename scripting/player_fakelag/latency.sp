@@ -353,11 +353,6 @@ stock void FakelagStartLatencySampling()
 
 	for (int client = 1; client <= MaxClients; client++)
 	{
-		if (!IsHumanInGame(client))
-		{
-			continue;
-		}
-
 		FakelagResetClientLatencySamples(client);
 	}
 }
@@ -370,6 +365,11 @@ stock void FakelagRestartLatencySampling()
 		g_LatencySamplingTimer = null;
 	}
 
+	if (!g_Runtime.mapActive) return;
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		FakelagResetClientLatencySamples(client);
+	}
 	g_LatencySamplingTimer = CreateTimer(FakelagGetSamplingInterval(), FakelagLatencySamplingTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 }
 
@@ -388,6 +388,7 @@ stock void FakelagStopLatencySampling()
 
 public Action FakelagLatencySamplingTimer(Handle timer)
 {
+	if (timer != g_LatencySamplingTimer || !g_Runtime.mapActive) return Plugin_Stop;
 	for (int client = 1; client <= MaxClients; client++)
 	{
 		FakelagSampleClientLatency(client);
