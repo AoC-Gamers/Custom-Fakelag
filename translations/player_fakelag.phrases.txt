@@ -679,4 +679,10 @@
 		"en" "Restored your profile: {1} ms, {2}% packet loss."
 		"es" "Perfil restaurado: {1} ms, {2}% de pérdida de paquetes."
 	}
+	"ClearedAllIntent"
+	{
+		"#format" "{1:d}"
+		"en" "Cleared {1} active profiles and discarded all saved and pending profiles."
+		"es" "Se limpiaron {1} perfiles activos y se descartaron todos los perfiles guardados y pendientes."
+	}
 }

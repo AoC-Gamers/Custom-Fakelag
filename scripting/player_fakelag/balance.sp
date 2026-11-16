@@ -739,6 +739,12 @@ stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &
 	adjustedCount = 0;
 	clearedCount  = 0;
 
+	int epoch = g_Runtime.intentEpoch;
+	int survivorUserIds[MAXPLAYERS + 1];
+	int infectedUserIds[MAXPLAYERS + 1];
+	for (int index = 0; index < survivorCount; index++) survivorUserIds[index] = GetClientUserId(survivorClients[index]);
+	for (int index = 0; index < infectedCount; index++) infectedUserIds[index] = GetClientUserId(infectedClients[index]);
+
 	for (int index = 0; index < pairCount; index++)
 	{
 		int	  survivor	   = survivorClients[index];
@@ -747,11 +753,12 @@ stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &
 		float infectedPing = infectedPings[index];
 
 		float targetPing = survivorPing > infectedPing ? survivorPing : infectedPing;
-		int survivorUserId = GetClientUserId(survivor);
-		int infectedUserId = GetClientUserId(infected);
-		int epoch = g_Runtime.intentEpoch;
+		if (epoch != g_Runtime.intentEpoch) return true;
+		int survivorUserId = survivorUserIds[index];
+		int infectedUserId = infectedUserIds[index];
+		if (GetClientOfUserId(survivorUserId) != survivor || GetClientOfUserId(infectedUserId) != infected) continue;
 		FakelagApplyPairTarget(survivor, infected, targetPing - survivorPing, survivorPing, targetPing, adjustedCount, clearedCount);
-		if (epoch != g_Runtime.intentEpoch) break;
+		if (epoch != g_Runtime.intentEpoch) return true;
 		if (GetClientOfUserId(survivorUserId) == survivor && GetClientOfUserId(infectedUserId) == infected)
 		{
 			FakelagApplyPairTarget(infected, survivor, targetPing - infectedPing, infectedPing, targetPing, adjustedCount, clearedCount);
@@ -760,6 +767,8 @@ stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &
 
 	for (int index = pairCount; index < survivorCount; index++)
 	{
+		if (epoch != g_Runtime.intentEpoch) return true;
+		if (GetClientOfUserId(survivorUserIds[index]) != survivorClients[index]) continue;
 		if (FakelagClearPlayerLatencyExplicit(survivorClients[index]))
 		{
 			clearedCount++;
@@ -768,6 +777,8 @@ stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &
 
 	for (int index = pairCount; index < infectedCount; index++)
 	{
+		if (epoch != g_Runtime.intentEpoch) return true;
+		if (GetClientOfUserId(infectedUserIds[index]) != infectedClients[index]) continue;
 		if (FakelagClearPlayerLatencyExplicit(infectedClients[index]))
 		{
 			clearedCount++;
@@ -813,9 +824,15 @@ stock void FakelagApplyBalance(FakelagConsoleReport report, int admin, ConsolePa
 	int adjusted = 0;
 	int cleared	 = 0;
 
+	int epoch = g_Runtime.intentEpoch;
+	int userIds[MAXPLAYERS + 1];
+	for (int index = 0; index < count; index++) userIds[index] = GetClientUserId(clients[index]);
+
 	for (int index = 0; index < count; index++)
 	{
+		if (epoch != g_Runtime.intentEpoch) break;
 		int	  target		= clients[index];
+		if (GetClientOfUserId(userIds[index]) != target) continue;
 		float rawPing		= pings[index];
 		float compensation	= targetPing - rawPing;
 		float displayPing	= FakelagEstimateNetGraphPingForClientMs(target, rawPing);
@@ -840,6 +857,7 @@ stock void FakelagApplyBalance(FakelagConsoleReport report, int admin, ConsolePa
 			adjusted++;
 			FakelagNotifyGlobalBalanceTarget(target, effective.lagMs);
 		}
+		if (epoch != g_Runtime.intentEpoch || GetClientOfUserId(userIds[index]) != target) continue;
 		FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, changed ? FakelagBalanceAction_Adjust : FakelagBalanceAction_Same, changed ? effective.lagMs : 0.0);
 	}
 }
@@ -886,9 +904,15 @@ stock bool FakelagApplyBalanceSilent(float &targetPing, int &highestClient, int 
 		return false;
 	}
 
+	int epoch = g_Runtime.intentEpoch;
+	int userIds[MAXPLAYERS + 1];
+	for (int index = 0; index < playerCount; index++) userIds[index] = GetClientUserId(targets[index]);
+
 	for (int index = 0; index < playerCount; index++)
 	{
+		if (epoch != g_Runtime.intentEpoch) break;
 		int	  target	   = targets[index];
+		if (GetClientOfUserId(userIds[index]) != target) continue;
 		float compensation = targetPing - pings[index];
 
 		if (compensation <= 0.0)

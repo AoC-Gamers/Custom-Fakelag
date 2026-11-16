@@ -14,6 +14,7 @@ enum struct PluginRuntimeState
 	bool mapActive;
 	int intentEpoch;
 	bool clearingIntent;
+	int modeSnapshotSerial;
 }
 PluginRuntimeState g_Runtime;
 
@@ -109,14 +110,8 @@ public void OnPluginStart()
 	g_CvarDefaultPacketLossMode.AddChangeHook(FakelagOnDefaultPacketLossModeChanged);
 	CFakeLag_OnLanPolicyChanged(CFakeLag_IsLanBlocked());
 
-	// OnMapStart has already happened when loading into an existing map,
-	// including a hibernating server where IsServerProcessing() is false.
-	if (g_Runtime.lateLoad)
-	{
-		char map[PLATFORM_MAX_PATH];
-		GetCurrentMap(map, sizeof(map));
-		if (map[0] != '\0') OnMapStart();
-	}
+	// SourceMod also delivers OnMapStart after OnAllPluginsLoaded on late load
+	// when a map is running (PluginSys.cpp). Do not guess from server ticks.
 	AutoExecConfig(true, "player_fakelag");
 
 	RegAdminCmd("sm_fakelag", FakeLagCmd, ADMFLAG_CONFIG, "Set fake lag for a player; use 0 to clear");
@@ -141,6 +136,7 @@ public void OnMapStart()
 public void OnMapEnd()
 {
 	g_Runtime.mapActive = false;
+	FakelagInvalidateDeferredWork();
 	// SourceMod calls OnMapEnd before removing NO_MAPCHANGE timers.
 	delete g_LatencySamplingTimer;
 	FakelagStopLatencySampling();
@@ -166,32 +162,9 @@ public void OnPluginEnd()
 	Call_StartForward(g_FwdOnPluginEnd);
 	Call_Finish();
 
-	if (g_FakeLagBalanceVote != null
-		&& GetFeatureStatus(FeatureType_Native, "CancelBuiltinVote") == FeatureStatus_Available
-		&& GetFeatureStatus(FeatureType_Native, "IsBuiltinVoteInProgress") == FeatureStatus_Available
-		&& IsBuiltinVoteInProgress())
-	{
-		CancelBuiltinVote();
-	}
-
-	g_FakeLagBalanceVote = null;
-	g_BalanceVoteMode	 = 0;
+	FakelagForgetAllIntent();
+	g_Runtime.clearingIntent = true;
 	FakelagStopLatencySampling();
-
-	for (int client = 1; client <= MaxClients; client++)
-	{
-		if (!IsHumanInGame(client))
-		{
-			continue;
-		}
-
-		if (!FakelagHasNetworkProfile(client))
-		{
-			continue;
-		}
-
-		CPrintToChat(client, "%t %t", "Tag", "TargetSelfCleared");
-	}
 
 	CFakeLag_ResetState();
 	delete g_PlayerLatencyByAccountId;
@@ -227,6 +200,10 @@ public void OnPluginEnd()
 
 public void CFakeLag_OnPacketLossModeChanged(CFakeLagPacketLossMode oldMode, CFakeLagPacketLossMode newMode)
 {
+	// An external mode reset invalidates previously queued work. The plugin's
+	// own mode flow queues its fresh snapshot only after this callback returns.
+	g_Runtime.intentEpoch++;
+	g_DefaultPacketLossModeApplyQueued = false;
 	if (g_FwdOnPacketLossModeChanged != null)
 	{
 		Call_StartForward(g_FwdOnPacketLossModeChanged);
@@ -647,19 +624,33 @@ public Action ClearAllLagCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
+	if (g_Runtime.clearingIntent) return Plugin_Handled;
 	int laggedClients = FakelagGetActiveProfileCount();
-	if (laggedClients <= 0)
+	// Durable intent is discarded before any native capable of throwing.
+	FakelagForgetAllIntent();
+	g_Runtime.clearingIntent = true;
+	Call_StartFunction(null, FakelagClearAllNative);
+	int error = Call_Finish();
+	g_Runtime.clearingIntent = false;
+	if (error != SP_ERROR_NONE)
 	{
-		CReplyToCommand(client, "%t %t", "Tag", "NoEntriesToClear");
+		ThrowError("Clear-all failed (SourcePawn error %d); saved intent was discarded", error);
 		return Plugin_Handled;
 	}
-
-	CFakeLag_ClearAllPlayerProfiles();
-	g_PlayerLatencyByAccountId.Clear();
-	g_PlayerPacketLossByAccountId.Clear();
-	g_PlayerDisconnectedByAccountId.Clear();
-	CPrintToChat(client, "%t %t", "Tag", "ClearedAll", laggedClients);
+	if (FakelagGetActiveProfileCount() != 0)
+	{
+		ThrowError("Clear-all did not empty the active profiles; saved intent was discarded");
+		return Plugin_Handled;
+	}
+	CPrintToChat(client, "%t %t", "Tag", "ClearedAllIntent", laggedClients);
 	return Plugin_Handled;
+}
+
+// A SourcePawn call boundary lets the owner release its guard on native error.
+// Call_Finish reports the failure; the command rethrows it without success text.
+public void FakelagClearAllNative()
+{
+	CFakeLag_ClearAllPlayerProfiles();
 }
 
 public Action PrintLagCmd(int client, int args)

@@ -115,26 +115,7 @@ public void CFakeLag_OnLanPolicyChanged(bool blocked)
 	{
 		return;
 	}
-	g_PlayerLatencyByAccountId.Clear();
-	g_PlayerPacketLossByAccountId.Clear();
-	g_PlayerDisconnectedByAccountId.Clear();
-	g_ModeChangeRestorePending = false;
-	for (int client = 1; client <= MaxClients; client++)
-	{
-		g_ModeChangeRestoreLag[client] = 0.0;
-		g_ModeChangeRestoreLoss[client] = 0;
-		g_ModeChangeRestoreUserId[client] = 0;
-	}
-	// Invalidate the old vote before cancellation can deliver callbacks.
-	bool hadVote = g_FakeLagBalanceVote != null;
-	g_FakeLagBalanceVote = null;
-	g_BalanceVoteMode = 0;
-	if (hadVote && GetFeatureStatus(FeatureType_Native, "CancelBuiltinVote") == FeatureStatus_Available
-		&& GetFeatureStatus(FeatureType_Native, "IsBuiltinVoteInProgress") == FeatureStatus_Available
-		&& IsBuiltinVoteInProgress())
-	{
-		CancelBuiltinVote();
-	}
+	FakelagForgetAllIntent();
 }
 
 public void CFakeLag_OnPlayerProfileChanged(int client, float oldLag, int oldPacketLossPercent, float newLag, int newPacketLossPercent, CFakeLagChangeReason reason)

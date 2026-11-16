@@ -1,5 +1,6 @@
 stock bool FakelagRequireAllowed(int client)
 {
+	if (g_Runtime.clearingIntent) return false;
 	if (!CFakeLag_IsLanBlocked())
 	{
 		return true;
@@ -133,6 +134,7 @@ stock void FakelagGetPacketLossModeName(int client, CFakeLagPacketLossMode mode,
 
 stock void FakelagQueueApplyDefaultPacketLossMode()
 {
+	if (g_Runtime.clearingIntent) return;
 	if (g_DefaultPacketLossModeApplyQueued)
 	{
 		if (FakelagIsDebugEnabled())
@@ -143,11 +145,12 @@ stock void FakelagQueueApplyDefaultPacketLossMode()
 	}
 
 	g_DefaultPacketLossModeApplyQueued = true;
-	RequestFrame(FakelagApplyDefaultPacketLossModeOnNextFrame);
+	RequestFrame(FakelagApplyDefaultPacketLossModeOnNextFrame, g_Runtime.intentEpoch);
 }
 
 void FakelagApplyDefaultPacketLossModeOnNextFrame(any data)
 {
+	if (data != g_Runtime.intentEpoch) return;
 	g_DefaultPacketLossModeApplyQueued = false;
 	FakelagApplyDefaultPacketLossMode();
 }
@@ -216,6 +219,7 @@ stock void FakelagApplyDefaultPacketLossMode()
 
 stock void FakelagSnapshotProfilesForModeChange()
 {
+	g_Runtime.modeSnapshotSerial++;
 	g_ModeChangeRestorePending = false;
 	int snapshotCount = 0;
 
@@ -275,16 +279,27 @@ stock void FakelagQueueModeChangeRestore()
 		LogMessage("[player_fakelag] Scheduling mode-change profile restore on next frame");
 	}
 
-	RequestFrame(FakelagRestoreProfilesAfterModeChange);
+	DataPack pack = new DataPack();
+	pack.WriteCell(g_Runtime.intentEpoch);
+	pack.WriteCell(g_Runtime.modeSnapshotSerial);
+	RequestFrame(FakelagRestoreProfilesAfterModeChange, pack);
 }
 
 void FakelagRestoreProfilesAfterModeChange(any data)
 {
+	DataPack pack = view_as<DataPack>(data);
+	pack.Reset();
+	int epoch = pack.ReadCell();
+	int serial = pack.ReadCell();
+	delete pack;
+	if (epoch != g_Runtime.intentEpoch || serial != g_Runtime.modeSnapshotSerial) return;
+	g_ModeChangeRestorePending = false;
 	int restoredCount = 0;
 	int skippedCount = 0;
 
 	for (int client = 1; client <= MaxClients; client++)
 	{
+		if (epoch != g_Runtime.intentEpoch || serial != g_Runtime.modeSnapshotSerial) return;
 		float lagMs = g_ModeChangeRestoreLag[client];
 		int packetLossPercent = g_ModeChangeRestoreLoss[client];
 		int userId = g_ModeChangeRestoreUserId[client];
@@ -324,7 +339,6 @@ void FakelagRestoreProfilesAfterModeChange(any data)
 		}
 	}
 
-	g_ModeChangeRestorePending = false;
 	if (FakelagIsDebugEnabled())
 	{
 		LogMessage("[player_fakelag] Mode-change restore finished: restored=%d skipped=%d", restoredCount, skippedCount);
@@ -343,7 +357,7 @@ stock bool FakelagIsBalanceAudienceClient(int client)
 
 stock bool FakelagCanApplyLatencyToClient(int client)
 {
-	if (CFakeLag_IsLanBlocked() || !IsHumanInGame(client) || !CFakeLag_IsClientSupported(client))
+	if (g_Runtime.clearingIntent || CFakeLag_IsLanBlocked() || !IsHumanInGame(client) || !CFakeLag_IsClientSupported(client))
 	{
 		return false;
 	}

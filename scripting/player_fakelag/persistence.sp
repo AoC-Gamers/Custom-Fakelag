@@ -1,3 +1,47 @@
+stock void FakelagInvalidateDeferredWork()
+{
+	g_Runtime.intentEpoch++;
+	g_Runtime.modeSnapshotSerial++;
+	g_ModeChangeRestorePending = false;
+	g_DefaultPacketLossModeApplyQueued = false;
+	g_DefaultPacketLossModeApplyRetries = 0;
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		g_ModeChangeRestoreLag[client] = 0.0;
+		g_ModeChangeRestoreLoss[client] = 0;
+		g_ModeChangeRestoreUserId[client] = 0;
+	}
+}
+
+stock void FakelagForgetAllIntent()
+{
+	FakelagInvalidateDeferredWork();
+	g_PlayerLatencyByAccountId.Clear();
+	g_PlayerPacketLossByAccountId.Clear();
+	g_PlayerDisconnectedByAccountId.Clear();
+	// Invalidate ownership before cancellation delivers any callbacks. Never
+	// cancel the global vote when this plugin has no vote of its own.
+	bool hadVote = g_FakeLagBalanceVote != null;
+	g_FakeLagBalanceVote = null;
+	g_BalanceVoteMode = 0;
+	if (hadVote && GetFeatureStatus(FeatureType_Native, "CancelBuiltinVote") == FeatureStatus_Available
+		&& GetFeatureStatus(FeatureType_Native, "IsBuiltinVoteInProgress") == FeatureStatus_Available
+		&& IsBuiltinVoteInProgress())
+	{
+		bool wasClearing = g_Runtime.clearingIntent;
+		g_Runtime.clearingIntent = true;
+		Call_StartFunction(null, FakelagCancelOwnedVote);
+		int error = Call_Finish();
+		g_Runtime.clearingIntent = wasClearing;
+		if (error != SP_ERROR_NONE) LogError("Owned vote invalidated, but cancellation failed (%d)", error);
+	}
+}
+
+public void FakelagCancelOwnedVote()
+{
+	CancelBuiltinVote();
+}
+
 stock bool FakelagGetClientAccountKey(int client, char[] buffer, int maxlen)
 {
 	buffer[0] = '\0';
@@ -19,6 +63,7 @@ stock bool FakelagGetClientAccountKey(int client, char[] buffer, int maxlen)
 
 stock void FakelagStoreProfileForClient(int client, float lag, int packetLossPercent)
 {
+	if (g_Runtime.clearingIntent || CFakeLag_IsLanBlocked() || (lag <= 0.0 && packetLossPercent <= 0)) return;
 	char accountKey[16];
 	if (!FakelagGetClientAccountKey(client, accountKey, sizeof(accountKey)))
 	{
@@ -35,6 +80,7 @@ stock void FakelagStoreProfileForClient(int client, float lag, int packetLossPer
 
 stock void FakelagSetDisconnectedState(int client, bool disconnected)
 {
+	if (g_Runtime.clearingIntent) return;
 	char accountKey[16];
 	if (!FakelagGetClientAccountKey(client, accountKey, sizeof(accountKey)))
 	{
@@ -117,17 +163,22 @@ stock bool FakelagHasDisconnectedState(int client)
 
 stock void FakelagQueueRestoreClientLatency(int client)
 {
-	if (client <= 0)
-	{
-		return;
-	}
-
-	RequestFrame(FakelagRestoreClientLatencyOnNextFrame, GetClientUserId(client));
+	if (client <= 0 || g_Runtime.clearingIntent || CFakeLag_IsLanBlocked()) return;
+	DataPack pack = new DataPack();
+	pack.WriteCell(GetClientUserId(client));
+	pack.WriteCell(g_Runtime.intentEpoch);
+	RequestFrame(FakelagRestoreClientLatencyOnNextFrame, pack);
 }
 
 void FakelagRestoreClientLatencyOnNextFrame(any data)
 {
-	int client = GetClientOfUserId(data);
+	DataPack pack = view_as<DataPack>(data);
+	pack.Reset();
+	int userId = pack.ReadCell();
+	int epoch = pack.ReadCell();
+	delete pack;
+	if (epoch != g_Runtime.intentEpoch) return;
+	int client = GetClientOfUserId(userId);
 	if (client <= 0)
 	{
 		return;
