@@ -4,12 +4,15 @@ Actualizado: 16-11-2026. Este índice consolida las revisiones de entregas;
 los informes y JSON originales conservan su carácter histórico. Sus resultados
 no se atribuyen automáticamente a commits posteriores.
 
-## Cambios locales del plugin
+## Últimas entregas del plugin
 
-[Entrega y aceptación pendiente del 16-11](PLUGIN_PENDING_VALIDATION.md):
-muestreo por mapa, resultados efectivos, pérdida sin latencia y limpieza de
-intención diferida. Regresiones ejecutadas en SourceMod con transporte simulado;
-CI remoto y aceptación con clientes Linux/Windows pendientes. Sin publicación.
+La [entrega original del 16-11](PLUGIN_PENDING_VALIDATION.md) se integró en
+`develop` como `77f1200`; su [CI pasó](https://github.com/AoC-Gamers/Custom-Fakelag/actions/runs/43904516633).
+La revisión posterior de tablas se corrigió localmente:
+[FL-02, informes efectivos](BALANCE_REPORT_VALIDATION.md). Tiene 177 aserciones
+por idioma, las 44 regresiones anteriores y cinco pruebas del muestreador.
+CI nuevo, clientes Linux/Windows y BuiltinVotes real siguen pendientes.
+No se publicó ni desplegó esa nueva rama.
 
 ## Estado actual
 
@@ -33,6 +36,7 @@ Los artefactos del diagnóstico están separados del paquete normal.
 
 | Tema | Informe | Datos |
 |---|---|---|
+| Informes de balance: propuestas frente a observaciones | [Tablas efectivas](BALANCE_REPORT_VALIDATION.md) | [Reproducción](runtime/plugin-table-baseline-2026-11-16.json), [arnés](runtime/plugin-table-results-2026-11-16.json) |
 | Seguridad inicial: propiedad, colas y pérdida | [Seguridad](FAKELAG_SAFETY_VALIDATION.md) | Reproducer y suite en tests/ |
 | ABI, capacidad y lector | [SDK/runtime](SDK_RUNTIME_REFERENCES.md) | [Linux](runtime/linux-engine-2.2.4.3.json), [Windows](runtime/windows-engine-2.2.4.3.json) |
 | 17 checks Linux | [Integración Linux](ENGINE_INTEGRATION_VALIDATION.md) | [Probe](runtime/linux-probe-2026-11-13.json) |

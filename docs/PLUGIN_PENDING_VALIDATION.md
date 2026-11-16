@@ -5,6 +5,19 @@ Código corregido: `d08d0e4`. Rama local: `codex/fakelag-plugin-pending`.
 Sin push, release ni despliegue. La evidencia del arnés registra además el SHA
 exacto ejecutado; los cambios posteriores de documentación no cambian el plugin.
 
+## Actualización posterior al push
+
+El bloque anterior y las pruebas descritas más abajo conservan el estado de la
+entrega local original. Después se integró `77f1200` en `develop` y pasó el
+[workflow 43904516633](https://github.com/AoC-Gamers/Custom-Fakelag/actions/runs/43904516633)
+(Linux, Windows, SourcePawn y canal develop), consultado de nuevo el 16-11-2026.
+No equivale a aceptación con clientes.
+
+La revisión posterior detectó el remanente FL-02 de las tablas. Su
+[corrección y evidencia nuevas](BALANCE_REPORT_VALIDATION.md) están en una rama
+local: CI remoto nuevo y pruebas con clientes reales siguen pendientes.
+El runner de la receta inferior incorpora ahora las comprobaciones de tablas.
+
 ## Correcciones
 
 - **FL-01:** timer por mapa. SourceMod entrega `OnMapStart` también en carga

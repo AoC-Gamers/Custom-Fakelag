@@ -1,0 +1,25 @@
+{
+  "initial_reproduction": {
+    "product_sha": "77f1200512f81380e6e9b829c17f14efaf00f3b2",
+    "trace": [
+      "[table_test] REPRO global-modified row=0 action=+40ms loss=2 effective1=40.0/3 effective3=0.0/0",
+      "[table_test] REPRO global-modified row=1 action=same loss=0 effective1=40.0/3 effective3=0.0/0",
+      "[table_test] REPRO pairs-modified row=0 action=Client1 +100ms loss=3 effective1=40.0/3 effective3=0.0/0",
+      "[table_test] REPRO pairs-veto row=0 action=Client1 +100ms loss=3 effective1=0.0/0 effective3=0.0/0",
+      "[table_test] REPRO unpaired-veto row=0 action=Client1 +50ms loss=2 effective1=0.0/0 effective3=25.0/15",
+      "[table_test] REPRO unpaired-veto row=1 action=clear loss=0 effective1=0.0/0 effective3=25.0/15",
+      "[table_test] REPRO COMPLETE"
+    ]
+  },
+  "regression_rejects_baseline": {
+    "baseline_sha": "77f1200512f81380e6e9b829c17f14efaf00f3b2",
+    "kind": "Committed regression harness compiled against archived baseline product sources; expected failure in real table cells",
+    "harness_source_sha256": "2f2fda405e4605ba222f1f6135fe76d2ffcc5598648de8f9cad8cf6c0849d69e",
+    "expected_failure": "plugin_test FAIL FL02-R01 global permitted (schema/actual row assertion)",
+    "trace": [
+      "[table_test] HEADER FL02-R01 global permitted Player       |   Avg |   Raw | Result       | Loss",
+      "[table_test] ROW FL02-R01 global permitted Client1      |  21.6 |  30.0 | +100ms       |    3",
+      "[table_test] ROW FL02-R01 global permitted Client2      | 121.6 | 130.0 | same         |    0"
+    ]
+  }
+}
