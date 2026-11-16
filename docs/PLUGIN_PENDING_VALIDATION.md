@@ -51,7 +51,8 @@ La política LAN no corrige el fallo histórico de cierre Steam.
 La suite incluye 44 aserciones funcionales y cinco ejecuciones del muestreador.
 Usa los fuentes del producto, no una reimplementación del algoritmo. El host
 es SRCDS Linux aislado, sin red, con contenido Valve en solo lectura. No conecta
-jugadores, no usa bots como evidencia humana y no valida ABI ni tráfico.
+jugadores. `sb_all_bot_game 1` mantiene la simulación del servidor de pruebas
+activa; sus bots no son evidencia humana. No se valida ABI ni tráfico.
 El arnés no se incluye en el paquete del producto.
 
 Validación local adicional:

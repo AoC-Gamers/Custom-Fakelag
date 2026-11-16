@@ -36,7 +36,7 @@ cat > "$TASK/gameinfo.txt" <<'EOF'
  }
 }
 EOF
-printf 'sv_lan 1\n' > "$TASK/cfg/server.cfg"
+printf 'sv_lan 1\nsv_cheats 1\nsb_all_bot_game 1\n' > "$TASK/cfg/server.cfg"
 # No SDKTools/entity hooks or automatic updater are needed by this mock host.
 rm -f "$TASK/addons/sourcemod/extensions/sdktools.autoload" "$TASK/addons/sourcemod/extensions/sdkhooks.autoload"
 python3 - "$TASK/addons/sourcemod/configs/core.cfg" <<'PYTHON'
