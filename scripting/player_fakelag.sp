@@ -431,20 +431,7 @@ public Action FakeLagCmd(int client, int args)
 			return Plugin_Handled;
 		}
 
-		if (!FakelagClearNetworkProfile(target, true))
-		{
-			CReplyToCommand(client, "%t %t", "Tag", "ProfileNotChanged");
-			return Plugin_Handled;
-		}
-		if (target == client)
-		{
-			CPrintToChatEx(target, target, "%t %t", "Tag", "TargetSelfCleared");
-		}
-		else
-		{
-			CPrintToChat(client, "%t %t", "Tag", "ClearedOnPlayer", target);
-			CPrintToChatEx(target, client, "%t %t", "Tag", "TargetClearedByAdmin", client);
-		}
+		FakelagClearProfileCommand(client, target);
 		return Plugin_Handled;
 	}
 
@@ -464,32 +451,7 @@ public Action FakeLagCmd(int client, int args)
 		CReplyToCommand(client, "%t %t", "Tag", "ProfileNotChanged");
 		return Plugin_Handled;
 	}
-	lagAmount = RoundToNearest(effective.lagMs);
-	packetLossPercent = effective.packetLossPercent;
-	if (target == client)
-	{
-		if (packetLossPercent > 0)
-		{
-			CPrintToChat(target, "%t %t", "Tag", "TargetSelfAdjustedWithLoss", lagAmount, packetLossPercent);
-		}
-		else
-		{
-			CPrintToChat(target, "%t %t", "Tag", "TargetSelfAdjusted", lagAmount);
-		}
-	}
-	else
-	{
-		if (packetLossPercent > 0)
-		{
-			CPrintToChat(client, "%t %t", "Tag", "SetOnPlayerWithLoss", lagAmount, packetLossPercent, target);
-			CPrintToChatEx(target, client, "%t %t", "Tag", "TargetAdjustedByAdminWithLoss", client, lagAmount, packetLossPercent);
-		}
-		else
-		{
-			CPrintToChat(client, "%t %t", "Tag", "SetOnPlayer", lagAmount, target);
-			CPrintToChatEx(target, client, "%t %t", "Tag", "TargetAdjustedByAdmin", client, lagAmount);
-		}
-	}
+	FakelagNotifyProfileApplied(client, target, effective);
 	return Plugin_Handled;
 }
 
@@ -553,20 +515,7 @@ public Action ClearLagCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	if (!FakelagClearNetworkProfile(target, true))
-	{
-		CReplyToCommand(client, "%t %t", "Tag", "ProfileNotChanged");
-		return Plugin_Handled;
-	}
-	if (target == client)
-	{
-		CPrintToChatEx(client, client, "%t %t", "Tag", "TargetSelfCleared");
-		CReplyToCommand(client, "%t %t", "Tag", "TargetSelfCleared");
-		return Plugin_Handled;
-	}
-
-	CPrintToChat(client, "%t %t", "Tag", "ClearedOnPlayer", target);
-	CPrintToChatEx(target, client, "%t %t", "Tag", "TargetClearedByAdmin", client);
+	FakelagClearProfileCommand(client, target);
 	return Plugin_Handled;
 }
 

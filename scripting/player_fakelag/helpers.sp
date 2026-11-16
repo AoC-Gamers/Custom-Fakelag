@@ -1,3 +1,38 @@
+stock void FakelagNotifyProfileApplied(int actor, int target, const PlayerNetworkProfile profile)
+{
+	if (actor == target)
+	{
+		CPrintToChat(target, "%t %t", "Tag", "TargetSelfAdjustedWithLoss", profile.lagMs, profile.packetLossPercent);
+	}
+	else
+	{
+		CPrintToChat(actor, "%t %t", "Tag", "SetOnPlayerWithLoss", profile.lagMs, profile.packetLossPercent, target);
+		CPrintToChatEx(target, actor, "%t %t", "Tag", "TargetAdjustedByAdminWithLoss", actor, profile.lagMs, profile.packetLossPercent);
+	}
+}
+
+stock void FakelagClearProfileCommand(int actor, int target)
+{
+	PlayerNetworkProfile effective;
+	if (FakelagClearNetworkProfileResult(target, effective, true) != FakelagProfile_Changed)
+	{
+		CReplyToCommand(actor, "%t %t", "Tag", "ProfileNotChanged");
+		return;
+	}
+	if (FakelagProfileIsActive(effective))
+	{
+		// A forward may replace a clear with a nonzero profile.
+		FakelagNotifyProfileApplied(actor, target, effective);
+		return;
+	}
+	if (target == actor) CPrintToChatEx(target, actor, "%t %t", "Tag", "TargetSelfCleared");
+	else
+	{
+		CPrintToChat(actor, "%t %t", "Tag", "ClearedOnPlayer", target);
+		CPrintToChatEx(target, actor, "%t %t", "Tag", "TargetClearedByAdmin", actor);
+	}
+}
+
 stock bool FakelagRequireAllowed(int client)
 {
 	if (g_Runtime.clearingIntent) return false;

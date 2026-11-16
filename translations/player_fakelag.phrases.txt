@@ -137,9 +137,9 @@
 
 	"SetOnPlayerWithLoss"
 	{
-		"#format"   "{1:d},{2:d},{3:N}"
-		"en"        "{lightgreen}Set fake lag{default} of {green}{1}ms{default} and {lightgreen}{2}%%{default} loss on player {teamcolor}{3}{default}"
-		"es"        "Se {lightgreen}aplico un fakelag{default} de {green}{1}ms{default} y {lightgreen}{2}%%{default} loss al jugador {teamcolor}{3}{default}"
+		"#format"   "{1:f},{2:d},{3:N}"
+		"en"        "{lightgreen}Set fake lag{default} of {green}{1:.1}ms{default} and {lightgreen}{2}%%{default} loss on player {teamcolor}{3}{default}"
+		"es"        "Se {lightgreen}aplico un fakelag{default} de {green}{1:.1}ms{default} y {lightgreen}{2}%%{default} loss al jugador {teamcolor}{3}{default}"
 	}
 
 	"TargetSelfCleared"
@@ -183,9 +183,9 @@
 
 	"TargetSelfAdjustedWithLoss"
 	{
-		"#format"   "{1:d},{2:d}"
-		"en"        "Your modified ms are now {green}{1} ms{default} with {lightgreen}{2}%%{default} loss."
-		"es"        "Tus ms modificados ahora son {green}{1} ms{default} con {lightgreen}{2}%%{default} de loss."
+		"#format"   "{1:f},{2:d}"
+		"en"        "Your modified ms are now {green}{1:.1} ms{default} with {lightgreen}{2}%%{default} loss."
+		"es"        "Tus ms modificados ahora son {green}{1:.1} ms{default} con {lightgreen}{2}%%{default} de loss."
 	}
 
 	"TargetAdjustedByAdmin"
@@ -197,9 +197,9 @@
 
 	"TargetAdjustedByAdminWithLoss"
 	{
-		"#format"   "{1:N},{2:d},{3:d}"
-		"en"        "{teamcolor}{1}{default} adjusted your modified ms to {green}{2} ms{default} with {lightgreen}{3}%%{default} loss."
-		"es"        "{teamcolor}{1}{default} ajusto tus ms modificados a {green}{2} ms{default} con {lightgreen}{3}%%{default} de loss."
+		"#format"   "{1:N},{2:f},{3:d}"
+		"en"        "{teamcolor}{1}{default} adjusted your modified ms to {green}{2:.1} ms{default} with {lightgreen}{3}%%{default} loss."
+		"es"        "{teamcolor}{1}{default} ajusto tus ms modificados a {green}{2:.1} ms{default} con {lightgreen}{3}%%{default} de loss."
 	}
 
 	"NoEntriesToClear"
@@ -676,8 +676,8 @@
 	"RestoredProfileOnSelf"
 	{
 		"#format" "{1:f},{2:d}"
-		"en" "Restored your profile: {1} ms, {2}% packet loss."
-		"es" "Perfil restaurado: {1} ms, {2}% de pérdida de paquetes."
+		"en" "Restored your profile: {1:.1} ms, {2}%% packet loss."
+		"es" "Perfil restaurado: {1:.1} ms, {2}%% de pérdida de paquetes."
 	}
 	"ClearedAllIntent"
 	{

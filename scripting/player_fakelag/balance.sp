@@ -676,9 +676,13 @@ stock void FakelagSortBalanceCandidatesDescending(int clients[MAXPLAYERS + 1], f
 	}
 }
 
-stock bool FakelagClearPlayerLatencyExplicit(int client)
+stock bool FakelagClearPlayerLatencyExplicit(int client, int &adjusted, int &cleared)
 {
-	return FakelagClearNetworkProfile(client, true);
+	PlayerNetworkProfile effective;
+	if (FakelagClearNetworkProfileResult(client, effective, true) != FakelagProfile_Changed) return false;
+	if (FakelagProfileIsActive(effective)) adjusted++;
+	else cleared++;
+	return true;
 }
 
 stock void FakelagApplyPairTarget(int target, int partner, float compensation, float basePing, float targetPing, int &adjusted, int &cleared)
@@ -688,8 +692,8 @@ stock void FakelagApplyPairTarget(int target, int partner, float compensation, f
 	bool changed;
 	if (compensation <= 0.0)
 	{
-		changed = FakelagClearPlayerLatencyExplicit(target);
-		if (changed) cleared++;
+		changed = FakelagClearPlayerLatencyExplicit(target, adjusted, cleared);
+		if (changed) FakelagGetNetworkProfile(target, effective);
 	}
 	else
 	{
@@ -769,20 +773,14 @@ stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &
 	{
 		if (epoch != g_Runtime.intentEpoch) return true;
 		if (GetClientOfUserId(survivorUserIds[index]) != survivorClients[index]) continue;
-		if (FakelagClearPlayerLatencyExplicit(survivorClients[index]))
-		{
-			clearedCount++;
-		}
+		FakelagClearPlayerLatencyExplicit(survivorClients[index], adjustedCount, clearedCount);
 	}
 
 	for (int index = pairCount; index < infectedCount; index++)
 	{
 		if (epoch != g_Runtime.intentEpoch) return true;
 		if (GetClientOfUserId(infectedUserIds[index]) != infectedClients[index]) continue;
-		if (FakelagClearPlayerLatencyExplicit(infectedClients[index]))
-		{
-			clearedCount++;
-		}
+		FakelagClearPlayerLatencyExplicit(infectedClients[index], adjustedCount, clearedCount);
 	}
 
 	return true;
@@ -840,13 +838,13 @@ stock void FakelagApplyBalance(FakelagConsoleReport report, int admin, ConsolePa
 
 		if (compensation <= 0.0)
 		{
-			clearedClient = FakelagClearPlayerLatencyExplicit(target);
-			if (clearedClient)
-			{
-				cleared++;
-				FakelagNotifyGlobalBalanceTarget(target, 0.0);
-			}
-			FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, clearedClient ? FakelagBalanceAction_Clear : FakelagBalanceAction_Same, 0.0);
+			bool changed = FakelagClearPlayerLatencyExplicit(target, adjusted, cleared);
+			if (epoch != g_Runtime.intentEpoch || GetClientOfUserId(userIds[index]) != target) continue;
+			float actualLag = FakelagGetAppliedLagMs(target);
+			clearedClient = changed && !FakelagHasNetworkProfile(target);
+			if (changed) FakelagNotifyGlobalBalanceTarget(target, actualLag);
+			FakelagBalanceAction action = !changed ? FakelagBalanceAction_Same : (clearedClient ? FakelagBalanceAction_Clear : FakelagBalanceAction_Adjust);
+			FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, action, actualLag);
 			continue;
 		}
 
@@ -917,7 +915,7 @@ stock bool FakelagApplyBalanceSilent(float &targetPing, int &highestClient, int 
 
 		if (compensation <= 0.0)
 		{
-			if (FakelagClearPlayerLatencyExplicit(target)) clearedCount++;
+			FakelagClearPlayerLatencyExplicit(target, adjustedCount, clearedCount);
 			continue;
 		}
 

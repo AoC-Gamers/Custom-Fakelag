@@ -280,18 +280,26 @@ stock FakelagProfileResult FakelagApplyNetworkProfile(int client, const PlayerNe
 	return FakelagProfileIsActive(effective) ? FakelagProfile_Changed : FakelagProfile_Unavailable;
 }
 
-stock bool FakelagClearNetworkProfile(int client, bool forget = false)
+stock FakelagProfileResult FakelagClearNetworkProfileResult(int client, PlayerNetworkProfile effective, bool forget = false)
 {
-	if (g_Runtime.clearingIntent || !CFakeLag_IsClientSupported(client)) return false;
+	if (g_Runtime.clearingIntent || !CFakeLag_IsClientSupported(client)) return FakelagProfile_Unavailable;
 	int userId = GetClientUserId(client);
 	int epoch = g_Runtime.intentEpoch;
-	bool hadProfile = FakelagHasNetworkProfile(client);
+	PlayerNetworkProfile before;
+	FakelagGetNetworkProfile(client, before);
 	CFakeLag_ClearPlayerProfile(client);
 	if (epoch != g_Runtime.intentEpoch || GetClientOfUserId(userId) != client
-		|| !CFakeLag_IsClientSupported(client) || FakelagHasNetworkProfile(client)) return false;
+		|| !CFakeLag_IsClientSupported(client)) return FakelagProfile_Unavailable;
+	FakelagGetNetworkProfile(client, effective);
 	// No pre-call flag can leak into a later implicit clear after veto/error.
-	if (forget) FakelagForgetStoredLatency(client);
-	return hadProfile;
+	if (forget && !FakelagProfileIsActive(effective)) FakelagForgetStoredLatency(client);
+	return FakelagProfilesEqual(before, effective) ? FakelagProfile_Unchanged : FakelagProfile_Changed;
+}
+
+stock bool FakelagClearNetworkProfile(int client, bool forget = false)
+{
+	PlayerNetworkProfile effective;
+	return FakelagClearNetworkProfileResult(client, effective, forget) == FakelagProfile_Changed && !FakelagProfileIsActive(effective);
 }
 
 stock bool FakelagHasNetworkProfile(int client)
