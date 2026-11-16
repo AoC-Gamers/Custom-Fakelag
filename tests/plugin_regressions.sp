@@ -174,7 +174,7 @@ stock void MockClearAll()
 }
 public Action PlayerFakelag_OnSetPlayerLatency(int client, float oldLag, float &lag, int reason)
 {
-	if (g_TestReenter == 1) { g_TestSession[client]++; }
+	if (g_TestReenter == 1) { g_TestSession[client] += 1000; }
 	if (g_TestReenter == 2) { g_TestBlocked = true; CFakeLag_OnLanPolicyChanged(true); }
 	if (g_TestReenter == 3) { FakelagForgetAllIntent(); }
 	if (g_TestOverride >= 0.0) lag = g_TestOverride;

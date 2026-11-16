@@ -36,13 +36,14 @@ cat > "$TASK/gameinfo.txt" <<'EOF'
  }
 }
 EOF
-printf 'sv_lan 1\nsv_hibernate_when_empty 0\n' > "$TASK/cfg/server.cfg"
+printf 'sv_lan 1\n' > "$TASK/cfg/server.cfg"
 # No SDKTools/entity hooks or automatic updater are needed by this mock host.
-rm -f "$TASK/addons/sourcemod/extensions/sdktools.autoload"
+rm -f "$TASK/addons/sourcemod/extensions/sdktools.autoload" "$TASK/addons/sourcemod/extensions/sdkhooks.autoload"
 python3 - "$TASK/addons/sourcemod/configs/core.cfg" <<'PYTHON'
 from pathlib import Path
+import re
 import sys
 p = Path(sys.argv[1])
-p.write_text(p.read_text().replace('"DisableAutoUpdate"\t\t"no"', '"DisableAutoUpdate"\t\t"yes"'))
+p.write_text(re.sub(r'("DisableAutoUpdate"\s+)"no"', r'\1"yes"', p.read_text()))
 PYTHON
 touch "$TASK/.custom-fakelag-isolated"
