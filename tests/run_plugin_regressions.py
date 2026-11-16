@@ -45,11 +45,18 @@ def main():
         return wait(pattern, offset, timeout)
 
     wait(r'\[plugin_test\] map-start timer=1 count=0', 0)
+    command('sm config ServerLang en', r'Config option.*ServerLang.*set to.*en')
     start = len(read())
     error_offsets = {p: len(p.read_text(errors='replace'))
                      for p in (game / 'addons/sourcemod/logs').glob('errors_*.log')}
     match = command('cf_plugin_test', r'\[plugin_test\] COMPLETE checks=(\d+)')
     checks = int(match[1])
+    table_checks = {}
+    for language in ('en', 'es'):
+        command('sm config ServerLang ' + language, r'Config option.*ServerLang.*set to.*' + language)
+        result = command('cf_plugin_tables', r'\[table_test\] COMPLETE checks=(\d+) language=\d+')
+        table_checks[language] = int(result[1])
+    command('sm config ServerLang en', r'Config option.*ServerLang.*set to.*en')
     command('cf_plugin_sampling', r'\[plugin_test\] SAMPLING COMPLETE reads=\d+')
     for map_name in ('c1m2_streets', 'c1m1_hotel'):
         command('changelevel ' + map_name, r'\[plugin_test\] map-end timer=0', timeout=45)
@@ -69,13 +76,14 @@ def main():
     unexpected = [e for e in exceptions if not e.startswith(expected)]
     if unexpected:
         raise RuntimeError('Unexpected SourcePawn exceptions: ' + repr(unexpected))
-    lines = [line for line in read()[start:].splitlines() if line.startswith('[plugin_test]')]
+    lines = [line for line in read()[start:].splitlines() if line.startswith(('[plugin_test]', '[table_test]'))]
     evidence = {
         'kind': 'Real SourceMod VM/timers/forwards/RequestFrame; mock clients and CFakeLag native transport',
         'source_sha': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
         'harness_sha256': hashlib.sha256(Path('.build/plugin-regressions/plugin_regressions.smx').read_bytes()).hexdigest(),
         'source_dirty': bool(subprocess.check_output(['git', 'status', '--porcelain'], text=True)),
         'checks_in_suite': checks,
+        'table_checks': table_checks,
         'sampling_runs': sum('SAMPLING COMPLETE' in line for line in lines),
         'map_changes': 2, 'reloads': 2,
         'expected_exceptions': exceptions, 'unexpected_exceptions': unexpected,
@@ -84,7 +92,7 @@ def main():
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + '\n')
-    print(f'PASS checks={checks} sampling=5 maps=2 reloads=2 (isolated consumer tests)')
+    print(f'PASS checks={checks} tables={table_checks} sampling=5 maps=2 reloads=2 (isolated consumer tests)')
 
 
 if __name__ == '__main__':
