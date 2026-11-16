@@ -246,18 +246,52 @@ stock PlayerNetworkProfile FakelagBuildNetworkProfile(float lagMs, int packetLos
 	return CFakeLag_BuildNetworkProfile(lagMs, packetLossPercent);
 }
 
-stock void FakelagApplyNetworkProfile(int client, const PlayerNetworkProfile profile)
+enum FakelagProfileResult
 {
-	if (CFakeLag_IsLanBlocked())
-	{
-		return;
-	}
-	CFakeLag_SetPlayerProfile(client, profile.lagMs, profile.packetLossPercent);
+	FakelagProfile_Unavailable,
+	FakelagProfile_Unchanged,
+	FakelagProfile_Changed
 }
 
-stock void FakelagClearNetworkProfile(int client)
+stock bool FakelagProfileIsActive(const PlayerNetworkProfile profile)
 {
+	return profile.lagMs > 0.0 || profile.packetLossPercent > 0;
+}
+
+stock bool FakelagProfilesEqual(const PlayerNetworkProfile left, const PlayerNetworkProfile right)
+{
+	return left.lagMs == right.lagMs && left.packetLossPercent == right.packetLossPercent;
+}
+
+stock FakelagProfileResult FakelagApplyNetworkProfile(int client, const PlayerNetworkProfile requested, PlayerNetworkProfile effective)
+{
+	if (g_Runtime.clearingIntent || !FakelagCanApplyLatencyToClient(client)) return FakelagProfile_Unavailable;
+	int userId = GetClientUserId(client);
+	int epoch = g_Runtime.intentEpoch;
+	PlayerNetworkProfile before;
+	FakelagGetNetworkProfile(client, before);
+	CFakeLag_SetPlayerProfile(client, requested.lagMs, requested.packetLossPercent);
+	// Forwards may disconnect the client, change LAN policy or clear all intent.
+	if (epoch != g_Runtime.intentEpoch || GetClientOfUserId(userId) != client
+		|| !FakelagCanApplyLatencyToClient(client)) return FakelagProfile_Unavailable;
+	FakelagGetNetworkProfile(client, effective);
+	if (FakelagProfilesEqual(before, effective)) return FakelagProfile_Unchanged;
+	// A reset during the forward must not be reported as an applied profile.
+	return FakelagProfileIsActive(effective) ? FakelagProfile_Changed : FakelagProfile_Unavailable;
+}
+
+stock bool FakelagClearNetworkProfile(int client, bool forget = false)
+{
+	if (g_Runtime.clearingIntent || !CFakeLag_IsClientSupported(client)) return false;
+	int userId = GetClientUserId(client);
+	int epoch = g_Runtime.intentEpoch;
+	bool hadProfile = FakelagHasNetworkProfile(client);
 	CFakeLag_ClearPlayerProfile(client);
+	if (epoch != g_Runtime.intentEpoch || GetClientOfUserId(userId) != client
+		|| !CFakeLag_IsClientSupported(client) || FakelagHasNetworkProfile(client)) return false;
+	// No pre-call flag can leak into a later implicit clear after veto/error.
+	if (forget) FakelagForgetStoredLatency(client);
+	return hadProfile;
 }
 
 stock bool FakelagHasNetworkProfile(int client)

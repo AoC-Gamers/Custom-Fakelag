@@ -236,7 +236,7 @@ stock void FakelagSnapshotProfilesForModeChange()
 			continue;
 		}
 
-		if (profile.lagMs <= 0.0)
+		if (!FakelagProfileIsActive(profile))
 		{
 			continue;
 		}
@@ -293,7 +293,7 @@ void FakelagRestoreProfilesAfterModeChange(any data)
 		g_ModeChangeRestoreLoss[client] = 0;
 		g_ModeChangeRestoreUserId[client] = 0;
 
-		if (lagMs <= 0.0 || userId <= 0)
+		if ((lagMs <= 0.0 && packetLossPercent <= 0) || userId <= 0)
 		{
 			continue;
 		}
@@ -309,7 +309,14 @@ void FakelagRestoreProfilesAfterModeChange(any data)
 			continue;
 		}
 
-		FakelagApplyNetworkProfile(currentClient, FakelagBuildNetworkProfile(lagMs, packetLossPercent));
+		PlayerNetworkProfile effective;
+		if (FakelagApplyNetworkProfile(currentClient, FakelagBuildNetworkProfile(lagMs, packetLossPercent), effective) != FakelagProfile_Changed)
+		{
+			skippedCount++;
+			continue;
+		}
+		lagMs = effective.lagMs;
+		packetLossPercent = effective.packetLossPercent;
 		restoredCount++;
 		if (FakelagIsDebugEnabled())
 		{

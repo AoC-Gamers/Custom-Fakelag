@@ -380,10 +380,9 @@ stock void FakelagNotifyGlobalBalanceTarget(int target, float compensation)
 		return;
 	}
 
-	if (compensation > 0.0)
+	if (FakelagHasNetworkProfile(target))
 	{
-		float basePingMs = FakelagGetClientAveragePingRawMs(target);
-		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
+		int packetLossPercent = FakelagGetAppliedPacketLossPercent(target);
 		int compensationMs = RoundToNearest(compensation);
 		if (packetLossPercent > 0)
 		{
@@ -396,7 +395,7 @@ stock void FakelagNotifyGlobalBalanceTarget(int target, float compensation)
 	}
 	else
 	{
-		CPrintToChat(target, "%t %t", "Tag", "BalanceTargetUnchanged");
+		CPrintToChat(target, "%t %t", "Tag", "TargetSelfCleared");
 	}
 }
 
@@ -452,10 +451,9 @@ stock void FakelagNotifyPairBalanceTarget(int target, int partner, float compens
 		return;
 	}
 
-	if (compensation > 0.0)
+	if (FakelagHasNetworkProfile(target))
 	{
-		float basePingMs = FakelagGetClientAveragePingRawMs(target);
-		int packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, compensation, basePingMs + compensation);
+		int packetLossPercent = FakelagGetAppliedPacketLossPercent(target);
 		int compensationMs = RoundToNearest(compensation);
 		if (packetLossPercent > 0)
 		{
@@ -468,7 +466,7 @@ stock void FakelagNotifyPairBalanceTarget(int target, int partner, float compens
 	}
 	else
 	{
-		CPrintToChat(target, "%t %t", "Tag", "PairBalanceTargetUnchanged", partner);
+		CPrintToChat(target, "%t %t", "Tag", "TargetSelfCleared");
 	}
 }
 
@@ -680,14 +678,28 @@ stock void FakelagSortBalanceCandidatesDescending(int clients[MAXPLAYERS + 1], f
 
 stock bool FakelagClearPlayerLatencyExplicit(int client)
 {
-	if (!FakelagHasNetworkProfile(client))
-	{
-		return false;
-	}
+	return FakelagClearNetworkProfile(client, true);
+}
 
-	g_ForgetLatencyOnNextClear[client] = true;
-	FakelagClearNetworkProfile(client);
-	return true;
+stock void FakelagApplyPairTarget(int target, int partner, float compensation, float basePing, float targetPing, int &adjusted, int &cleared)
+{
+	int partnerUserId = GetClientUserId(partner);
+	PlayerNetworkProfile effective;
+	bool changed;
+	if (compensation <= 0.0)
+	{
+		changed = FakelagClearPlayerLatencyExplicit(target);
+		if (changed) cleared++;
+	}
+	else
+	{
+		changed = FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(basePing, compensation, targetPing)), effective) == FakelagProfile_Changed;
+		if (changed) adjusted++;
+	}
+	if (changed && GetClientOfUserId(partnerUserId) == partner)
+	{
+		FakelagNotifyPairBalanceTarget(target, partner, effective.lagMs);
+	}
 }
 
 stock bool FakelagPreparePairBalance(int survivorClients[MAXPLAYERS + 1], float survivorPings[MAXPLAYERS + 1], int &survivorCount, int infectedClients[MAXPLAYERS + 1], float infectedPings[MAXPLAYERS + 1], int &infectedCount, int &pairCount)
@@ -734,47 +746,15 @@ stock bool FakelagApplyPairBalanceSilent(int &playerCount, int &pairCount, int &
 		float survivorPing = survivorPings[index];
 		float infectedPing = infectedPings[index];
 
-		if (survivorPing > infectedPing)
+		float targetPing = survivorPing > infectedPing ? survivorPing : infectedPing;
+		int survivorUserId = GetClientUserId(survivor);
+		int infectedUserId = GetClientUserId(infected);
+		int epoch = g_Runtime.intentEpoch;
+		FakelagApplyPairTarget(survivor, infected, targetPing - survivorPing, survivorPing, targetPing, adjustedCount, clearedCount);
+		if (epoch != g_Runtime.intentEpoch) break;
+		if (GetClientOfUserId(survivorUserId) == survivor && GetClientOfUserId(infectedUserId) == infected)
 		{
-			if (FakelagClearPlayerLatencyExplicit(survivor))
-			{
-				clearedCount++;
-			}
-
-			float compensation = survivorPing - infectedPing;
-			FakelagApplyNetworkProfile(infected, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(infectedPing, compensation, survivorPing)));
-			FakelagNotifyPairBalanceTarget(infected, survivor, compensation);
-			FakelagNotifyPairBalanceTarget(survivor, infected, 0.0);
-			adjustedCount++;
-			continue;
-		}
-
-		if (infectedPing > survivorPing)
-		{
-			if (FakelagClearPlayerLatencyExplicit(infected))
-			{
-				clearedCount++;
-			}
-
-			float compensation = infectedPing - survivorPing;
-			FakelagApplyNetworkProfile(survivor, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(survivorPing, compensation, infectedPing)));
-			FakelagNotifyPairBalanceTarget(survivor, infected, compensation);
-			FakelagNotifyPairBalanceTarget(infected, survivor, 0.0);
-			adjustedCount++;
-			continue;
-		}
-
-		FakelagNotifyPairBalanceTarget(survivor, infected, 0.0);
-		FakelagNotifyPairBalanceTarget(infected, survivor, 0.0);
-
-		if (FakelagClearPlayerLatencyExplicit(survivor))
-		{
-			clearedCount++;
-		}
-
-		if (FakelagClearPlayerLatencyExplicit(infected))
-		{
-			clearedCount++;
+			FakelagApplyPairTarget(infected, survivor, targetPing - infectedPing, infectedPing, targetPing, adjustedCount, clearedCount);
 		}
 	}
 
@@ -843,24 +823,24 @@ stock void FakelagApplyBalance(FakelagConsoleReport report, int admin, ConsolePa
 
 		if (compensation <= 0.0)
 		{
-			FakelagNotifyGlobalBalanceTarget(target, 0.0);
-
-			if (FakelagHasNetworkProfile(target))
+			clearedClient = FakelagClearPlayerLatencyExplicit(target);
+			if (clearedClient)
 			{
-				g_ForgetLatencyOnNextClear[target] = true;
-				FakelagClearNetworkProfile(target);
 				cleared++;
-				clearedClient = true;
+				FakelagNotifyGlobalBalanceTarget(target, 0.0);
 			}
-
-			FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, clearedClient ? FakelagBalanceAction_Clear : FakelagBalanceAction_Same, compensation);
+			FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, clearedClient ? FakelagBalanceAction_Clear : FakelagBalanceAction_Same, 0.0);
 			continue;
 		}
 
-		FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(rawPing, compensation, targetPing)));
-		adjusted++;
-		FakelagNotifyGlobalBalanceTarget(target, compensation);
-		FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, FakelagBalanceAction_Adjust, compensation);
+		PlayerNetworkProfile effective;
+		bool changed = FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(rawPing, compensation, targetPing)), effective) == FakelagProfile_Changed;
+		if (changed)
+		{
+			adjusted++;
+			FakelagNotifyGlobalBalanceTarget(target, effective.lagMs);
+		}
+		FakelagAddGlobalConsolePanelRow(panel, report, admin, target, displayPing, rawPing, changed ? FakelagBalanceAction_Adjust : FakelagBalanceAction_Same, changed ? effective.lagMs : 0.0);
 	}
 }
 
@@ -913,17 +893,12 @@ stock bool FakelagApplyBalanceSilent(float &targetPing, int &highestClient, int 
 
 		if (compensation <= 0.0)
 		{
-			if (FakelagHasNetworkProfile(target))
-			{
-				g_ForgetLatencyOnNextClear[target] = true;
-				FakelagClearNetworkProfile(target);
-				clearedCount++;
-			}
+			if (FakelagClearPlayerLatencyExplicit(target)) clearedCount++;
 			continue;
 		}
 
-		FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(pings[index], compensation, targetPing)));
-		adjustedCount++;
+		PlayerNetworkProfile effective;
+		if (FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(compensation, FakelagResolvePacketLossPercent(pings[index], compensation, targetPing)), effective) == FakelagProfile_Changed) adjustedCount++;
 	}
 
 	return true;

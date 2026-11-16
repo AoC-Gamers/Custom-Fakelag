@@ -98,7 +98,7 @@ stock bool FakelagTryGetStoredProfile(int client, float &lag, int &packetLossPer
 	return true;
 }
 
-stock bool FakelagConsumeDisconnectedState(int client)
+stock bool FakelagHasDisconnectedState(int client)
 {
 	char accountKey[16];
 	if (!FakelagGetClientAccountKey(client, accountKey, sizeof(accountKey)))
@@ -112,7 +112,6 @@ stock bool FakelagConsumeDisconnectedState(int client)
 		return false;
 	}
 
-	g_PlayerDisconnectedByAccountId.Remove(accountKey);
 	return true;
 }
 
@@ -168,7 +167,7 @@ stock void FakelagRestoreClientLatencyIfEligible(int client)
 		return;
 	}
 
-	if (storedLag <= 0.0)
+	if (storedLag <= 0.0 && storedPacketLossPercent <= 0)
 	{
 		if (FakelagIsDebugEnabled())
 		{
@@ -177,8 +176,12 @@ stock void FakelagRestoreClientLatencyIfEligible(int client)
 		return;
 	}
 
-	bool restoredAfterDisconnect = FakelagConsumeDisconnectedState(client);
-	FakelagApplyNetworkProfile(client, FakelagBuildNetworkProfile(storedLag, storedPacketLossPercent));
+	bool restoredAfterDisconnect = FakelagHasDisconnectedState(client);
+	PlayerNetworkProfile effective;
+	if (FakelagApplyNetworkProfile(client, FakelagBuildNetworkProfile(storedLag, storedPacketLossPercent), effective) != FakelagProfile_Changed) return;
+	FakelagSetDisconnectedState(client, false);
+	storedLag = effective.lagMs;
+	storedPacketLossPercent = effective.packetLossPercent;
 	if (FakelagIsDebugEnabled())
 	{
 		char accountKey[16];
@@ -193,6 +196,6 @@ stock void FakelagRestoreClientLatencyIfEligible(int client)
 	}
 	if (restoredAfterDisconnect)
 	{
-		CPrintToChat(client, "%t %t", "Tag", "RestoredOnSelf", storedLag);
+		CPrintToChat(client, "%t %t", "Tag", "RestoredProfileOnSelf", storedLag, storedPacketLossPercent);
 	}
 }

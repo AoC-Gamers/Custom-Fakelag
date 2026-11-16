@@ -668,4 +668,15 @@
 		"en"        "{teamcolor}{1}{default}: {green}{2:.1}ms{default}"
 		"es"        "{teamcolor}{1}{default}: {green}{2:.1}ms{default}"
 	}
+	"ProfileNotChanged"
+	{
+		"en" "The request did not produce a confirmed profile change."
+		"es" "La solicitud no produjo un cambio de perfil confirmado."
+	}
+	"RestoredProfileOnSelf"
+	{
+		"#format" "{1:f},{2:d}"
+		"en" "Restored your profile: {1} ms, {2}% packet loss."
+		"es" "Perfil restaurado: {1} ms, {2}% de pérdida de paquetes."
+	}
 }

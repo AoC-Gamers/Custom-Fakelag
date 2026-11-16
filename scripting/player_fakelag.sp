@@ -12,6 +12,8 @@ enum struct PluginRuntimeState
 {
 	bool lateLoad;
 	bool mapActive;
+	int intentEpoch;
+	bool clearingIntent;
 }
 PluginRuntimeState g_Runtime;
 
@@ -31,7 +33,6 @@ ConVar		  g_CvarLossAddedFloorMs		  = null;
 ConVar		  g_CvarLossAddedSpanMs			  = null;
 ConVar		  g_CvarLossMaxPercent			  = null;
 ConVar		  g_CvarDefaultPacketLossMode	  = null;
-bool		  g_ForgetLatencyOnNextClear[MAXPLAYERS + 1];
 bool		  g_ModeChangeRestorePending	  = false;
 float		  g_ModeChangeRestoreLag[MAXPLAYERS + 1];
 int			  g_ModeChangeRestoreLoss[MAXPLAYERS + 1];
@@ -259,7 +260,6 @@ public void OnClientPostAdminCheck(int client)
 public void OnClientDisconnect(int client)
 {
 	FakelagResetClientLatencySamples(client);
-	g_ForgetLatencyOnNextClear[client] = false;
 }
 
 public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
@@ -454,8 +454,11 @@ public Action FakeLagCmd(int client, int args)
 			return Plugin_Handled;
 		}
 
-		g_ForgetLatencyOnNextClear[target] = true;
-		FakelagClearNetworkProfile(target);
+		if (!FakelagClearNetworkProfile(target, true))
+		{
+			CReplyToCommand(client, "%t %t", "Tag", "ProfileNotChanged");
+			return Plugin_Handled;
+		}
 		if (target == client)
 		{
 			CPrintToChatEx(target, target, "%t %t", "Tag", "TargetSelfCleared");
@@ -478,7 +481,14 @@ public Action FakeLagCmd(int client, int args)
 	float targetPingMs		= basePingMs >= 0.0 ? (basePingMs + addedLagMs) : addedLagMs;
 	int	  packetLossPercent = FakelagResolvePacketLossPercent(basePingMs, addedLagMs, targetPingMs);
 
-	FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(addedLagMs, packetLossPercent));
+	PlayerNetworkProfile effective;
+	if (FakelagApplyNetworkProfile(target, FakelagBuildNetworkProfile(addedLagMs, packetLossPercent), effective) != FakelagProfile_Changed)
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "ProfileNotChanged");
+		return Plugin_Handled;
+	}
+	lagAmount = RoundToNearest(effective.lagMs);
+	packetLossPercent = effective.packetLossPercent;
 	if (target == client)
 	{
 		if (packetLossPercent > 0)
@@ -566,8 +576,11 @@ public Action ClearLagCmd(int client, int args)
 		return Plugin_Handled;
 	}
 
-	g_ForgetLatencyOnNextClear[target] = true;
-	FakelagClearNetworkProfile(target);
+	if (!FakelagClearNetworkProfile(target, true))
+	{
+		CReplyToCommand(client, "%t %t", "Tag", "ProfileNotChanged");
+		return Plugin_Handled;
+	}
 	if (target == client)
 	{
 		CPrintToChatEx(client, client, "%t %t", "Tag", "TargetSelfCleared");

@@ -124,7 +124,6 @@ public void CFakeLag_OnLanPolicyChanged(bool blocked)
 		g_ModeChangeRestoreLag[client] = 0.0;
 		g_ModeChangeRestoreLoss[client] = 0;
 		g_ModeChangeRestoreUserId[client] = 0;
-		g_ForgetLatencyOnNextClear[client] = false;
 	}
 	// Invalidate the old vote before cancellation can deliver callbacks.
 	bool hadVote = g_FakeLagBalanceVote != null;
@@ -154,7 +153,7 @@ public void CFakeLag_OnPlayerProfileChanged(int client, float oldLag, int oldPac
 	bool stillApplied = !lanBlocked && CFakeLag_IsClientSupported(client)
 		&& FakelagGetNetworkProfile(client, current)
 		&& current.lagMs == newLag && current.packetLossPercent == newPacketLossPercent;
-	if ((newLag > 0.0 || newPacketLossPercent > 0) && stillApplied)
+	if ((newLag > 0.0 || newPacketLossPercent > 0) && stillApplied && !g_Runtime.clearingIntent)
 	{
 		FakelagStoreProfileForClient(client, newLag, newPacketLossPercent);
 		if (reason != CFakeLagChange_Disconnect)
@@ -162,9 +161,8 @@ public void CFakeLag_OnPlayerProfileChanged(int client, float oldLag, int oldPac
 			FakelagSetDisconnectedState(client, false);
 		}
 	}
-	else if (lanBlocked || reason == CFakeLagChange_LanPolicy || g_ForgetLatencyOnNextClear[client])
+	else if (lanBlocked || reason == CFakeLagChange_LanPolicy)
 	{
-		g_ForgetLatencyOnNextClear[client] = false;
 		FakelagForgetStoredLatency(client);
 		if (FakelagIsDebugEnabled())
 		{
