@@ -53,7 +53,11 @@ Usa los fuentes del producto, no una reimplementación del algoritmo. El host
 es SRCDS Linux aislado, sin red, con contenido Valve en solo lectura. No conecta
 jugadores. `sb_all_bot_game 1` mantiene la simulación del servidor de pruebas
 activa; sus bots no son evidencia humana. No se valida ABI ni tráfico.
-El arnés no se incluye en el paquete del producto.
+El arnés no se incluye en el paquete del producto. El core emitió el aviso de
+fallback de `gEntList` a entidades networkables; no se certifica ese gamedata.
+Runtime: L4D2 2.2.4.3/10097, SourceMod 1.12.0.7260 y Metamod 1.12.0-dev+1228.
+SHA limpio ejecutado: `bed6f6f3a41b589f536afe9d84c91cd4a5701d4b`.
+La integración posterior de esta evidencia cambia solo documentos/JSON.
 
 Validación local adicional:
 
