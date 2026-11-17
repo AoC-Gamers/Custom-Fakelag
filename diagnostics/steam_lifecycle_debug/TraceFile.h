@@ -10,7 +10,7 @@ class TraceFile {
     size_t m_Bytes = 0;
     size_t m_Limit;
 public:
-    explicit TraceFile(size_t limit = 5 * 1024 * 1024) : m_Limit(limit) {}
+    explicit TraceFile(size_t limit = (5 * 1024 * 1024)) : m_Limit(limit) {}
     ~TraceFile() { Close(); }
     TraceFile(const TraceFile&) = delete;
     TraceFile& operator=(const TraceFile&) = delete;

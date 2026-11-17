@@ -31,6 +31,9 @@ endif
 help:
 	@printf '%s\n' \
 		'Available targets (build/deps/package phases run in order):' \
+		'  sonar-build sonar-cppcheck sonar (explicit local analysis)' \
+		'  sonar-tooling-test coverage-tooling-test test-coverage test-python-coverage' \
+		'  deps-sonar deps-test-coverage (explicit tool preparation)' \
 		'  test-python test-consumers test-diagnostic-linux test-diagnostic-windows' \
 		'  test-sdk-windows test-collection-windows validate-artifact-linux validate-artifact-windows' \
 		'  make help                  Show this help message' \
@@ -132,3 +135,30 @@ release-identity-linux:
 	$(PYTHON) "$(ROOT_DIR)/scripts/ci/release-identity.py" --platform linux
 release-identity-windows:
 	$(PYTHON) "$(ROOT_DIR)/scripts/ci/release-identity.py" --platform windows
+
+# Explicit local analysis only. Never add these targets to CI.
+SONAR_BUILD_DIR ?= $(ROOT_DIR)/.build/sonar-native
+TEST_OUTPUT ?= $(ROOT_DIR)/.build/coverage/run-$(shell date +%Y%m%dT%H%M%S)
+COVERAGE_VENV_DIR ?= $(ROOT_DIR)/.deps/test-coverage
+COVERAGE_PYTHON ?= $(COVERAGE_VENV_DIR)/bin/python
+.PHONY: sonar-build sonar sonar-cppcheck sonar-tooling-test coverage-tooling-test test-coverage deps-test-coverage test-python-coverage
+sonar-build:
+	$(PYTHON) "$(ROOT_DIR)/scripts/tools/sonar-build.py" --output "$(SONAR_BUILD_DIR)"
+sonar:
+	$(PYTHON) "$(ROOT_DIR)/scripts/tools/make_sonar.py" analyze --compile-commands "$(SONAR_BUILD_DIR)/compile_commands.json"
+sonar-cppcheck:
+	$(PYTHON) "$(ROOT_DIR)/scripts/tools/make_sonar.py" cppcheck --compile-commands "$(SONAR_BUILD_DIR)/compile_commands.json"
+sonar-tooling-test:
+	$(PYTHON) "$(ROOT_DIR)/tests/python/sonar_tooling_test.py"
+coverage-tooling-test:
+	$(PYTHON) "$(ROOT_DIR)/tests/python/native_coverage_test.py"
+test-coverage:
+	$(PYTHON) "$(ROOT_DIR)/tests/runners/test-coverage.py" --output "$(TEST_OUTPUT)" --compile-commands "$(SONAR_BUILD_DIR)/compile_commands.json"
+deps-test-coverage:
+	COVERAGE_VENV_DIR="$(COVERAGE_VENV_DIR)" bash "$(ROOT_DIR)/scripts/deps/fetch-test-coverage.sh"
+test-python-coverage:
+	$(COVERAGE_PYTHON) "$(ROOT_DIR)/tests/runners/test-python-coverage.py" --output "$(TEST_OUTPUT)"
+.PHONY: deps-sonar
+# Ubuntu host helper; scanner/JDK are selected explicitly from the local environment.
+deps-sonar:
+	bash "$(ROOT_DIR)/scripts/deps/fetch-sonar-tools.sh"

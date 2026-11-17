@@ -71,6 +71,7 @@
     "docs/testing/windows-engine-validation.md",
     "docs/testing/windows-load-order-validation.md",
     "docs/testing/windows-shutdown-investigation.md",
-    "docs/testing/windows-steam-debug-validation.md"
+    "docs/testing/windows-steam-debug-validation.md",
+    "docs/build/sonar.md"
   ]
 }

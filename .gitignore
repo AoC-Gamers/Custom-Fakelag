@@ -58,3 +58,7 @@ temp/
 # Keep generated Python caches excluded after source directory exceptions.
 __pycache__/
 *.pyc
+
+# Local Sonar configuration and credentials
+env.secret
+.scannerwork/

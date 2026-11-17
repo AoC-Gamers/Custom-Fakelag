@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Integración local de Sonar C/C++ con contexto de compilación x86, cobertura medida y controles de procedencia, fuera del pipeline de CI.
+
+
 - Los binarios conservan el nombre AMBuild `custom_fakelag.ext.2.l4d2.so/dll`; retirar las copias antiguas al actualizar.
 
 

@@ -34,3 +34,10 @@ class PackageTests(unittest.TestCase):
             record = {'name': name}
             self.assertIs(module({'observation': {'modules': [record]}}, 'custom_fakelag.ext.dll'), record)
         self.assertIsNone(module({'observation': {'modules': [{'name': 'other.dll'}]}}, 'custom_fakelag.ext.dll'))
+
+    def test_truncated_native_headers_are_rejected(self):
+        for payload in (b'', b'\x7fELF\x01\x01', b'MZ'+bytes(62)):
+            with self.assertRaises(ValueError): c.validate_elf(payload)
+            with self.assertRaises(ValueError): c.validate_pe(payload)
+        pe = bytearray(64); pe[:2] = b'MZ'; pe[60:64] = (65535).to_bytes(4,'little')
+        with self.assertRaises(ValueError): c.validate_pe(pe)

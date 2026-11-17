@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-BUILD_DIR="$ROOT/.build/tests-linux"
+BUILD_DIR="${TEST_BUILD_DIR:-$ROOT/.build/tests-linux}"
 TEST_SOURCE="$ROOT/tests/native/custom_fakelag_tests.cpp"
 LAG_SYSTEM_SOURCE="$ROOT/extension/network/LagSystem.cpp"
 TEST_BIN="$BUILD_DIR/custom_fakelag_tests"
@@ -10,6 +10,9 @@ TEST_BIN="$BUILD_DIR/custom_fakelag_tests"
 DEPS_DIR="${DEPS_DIR:-$ROOT/.deps/exts-linux}"
 mkdir -p "$BUILD_DIR"
 extra_flags=()
+if [[ "${TEST_COVERAGE:-0}" == 1 ]]; then
+  extra_flags+=(--coverage -fprofile-abs-path)
+fi
 if [[ "${TEST_ARCH:-native}" == 32 ]]; then
   extra_flags+=(-m32)
 fi
