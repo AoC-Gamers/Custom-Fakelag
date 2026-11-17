@@ -54,42 +54,20 @@ externo. Cargar este observador requiere SM: no es un control vanilla estricto.
 Reutiliza SDK/AMBuild del repo y un build nuevo. Linux requiere multilib i386:
 
 ```bash
-mkdir -p .build/steam-debug
-cd .build/steam-debug
-../../.deps/exts-linux/.venv-linux/bin/python ../../configure.py \
-  --sdks l4d2 --hl2sdk-root ../../.deps/exts-linux \
-  --mms-path ../../.deps/exts-linux/mmsource-1.12 \
-  --sm-path ../../.deps/exts-linux/sourcemod-1.12 \
-  --enable-optimize --steam-lifecycle-debug
-../../.deps/exts-linux/.venv-linux/bin/ambuild
+make test-diagnostic-linux
+# Windows: make test-diagnostic-windows
 ```
-
-Windows: abre MSVC x86 y usa el Python con AMBuild de tus dependencias. Desde
-un build nuevo bajo `.build`:
-
-```powershell
-python ../../configure.py --sdks l4d2 --hl2sdk-root ../../.deps/exts-windows `
-  --mms-path ../../.deps/exts-windows/mmsource-1.12 `
-  --sm-path ../../.deps/exts-windows/sourcemod-1.12 `
-  --enable-optimize --steam-lifecycle-debug
-ambuild
-```
-
-Salida relativa al build:
-`diagnostics/steam_lifecycle_debug/package/addons/sourcemod/extensions/`, nombre
-`steam_lifecycle_debug.ext.2.l4d2.so` o `.dll`. El .so no sirve en Windows.
-No uses los scripts de empaquetado normal para instalar este diagnóstico.
 
 ## Validación
 
-[CI y límites actuales](../../docs/VALIDATION.md): builds/fixtures x86 en ambas
+[CI y límites actuales](../../docs/testing/README.md): builds/fixtures x86 en ambas
 plataformas; pruebas Linux ASan/UBSan. Compila `tests.cpp` con C++14 y pásale un
 directorio temporal existente; en Windows enlaza advapi32.lib. Cubre lecturas
 válidas/fallidas, identidad desconocida, null/overflow, flush, append y rotación.
 
-La [matriz Windows](../../docs/WINDOWS_STEAM_DEBUG_VALIDATION.md) reúne 18 procesos
+La [matriz Windows](../../docs/testing/README.md) reúne 18 procesos
 con cliente real: LAN 1 falló 9/9 y LAN 0 cerró 9/9, en vanilla/SM/observador.
 La DLL de esos ensayos tenía predeterminado 2. El código actual carga en 0;
 su carga/recarga real debe verificarse por separado. El recolector
-`tests/windows_steam_debug_trial.py` espera 0 y activa 2 explícitamente; para
+`tests/python/windows_steam_debug_trial.py` espera 0 y activa 2 explícitamente; para
 repetir la DLL histórica usa `--expected-default 2`, registrando su hash.

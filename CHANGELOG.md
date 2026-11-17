@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Repositorio organizado por responsabilidad; Make comparte operaciones con CI.
+- Instaladores sin informes de ejecución ni fuentes internas, con validación de contenido y arquitectura por plataforma.
+- Nombres de canal uniformes con plataforma al final; actualizar enlaces antiguos.
+- Los informes de balance consultan perfiles efectivos tras forwards y vetos.
+
+
 ### Política LAN
 
 - `sv_lan 1` bloquea perfiles nuevos y limpia perfiles, colas y pérdida, con
@@ -9,7 +15,7 @@
   desactivada por defecto. Volver a LAN 0 no restaura perfiles.
 - `player_fakelag` descarta persistencia, snapshots y votos pendientes.
   API nueva: `CFakeLag_IsLanBlocked`, `CFakeLag_OnLanPolicyChanged` y razón
-  `CFakeLagChange_LanPolicy`. [Contrato](docs/LAN_POLICY.md).
+  `CFakeLagChange_LanPolicy`. [Contrato](docs/lan-policy/lan-policy.md).
 
 ### Integración y seguridad
 
@@ -28,12 +34,12 @@
 
 ### Herramientas y validación
 
-- Build reproducible de SMX y extensiones x86, paquetes por plataforma y canales
+- Build automatizado de SMX y extensiones x86, paquetes por plataforma y canales
   `channel/develop` / `channel/latest`.
 - Diagnóstico independiente Steam Lifecycle Debug, apagado por defecto, con
   ConVar, muestreo de solo lectura y logs acotados; artefactos separados.
 - Regresiones Linux ASan/UBSan, Windows nativas, SourcePawn y herramientas Python
-  en CI. La [matriz](docs/VALIDATION.md) distingue esos checks del runtime.
+  en CI. La [matriz](docs/testing/validation.md) distingue esos checks del runtime.
 - En Windows se validaron API con cliente real, ambos órdenes con Left4DHooks
   activo y recargas. La investigación de cierre reprodujo el fallo también en
   vanilla con LAN 1; los antiguos `0xc0000409` siguen sin atribución completa.

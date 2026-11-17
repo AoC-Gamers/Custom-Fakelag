@@ -48,3 +48,13 @@ __pycache__/
 tmp/
 temp/
 .tmp/
+
+# Source automation and build documentation are versioned.
+!scripts/build/
+!scripts/build/**
+!docs/build/
+!docs/build/**
+
+# Keep generated Python caches excluded after source directory exceptions.
+__pycache__/
+*.pyc

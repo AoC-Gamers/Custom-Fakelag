@@ -18,7 +18,7 @@ sourceFiles = [
 ] + list(map(lambda x : 'libudis86/' + x, ['decode.c', 'itab.c', 'syn-att.c', 'syn-intel.c', 'syn.c', 'udis86.c']))
 
 if os.environ.get('CUSTOM_FAKELAG_ENGINE_HARNESS') == '1':
-  sourceFiles += ['../tests/engine_runtime_harness.cpp']
+  sourceFiles += ['../tests/native/engine_runtime_harness.cpp']
 
 ###############
 # Make sure to edit PackageScript, which copies your files to their appropriate locations

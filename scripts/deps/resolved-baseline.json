@@ -1,0 +1,42 @@
+[
+  {
+    "dependency": "hl2sdk-l4d2",
+    "selection": "mobile branch",
+    "observed_commit": "2a31cd007b2d7d2f964dc093eedcf7a812cf9dd6"
+  },
+  {
+    "dependency": "sourcemod-1.12",
+    "selection": "mobile branch",
+    "observed_commit": "3f7460671f7adc4a3c6791a47d21ba3e7b5fba91"
+  },
+  {
+    "dependency": "mmsource-1.12",
+    "selection": "mobile branch",
+    "observed_commit": "4e031eb571f5978eea8207b5d915c9cd0e8d6c58"
+  },
+  {
+    "dependency": "ambuild",
+    "selection": "mobile branch",
+    "observed_commit": "5b0aa725beef33c9cf6a1b00659a010c3d9120d3"
+  },
+  {
+    "dependency": "colors.inc",
+    "selection": "vendored compile snapshot",
+    "sha256": "c669e25ac4c03a593defc030aad7ef0765906538c6b2b80a1875c8643b36e80e"
+  },
+  {
+    "dependency": "builtinvotes.inc",
+    "selection": "vendored compile snapshot",
+    "sha256": "04fc3dac84a166d309ee258738a8fd08ef741710eeba2c1dfc8e269c2088d831"
+  },
+  {
+    "dependency": "left4dhooks_stocks.inc",
+    "selection": "vendored compile snapshot",
+    "sha256": "f7d659edac7862202a679acc9f83e5ef0d3c0728339d1e456659372e91106d12"
+  },
+  {
+    "dependency": "builtinvotes_stocks.inc",
+    "selection": "vendored compile snapshot",
+    "sha256": "e9cc16dadbb397e255945bcf63c1c6a40a8f0eb5f6866f06ecb396decc9b1dd9"
+  }
+]

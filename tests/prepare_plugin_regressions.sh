@@ -14,7 +14,7 @@ printf '"Metamod Plugin" { "alias" "sourcemod" "file" "addons/sourcemod/bin/sour
 for d in bin extensions gamedata configs translations; do cp -a /work/.deps/smx/sourcemod-package/addons/sourcemod/$d "$TASK/addons/sourcemod/"; done
 mkdir -p "$TASK/addons/sourcemod/plugins"
 cp /work/.build/plugin-regressions/plugin_regressions.smx "$TASK/addons/sourcemod/plugins/"
-cp /work/translations/player_fakelag.phrases.txt "$TASK/addons/sourcemod/translations/"
+cp /work/addons/sourcemod/translations/player_fakelag.phrases.txt "$TASK/addons/sourcemod/translations/"
 cat > "$TASK/gameinfo.txt" <<'EOF'
 "GameInfo"
 {

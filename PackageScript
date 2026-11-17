@@ -16,7 +16,7 @@ def GetFolder(path):
   return folder_map[norm_path]
 
 
-manifest_path = os.path.join(builder.sourcePath, 'plugin-package-map.json')
+manifest_path = os.path.join(builder.sourcePath, 'scripts/package/package-map.json')
 with open(manifest_path, 'r', encoding='utf-8') as f:
   manifest = json.load(f)
 
@@ -69,9 +69,9 @@ def CopyManifestSection(section, src_root, dest_root):
       CopyManifestSection(value, os.path.join(src_root, key), os.path.join(dest_root, key))
 
 
-CopyManifestSection(artifact_manifest.get('scripting', {}), 'scripting', 'addons/sourcemod/scripting')
-CopyManifestSection(artifact_manifest.get('translations', {}), 'translations', 'addons/sourcemod/translations')
-CopyManifestSection(artifact_manifest.get('gamedata', {}), 'gamedata', 'addons/sourcemod/gamedata')
+CopyManifestSection(artifact_manifest.get('scripting', {}), 'addons/sourcemod/scripting', 'addons/sourcemod/scripting')
+CopyManifestSection(artifact_manifest.get('translations', {}), 'addons/sourcemod/translations', 'addons/sourcemod/translations')
+CopyManifestSection(artifact_manifest.get('gamedata', {}), 'addons/sourcemod/gamedata', 'addons/sourcemod/gamedata')
 
 # Copy binaries.
 plugin_buckets = build_manifest.get('plugins', {})

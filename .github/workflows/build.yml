@@ -6,15 +6,16 @@ on:
       - main
       - master
       - develop
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
 concurrency:
   group: custom-fakelag-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   deps-smx:
@@ -36,7 +37,7 @@ jobs:
         id: cache-key
         shell: bash
         run: |
-          echo "key=smx-deps-${{ runner.os }}-${{ hashFiles('scripts/fetch-plugin-deps.py', 'scripts/build-plugins.py', 'scripts/copy-tree.py', 'scripts/stage-artifact.py', 'scripts/package-release.py', 'plugin-package-map.json', 'Makefile') }}" >> "$GITHUB_OUTPUT"
+          echo "key=smx-deps-${{ runner.os }}-${{ hashFiles('scripts/deps/fetch-plugin-deps.py', 'scripts/build/build-plugins.py', 'scripts/package/copy-tree.py', 'scripts/package/stage-artifact.py', 'scripts/package/package-release.py', 'scripts/package/package-map.json', 'Makefile') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore dependency cache
         id: deps-cache-restore
@@ -84,16 +85,7 @@ jobs:
 
       - name: Check shutdown evidence exporter and compile opt-in consumers
         shell: bash
-        run: |
-          python3 -m unittest discover -s tests -p test_windows_shutdown_export.py
-          python3 -m unittest discover -s tests -p test_windows_steam_debug_tools.py
-          compiler=.deps/smx/sourcemod-package/addons/sourcemod/scripting/spcomp
-          includes=.deps/smx/sourcemod-package/addons/sourcemod/scripting/include
-          mkdir -p .build/shutdown-consumers
-          for consumer in windows_shutdown_consumer windows_shutdown_fill_consumer plugin_regressions balance_report_consumer; do
-            "$compiler" "tests/$consumer.sp" -iscripting/include -i"$includes" -o".build/shutdown-consumers/$consumer.smx"
-          done
-
+        run: make test-consumers
       - name: Upload SMX build tree
         uses: actions/upload-artifact@v7
         with:
@@ -122,7 +114,7 @@ jobs:
         id: cache-key
         shell: bash
         run: |
-          echo "key=exts-linux-deps-${{ runner.os }}-${{ hashFiles('scripts/fetch-linux-deps.sh', 'scripts/build-linux-l4d2.sh', 'plugin-package-map.json', 'Makefile', 'configure.py', 'AMBuildScript', 'AMBuilder', 'PackageScript') }}" >> "$GITHUB_OUTPUT"
+          echo "key=exts-linux-deps-${{ runner.os }}-${{ hashFiles('scripts/deps/fetch-linux-deps.sh', 'scripts/build/build-linux-l4d2.sh', 'scripts/package/package-map.json', 'Makefile', 'configure.py', 'AMBuildScript', 'AMBuilder', 'PackageScript') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore dependency cache
         id: deps-cache-restore
@@ -175,17 +167,7 @@ jobs:
 
       - name: Build and test independent Steam lifecycle diagnostic
         shell: bash
-        run: |
-          root="$PWD"
-          deps="$root/.deps/exts-linux"
-          python="$deps/.venv-linux/bin/python"
-          mkdir -p .build/steam-debug/test-data
-          g++ -m32 -std=c++14 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer diagnostics/steam_lifecycle_debug/tests.cpp -o .build/steam-debug/tests
-          .build/steam-debug/tests .build/steam-debug/test-data
-          cd .build/steam-debug
-          "$python" "$root/configure.py" --sdks l4d2 --hl2sdk-root "$deps" --mms-path "$deps/mmsource-1.12" --sm-path "$deps/sourcemod-1.12" --enable-optimize --steam-lifecycle-debug
-          "$python" -c 'import sys; from ambuild2.run import cli_run; sys.exit(cli_run())'
-
+        run: make test-diagnostic-linux
       - name: Upload Linux diagnostic separately
         uses: actions/upload-artifact@v7
         with:
@@ -220,7 +202,7 @@ jobs:
         id: cache-key
         shell: bash
         run: |
-          echo "key=exts-windows-deps-${{ runner.os }}-${{ hashFiles('scripts/fetch-windows-deps.ps1', 'scripts/build-windows-l4d2.ps1', 'plugin-package-map.json', 'Makefile', 'configure.py', 'AMBuildScript', 'AMBuilder', 'PackageScript') }}" >> "$GITHUB_OUTPUT"
+          echo "key=exts-windows-deps-${{ runner.os }}-${{ hashFiles('scripts/deps/fetch-windows-deps.ps1', 'scripts/build/build-windows-l4d2.ps1', 'scripts/package/package-map.json', 'Makefile', 'configure.py', 'AMBuildScript', 'AMBuilder', 'PackageScript') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore dependency cache
         id: deps-cache-restore
@@ -267,52 +249,18 @@ jobs:
 
       - name: Compile Windows SDK contract harness
         shell: pwsh
-        run: pwsh -NoProfile -File scripts/test-windows-sdk-contract.ps1 -BuildOnly
+        run: make test-sdk-windows
 
       - name: Verify real Windows exit collection including DLL detach
         shell: pwsh
-        run: |
-          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-          $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if (-not $installation) { throw 'MSVC toolchain not found' }
-          $vcvars = Join-Path $installation 'VC\Auxiliary\Build\vcvarsall.bat'
-          $python = (Get-Command python.exe -ErrorAction Stop).Source
-          $private = Join-Path $env:RUNNER_TEMP 'shutdown-collection'
-          pwsh -NoProfile -File scripts/test-windows-shutdown-collection.ps1 -PrivateDirectory $private -Python $python -VcVars $vcvars
-
+        run: make test-collection-windows
       - name: Build Windows extension package
         shell: pwsh
         run: make build-exts-windows
 
       - name: Build and test independent Steam lifecycle diagnostic
         shell: pwsh
-        run: |
-          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-          $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if (-not $installation) { throw 'MSVC toolchain not found' }
-          $vcvars = Join-Path $installation 'VC\Auxiliary\Build\vcvarsall.bat'
-          $environment = cmd /c """$vcvars"" x86 >nul && set"
-          if ($LASTEXITCODE) { throw 'MSVC x86 initialization failed' }
-          foreach ($line in $environment) {
-            if ($line -match '^(.*?)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') }
-          }
-          $root = (Get-Location).Path
-          $deps = Join-Path $root '.deps\exts-windows'
-          $python = Join-Path $deps '.venv-windows\Scripts\python.exe'
-          $build = Join-Path $root '.build\steam-debug'
-          New-Item -ItemType Directory -Force (Join-Path $build 'test-data') | Out-Null
-          Push-Location $build
-          try {
-            & cl /nologo /std:c++14 /EHsc /W4 /D_CRT_SECURE_NO_WARNINGS "$root\diagnostics\steam_lifecycle_debug\tests.cpp" /Fe:tests.exe /link advapi32.lib
-            if ($LASTEXITCODE) { throw 'Diagnostic fixture compilation failed' }
-            & .\tests.exe (Join-Path $build 'test-data')
-            if ($LASTEXITCODE) { throw 'Diagnostic fixture failed' }
-            & $python "$root\configure.py" --sdks l4d2 --hl2sdk-root $deps --mms-path "$deps\mmsource-1.12" --sm-path "$deps\sourcemod-1.12" --enable-optimize --steam-lifecycle-debug
-            if ($LASTEXITCODE) { throw 'Diagnostic configuration failed' }
-            & $python -c 'import sys; from ambuild2.run import cli_run; sys.exit(cli_run())'
-            if ($LASTEXITCODE) { throw 'Diagnostic build failed' }
-          } finally { Pop-Location }
-
+        run: make test-diagnostic-windows
       - name: Upload Windows diagnostic separately
         uses: actions/upload-artifact@v7
         with:
@@ -363,27 +311,7 @@ jobs:
       - name: Resolve Linux artifact metadata
         id: meta
         shell: bash
-        run: |
-          case "${GITHUB_REF_NAME}" in
-            main|master)
-              echo "basename=custom-fakelag-linux-latest" >> "$GITHUB_OUTPUT"
-              echo "release_tag=channel/latest" >> "$GITHUB_OUTPUT"
-              echo "release_name=Latest" >> "$GITHUB_OUTPUT"
-              echo "prerelease=false" >> "$GITHUB_OUTPUT"
-              ;;
-            develop)
-              echo "basename=custom-fakelag-linux-develop" >> "$GITHUB_OUTPUT"
-              echo "release_tag=channel/develop" >> "$GITHUB_OUTPUT"
-              echo "release_name=Develop" >> "$GITHUB_OUTPUT"
-              echo "prerelease=true" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              echo "basename=custom-fakelag-linux-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-              echo "release_tag=" >> "$GITHUB_OUTPUT"
-              echo "release_name=" >> "$GITHUB_OUTPUT"
-              echo "prerelease=false" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
+        run: make release-identity-linux
 
       - name: Package Linux trees
         shell: bash
@@ -393,7 +321,7 @@ jobs:
 
       - name: Build Linux release archive
         shell: bash
-        run: make release-linux LINUX_RELEASE_BASENAME="${{ steps.meta.outputs.basename }}"
+        run: make release-linux validate-artifact-linux LINUX_RELEASE_BASENAME="${{ steps.meta.outputs.basename }}"
 
       - name: Upload Linux release artifact
         uses: actions/upload-artifact@v7
@@ -433,18 +361,7 @@ jobs:
       - name: Resolve Windows artifact metadata
         id: meta
         shell: bash
-        run: |
-          case "${GITHUB_REF_NAME}" in
-            main|master)
-              echo "basename=custom-fakelag-windows-latest" >> "$GITHUB_OUTPUT"
-              ;;
-            develop)
-              echo "basename=custom-fakelag-windows-develop" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              echo "basename=custom-fakelag-windows-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
+        run: make release-identity-windows
 
       - name: Package Windows trees
         shell: pwsh
@@ -454,7 +371,7 @@ jobs:
 
       - name: Build Windows release archive
         shell: pwsh
-        run: make release-windows WINDOWS_RELEASE_BASENAME="${{ steps.meta.outputs.basename }}"
+        run: make release-windows validate-artifact-windows WINDOWS_RELEASE_BASENAME="${{ steps.meta.outputs.basename }}"
 
       - name: Upload Windows release artifact
         uses: actions/upload-artifact@v7
@@ -465,9 +382,11 @@ jobs:
           retention-days: 14
 
   publish:
+    permissions:
+      contents: write
     runs-on: ubuntu-22.04
     needs: [release-linux, release-windows]
-    if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'master' || github.ref_name == 'develop')
+    if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'master' || github.ref_name == 'develop' || startsWith(github.ref, 'refs/tags/v'))
 
     steps:
       - name: Checkout repository
@@ -488,6 +407,7 @@ jobs:
           path: dist/release
 
       - name: Move channel tag
+        if: github.ref_type != 'tag'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -505,18 +425,18 @@ jobs:
           linux_asset="dist/release/${{ needs.release-linux.outputs.basename }}.zip"
           windows_asset="dist/release/${{ needs.release-windows.outputs.basename }}.zip"
 
+          test -s "$linux_asset"
+          test -s "$windows_asset"
+          gh release list --limit 1 >/dev/null
+          notes="$RUNNER_TEMP/channel-notes.md"
+          printf 'Actualización %s.\nFecha UTC: %s\nCommit: %s\nCI: %s/%s/actions/runs/%s (intento %s)\n' "$title" "$(date -u +%FT%TZ)" "$GITHUB_SHA" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > "$notes"
           if gh release view "$tag" >/dev/null 2>&1; then
-            if [[ "${{ needs.release-linux.outputs.prerelease }}" == "true" ]]; then
-              gh release edit "$tag" --title "$title" --prerelease --latest=false
-            else
-              gh release edit "$tag" --title "$title" --latest=false
-            fi
-          else
-            if [[ "${{ needs.release-linux.outputs.prerelease }}" == "true" ]]; then
-              gh release create "$tag" --title "$title" --prerelease --latest=false --target "$GITHUB_SHA"
-            else
-              gh release create "$tag" --title "$title" --latest=false --target "$GITHUB_SHA"
-            fi
+            gh release delete "$tag" --yes
           fi
-
-          gh release upload "$tag" "$linux_asset" "$windows_asset" --clobber
+          gh release create "$tag" --title "$title" --draft --target "$GITHUB_SHA" --notes-file "$notes"
+          gh release upload "$tag" "$linux_asset" "$windows_asset"
+          if [[ "${{ needs.release-linux.outputs.prerelease }}" == "true" ]]; then
+            gh release edit "$tag" --draft=false --prerelease --latest=false
+          else
+            gh release edit "$tag" --draft=false --prerelease=false --latest
+          fi
