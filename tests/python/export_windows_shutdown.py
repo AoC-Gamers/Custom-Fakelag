@@ -72,7 +72,7 @@ def export_trial(path):
                                    for match in re.findall(traffic_pattern, text)]
     out['code_observations'] = [{'time': e['time'], 'command': e['command'],
                                 'fill': e['observation'].get('fill'), 'lag': e['observation'].get('lag'),
-                                'custom_fakelag_loaded': any(m['name'].lower() == 'custom_fakelag.ext.dll' for m in e['observation'].get('modules', []))}
+                                'custom_fakelag_loaded': any(m['name'].lower() in ('custom_fakelag.ext.dll', 'custom_fakelag.ext.2.l4d2.dll') for m in e['observation'].get('modules', []))}
                                for e in r.get('events', []) if e.get('command') and e.get('observation')
                                and not e['command'].startswith('kickid ')]
     if r.get('scenario') == 'detached':

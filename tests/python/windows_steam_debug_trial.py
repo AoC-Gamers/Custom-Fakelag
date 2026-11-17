@@ -222,7 +222,7 @@ def main():
         snapshot=observe(console.process.pid); result['ready_observation']=snapshot
         names={m['name'].lower() for m in snapshot['modules']}
         effective={'mm':'metamod.2.l4d2.dll' in names,'sm':'sourcemod.2.l4d2.dll' in names,
-            'observer':a.dll.name.lower() in names,'cf':'custom_fakelag.ext.dll' in names,'dh':'dhooks.ext.dll' in names}
+            'observer':a.dll.name.lower() in names,'cf':bool({'custom_fakelag.ext.dll', 'custom_fakelag.ext.2.l4d2.dll'} & set(names)),'dh':'dhooks.ext.dll' in names}
         expected=dict(mm=a.row!='A',sm=a.row!='A',observer=a.row=='C',cf=False,dh=False)
         result['effective_components']=effective
         assert effective==expected,(effective,expected)

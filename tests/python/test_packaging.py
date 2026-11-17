@@ -15,7 +15,22 @@ class PackageTests(unittest.TestCase):
                 with self.assertRaises(ValueError): c.validate(files,'linux')
     def test_platform_inventory(self):
         linux=c.inventory('linux');windows=c.inventory('windows')
-        self.assertIn('addons/sourcemod/extensions/custom_fakelag.ext.so',linux)
-        self.assertNotIn('addons/sourcemod/extensions/custom_fakelag.ext.dll',linux)
-        self.assertIn('addons/sourcemod/extensions/custom_fakelag.ext.dll',windows)
+        self.assertIn('addons/sourcemod/extensions/custom_fakelag.ext.2.l4d2.so',linux)
+        self.assertNotIn('addons/sourcemod/extensions/custom_fakelag.ext.2.l4d2.dll',linux)
+        self.assertIn('addons/sourcemod/extensions/custom_fakelag.ext.2.l4d2.dll',windows)
         self.assertFalse(any('runtime/' in x or x.endswith('.sp') for x in linux))
+
+    def test_legacy_binary_is_not_installable(self):
+        expected = c.inventory('linux')
+        legacy = 'addons/sourcemod/extensions/custom_fakelag.ext.so'
+        files = dict.fromkeys(expected, b'')
+        files[legacy] = files.pop('addons/sourcemod/extensions/custom_fakelag.ext.2.l4d2.so')
+        with self.assertRaisesRegex(ValueError, 'Artifact mismatch'):
+            c.validate(files, 'linux')
+
+    def test_observer_accepts_canonical_and_historical_names(self):
+        from export_windows_load_order import module
+        for name in ('custom_fakelag.ext.dll', 'custom_fakelag.ext.2.l4d2.dll'):
+            record = {'name': name}
+            self.assertIs(module({'observation': {'modules': [record]}}, 'custom_fakelag.ext.dll'), record)
+        self.assertIsNone(module({'observation': {'modules': [{'name': 'other.dll'}]}}, 'custom_fakelag.ext.dll'))

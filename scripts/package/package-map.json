@@ -21,8 +21,8 @@
         },
         "extensions": {
           "files": [
-            "custom_fakelag.ext.dll",
-            "custom_fakelag.ext.so"
+            "custom_fakelag.ext.2.l4d2.dll",
+            "custom_fakelag.ext.2.l4d2.so"
           ]
         },
         "scripting": {

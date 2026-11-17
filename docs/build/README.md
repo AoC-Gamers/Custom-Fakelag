@@ -24,3 +24,7 @@ custom-fakelag-latest-linux/windows.zip; los tags v* conservan su versión.
 Cambian los nombres antiguos con plataforma antes del canal: actualizar enlaces.
 Release local genera ZIP sin publicar. El workflow publica únicamente ramas
 principales/develop o tags versionados, tras validar ambas plataformas.
+
+El binario nativo conserva el nombre generado por AMBuild: custom_fakelag.ext.2.l4d2.so
+o custom_fakelag.ext.2.l4d2.dll. No se renombra al empaquetar. Antes de actualizar,
+descargar y retirar la antigua copia sin sufijo de juego para evitar duplicados.

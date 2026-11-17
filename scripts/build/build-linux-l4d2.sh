@@ -143,22 +143,10 @@ fi
 popd > /dev/null
 
 PACKAGE_DIR="$BUILD_DIR/package/addons/sourcemod/extensions"
-CANONICAL_EXT_DIR="$PACKAGE_DIR"
-if [[ "$EXTENSION_BUCKET" != "root" ]]; then
-  CANONICAL_EXT_DIR="$PACKAGE_DIR/$EXTENSION_BUCKET"
-  mkdir -p "$CANONICAL_EXT_DIR"
-fi
-CANONICAL_EXT_BIN="$CANONICAL_EXT_DIR/$EXTENSION_STEM.ext.so"
-EXT_BIN="$(find "$PACKAGE_DIR" -maxdepth 1 -type f -name "$EXTENSION_STEM.ext*.so" | head -n 1)"
-
-if [[ -z "$EXT_BIN" || ! -f "$EXT_BIN" ]]; then
-  echo "Build completed but no $EXTENSION_STEM extension binary was found in $PACKAGE_DIR." >&2
+EXT_BIN="$PACKAGE_DIR/$EXTENSION_STEM.ext.2.l4d2.so"
+if [[ ! -f "$EXT_BIN" ]]; then
+  echo "Missing canonical L4D2 extension: $EXT_BIN" >&2
   exit 1
-fi
-
-if [[ "$EXT_BIN" != "$CANONICAL_EXT_BIN" ]]; then
-  mv "$EXT_BIN" "$CANONICAL_EXT_BIN"
-  EXT_BIN="$CANONICAL_EXT_BIN"
 fi
 
 cat <<EOF

@@ -29,8 +29,9 @@ def redact(text, names=()):
     return re.sub(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', address, text)
 
 def module(row, name):
+    names = {name, 'custom_fakelag.ext.2.l4d2.dll'} if name == 'custom_fakelag.ext.dll' else {name}
     return next((m for m in row.get('observation', {}).get('modules', [])
-                 if m['name'].lower() == name), None)
+                 if m['name'].lower() in names), None)
 
 def last_fields(console, marker):
     lines = [line for line in console.splitlines() if marker in line]

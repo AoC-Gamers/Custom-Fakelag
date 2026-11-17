@@ -155,7 +155,7 @@ def main():
         effective = {'metamod': 'metamod.2.l4d2.dll' in names,
                      'sourcemod': 'sourcemod.2.l4d2.dll' in names,
                      'dhooks': 'dhooks.ext.dll' in names,
-                     'custom_fakelag': 'custom_fakelag.ext.dll' in names,
+                     'custom_fakelag': bool({'custom_fakelag.ext.dll', 'custom_fakelag.ext.2.l4d2.dll'} & set(names)),
                      'fill_detour': result['ready_observation']['fill']['bytes'].startswith('e9')}
         expected = {'metamod': a.row != 'A', 'sourcemod': a.row != 'A',
                     'dhooks': a.row in 'CDEFG', 'custom_fakelag': a.row in 'EFG',
@@ -193,7 +193,7 @@ def main():
                     before = observe(console.process.pid)
                     record('sm exts unload ' + str(int(ids[-1])))
                     after = observe(console.process.pid)
-                    if any(m['name'].lower() == 'custom_fakelag.ext.dll' for m in after['modules']):
+                    if any(m['name'].lower() in ('custom_fakelag.ext.dll', 'custom_fakelag.ext.2.l4d2.dll') for m in after['modules']):
                         raise RuntimeError('Custom-Fakelag did not actually unload')
                     if after['lag']['bytes'][:10] != '558bec5157': raise RuntimeError('Lag entry not restored on unload')
                     if after['fill']['bytes'] != before['fill']['bytes']: raise RuntimeError('Left4DHooks Fill entry changed during CF unload')

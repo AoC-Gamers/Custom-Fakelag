@@ -27,7 +27,7 @@ Usa el ZIP de la plataforma adecuada o compílalo según
 [desarrollo local](docs/build/development.md). Copia `addons/` sobre el servidor y
 actualiza **extensión, plugin e includes juntos**. El paquete contiene:
 
-- `extensions/custom_fakelag.ext.so` o `.ext.dll`.
+- `extensions/custom_fakelag.ext.2.l4d2.so` o `.ext.2.l4d2.dll`.
 - `plugins/player_fakelag.smx`, sus includes públicos propios.
 - `addons/sourcemod/gamedata/custom_fakelag.games.txt` y traducciones.
 
@@ -120,3 +120,8 @@ Los ZIP de canal usan `custom-fakelag-develop-linux.zip`,
 `custom-fakelag-develop-windows.zip`, `custom-fakelag-latest-linux.zip` y
 `custom-fakelag-latest-windows.zip`. Los enlaces antiguos con plataforma antes
 del canal deberán actualizarse cuando se publique la migración.
+
+Al actualizar desde los paquetes antiguos, descargar la extensión y retirar
+`custom_fakelag.ext.so` o `custom_fakelag.ext.dll` antes de instalar el binario
+canónico de la misma plataforma. Conservar una sola copia evita cargas duplicadas.
+El nombre lógico de carga y los includes públicos permanecen iguales.

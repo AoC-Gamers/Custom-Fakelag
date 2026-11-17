@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Los binarios conservan el nombre AMBuild `custom_fakelag.ext.2.l4d2.so/dll`; retirar las copias antiguas al actualizar.
+
+
 - Repositorio organizado por responsabilidad; Make comparte operaciones con CI.
 - Instaladores sin informes de ejecución ni fuentes internas, con validación de contenido y arquitectura por plataforma.
 - Nombres de canal uniformes con plataforma al final; actualizar enlaces antiguos.

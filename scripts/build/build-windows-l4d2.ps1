@@ -176,17 +176,9 @@ finally {
 }
 
 $packageDir = Join-Path $buildDir "package\addons\sourcemod\extensions"
-$extBin = Get-ChildItem $packageDir -Filter "$extensionStem.ext*.dll" | Select-Object -First 1 -ExpandProperty FullName
-if (-not $extBin) {
-  throw "Build completed but no $extensionStem extension binary was found in $packageDir."
-}
-
-$canonicalExtDir = if ($extensionBucket -eq "root") { $packageDir } else { Join-Path $packageDir $extensionBucket }
-New-Item -ItemType Directory -Force $canonicalExtDir | Out-Null
-$canonicalExtBin = Join-Path $canonicalExtDir "$extensionStem.ext.dll"
-if ($extBin -ne $canonicalExtBin) {
-  Move-Item $extBin $canonicalExtBin -Force
-  $extBin = $canonicalExtBin
+$extBin = Join-Path $packageDir "$extensionStem.ext.2.l4d2.dll"
+if (-not (Test-Path -LiteralPath $extBin -PathType Leaf)) {
+  throw "Missing canonical L4D2 extension: $extBin"
 }
 
 Write-Host "Build complete."
