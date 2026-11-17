@@ -41,3 +41,24 @@ class PackageTests(unittest.TestCase):
             with self.assertRaises(ValueError): c.validate_pe(payload)
         pe = bytearray(64); pe[:2] = b'MZ'; pe[60:64] = (65535).to_bytes(4,'little')
         with self.assertRaises(ValueError): c.validate_pe(pe)
+
+    def test_native_headers_validate_machine_and_optional_header(self):
+        # Exercise both installer architectures on any host, including PE32
+        # success and rejection after a valid DOS/PE signature.
+        elf = bytearray(20)
+        elf[:6] = b'\x7fELF\x01\x01'
+        elf[18:20] = (3).to_bytes(2, 'little')
+        c.validate_elf(elf)
+        elf[18:20] = (62).to_bytes(2, 'little')
+        with self.assertRaisesRegex(ValueError, 'ELF32 i386'):
+            c.validate_elf(elf)
+        pe = bytearray(90)
+        pe[:2] = b'MZ'
+        pe[60:64] = (64).to_bytes(4, 'little')
+        pe[64:68] = b'PE\0\0'
+        pe[68:70] = (0x14c).to_bytes(2, 'little')
+        pe[88:90] = (0x10b).to_bytes(2, 'little')
+        c.validate_pe(pe)
+        pe[88:90] = (0x20b).to_bytes(2, 'little')
+        with self.assertRaisesRegex(ValueError, 'PE32 i386'):
+            c.validate_pe(pe)
