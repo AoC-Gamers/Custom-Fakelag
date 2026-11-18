@@ -35,3 +35,12 @@ El ZIP incluye el README de instalación generado desde el README raíz,
 `LICENSE` y `CHANGELOG.md`. Para archivos de fuente sin Git, `SOURCE_REVISION` admite
 el SHA completo de la fuente cuando se conoce. Revisa la [procedencia](licensing.md)
 antes de publicar.
+
+## Runners de CI
+
+Activar `L4D2_EXT_LINUX_RUNNER` y `L4D2_EXT_WINDOWS_RUNNER` como variables de
+organización de GitHub Actions con acceso a este repositorio. Los jobs
+`linux-runner` y `windows-runner` comprueban su presencia y comparten la
+etiqueta con dependencias, compilación y empaquetado nativos. Si el valor falta
+o contiene solo espacios, el job de validación falla antes del build. La
+etiqueta también distingue las cachés de dependencias nativas.

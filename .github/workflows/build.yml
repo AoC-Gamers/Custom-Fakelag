@@ -18,6 +18,40 @@ permissions:
   contents: read
 
 jobs:
+  linux-runner:
+    runs-on: ubuntu-22.04
+    outputs:
+      label: ${{ steps.runner.outputs.label }}
+    steps:
+      - name: Validate L4D2 Linux runner
+        id: runner
+        shell: bash
+        env:
+          L4D2_EXT_LINUX_RUNNER: ${{ vars.L4D2_EXT_LINUX_RUNNER }}
+        run: |
+          if [[ -z "${L4D2_EXT_LINUX_RUNNER//[[:space:]]/}" ]]; then
+            echo "::error::L4D2_EXT_LINUX_RUNNER is missing or blank. Configure it in AoC-Gamers and grant access to Custom-Fakelag."
+            exit 1
+          fi
+          printf 'label=%s\n' "$L4D2_EXT_LINUX_RUNNER" >> "$GITHUB_OUTPUT"
+
+  windows-runner:
+    runs-on: ubuntu-22.04
+    outputs:
+      label: ${{ steps.runner.outputs.label }}
+    steps:
+      - name: Validate L4D2 Windows runner
+        id: runner
+        shell: bash
+        env:
+          L4D2_EXT_WINDOWS_RUNNER: ${{ vars.L4D2_EXT_WINDOWS_RUNNER }}
+        run: |
+          if [[ -z "${L4D2_EXT_WINDOWS_RUNNER//[[:space:]]/}" ]]; then
+            echo "::error::L4D2_EXT_WINDOWS_RUNNER is missing or blank. Configure it in AoC-Gamers and grant access to Custom-Fakelag."
+            exit 1
+          fi
+          printf 'label=%s\n' "$L4D2_EXT_WINDOWS_RUNNER" >> "$GITHUB_OUTPUT"
+
   deps-smx:
     runs-on: ubuntu-22.04
     outputs:
@@ -95,7 +129,8 @@ jobs:
           retention-days: 1
 
   deps-exts-linux:
-    runs-on: ubuntu-22.04
+    runs-on: ${{ needs.linux-runner.outputs.label }}
+    needs: [linux-runner]
     outputs:
       cache-key: ${{ steps.cache-key.outputs.key }}
 
@@ -113,8 +148,10 @@ jobs:
       - name: Resolve dependency cache key
         id: cache-key
         shell: bash
+        env:
+          NATIVE_RUNNER_LABEL: ${{ needs.linux-runner.outputs.label }}
         run: |
-          echo "key=exts-linux-deps-${{ runner.os }}-${{ hashFiles('scripts/deps/fetch-linux-deps.sh', 'scripts/build/build-linux-l4d2.sh', 'scripts/package/package-map.json', 'Makefile', 'configure.py', 'AMBuildScript', 'AMBuilder', 'PackageScript') }}" >> "$GITHUB_OUTPUT"
+          echo "key=exts-linux-deps-$NATIVE_RUNNER_LABEL-${{ runner.os }}-${{ hashFiles('scripts/deps/fetch-linux-deps.sh', 'scripts/build/build-linux-l4d2.sh', 'scripts/package/package-map.json', 'Makefile', 'configure.py', 'AMBuildScript', 'AMBuilder', 'PackageScript') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore dependency cache
         id: deps-cache-restore
@@ -136,8 +173,8 @@ jobs:
           key: ${{ steps.cache-key.outputs.key }}
 
   build-exts-linux:
-    runs-on: ubuntu-22.04
-    needs: deps-exts-linux
+    runs-on: ${{ needs.linux-runner.outputs.label }}
+    needs: [linux-runner, deps-exts-linux]
 
     steps:
       - name: Checkout repository
@@ -185,7 +222,8 @@ jobs:
           retention-days: 1
 
   deps-exts-windows:
-    runs-on: windows-2022
+    runs-on: ${{ needs.windows-runner.outputs.label }}
+    needs: [windows-runner]
     outputs:
       cache-key: ${{ steps.cache-key.outputs.key }}
 
@@ -201,8 +239,10 @@ jobs:
       - name: Resolve dependency cache key
         id: cache-key
         shell: bash
+        env:
+          NATIVE_RUNNER_LABEL: ${{ needs.windows-runner.outputs.label }}
         run: |
-          echo "key=exts-windows-deps-${{ runner.os }}-${{ hashFiles('scripts/deps/fetch-windows-deps.ps1', 'scripts/build/build-windows-l4d2.ps1', 'scripts/package/package-map.json', 'Makefile', 'configure.py', 'AMBuildScript', 'AMBuilder', 'PackageScript') }}" >> "$GITHUB_OUTPUT"
+          echo "key=exts-windows-deps-$NATIVE_RUNNER_LABEL-${{ runner.os }}-${{ hashFiles('scripts/deps/fetch-windows-deps.ps1', 'scripts/build/build-windows-l4d2.ps1', 'scripts/package/package-map.json', 'Makefile', 'configure.py', 'AMBuildScript', 'AMBuilder', 'PackageScript') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore dependency cache
         id: deps-cache-restore
@@ -224,8 +264,8 @@ jobs:
           key: ${{ steps.cache-key.outputs.key }}
 
   build-exts-windows:
-    runs-on: windows-2022
-    needs: deps-exts-windows
+    runs-on: ${{ needs.windows-runner.outputs.label }}
+    needs: [windows-runner, deps-exts-windows]
 
     steps:
       - name: Checkout repository
@@ -278,8 +318,8 @@ jobs:
           retention-days: 1
 
   release-linux:
-    runs-on: ubuntu-22.04
-    needs: [build-smx, build-exts-linux]
+    runs-on: ${{ needs.linux-runner.outputs.label }}
+    needs: [linux-runner, build-smx, build-exts-linux]
     outputs:
       basename: ${{ steps.meta.outputs.basename }}
       release-tag: ${{ steps.meta.outputs.release_tag }}
@@ -332,8 +372,8 @@ jobs:
           retention-days: 14
 
   release-windows:
-    runs-on: windows-2022
-    needs: [build-smx, build-exts-windows]
+    runs-on: ${{ needs.windows-runner.outputs.label }}
+    needs: [windows-runner, build-smx, build-exts-windows]
     outputs:
       basename: ${{ steps.meta.outputs.basename }}
 
