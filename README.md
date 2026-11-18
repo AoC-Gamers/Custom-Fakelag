@@ -29,7 +29,7 @@ actualiza **extensión, plugin e includes juntos**. El paquete contiene:
 
 - `extensions/custom_fakelag.ext.2.l4d2.so` o `.ext.2.l4d2.dll`.
 - `plugins/player_fakelag.smx`, sus includes públicos propios.
-- `addons/sourcemod/gamedata/custom_fakelag.games.txt` y traducciones.
+- `gamedata/custom_fakelag.games.txt` y traducciones.
 
 Las rutas anteriores son relativas a `addons/sourcemod/`. El diagnóstico Steam
 es independiente y se publica como artefacto separado, sin autoload.
@@ -38,6 +38,19 @@ Entorno comprobado: SourceMod 1.12 y Metamod 1.12. El plugin usa BuiltinVotes y
 Left4DHooks; la extensión puede utilizarse desde otros plugins sin esa capa.
 Los includes externos de desarrollo y el runtime de Valve no se distribuyen
 dentro del ZIP. En Linux se requieren las bibliotecas i386 del gameserver.
+
+Al actualizar desde los paquetes antiguos, descargar la extensión y retirar
+`custom_fakelag.ext.so` o `custom_fakelag.ext.dll` antes de instalar el binario
+canónico de la misma plataforma. Conservar una sola copia evita cargas duplicadas.
+El nombre lógico de carga y los includes públicos permanecen iguales.
+
+Comprueba en la consola del servidor que `sm exts list` muestre la extensión y
+`sm plugins list` muestre `player_fakelag`. Si la instalación falla, restaura
+el conjunto anterior de archivos desde tu respaldo. La copia de `addons/` puede
+sobrescribir recursos propios modificados. El motor debe corresponder a las
+[identidades verificadas de L4D2 2.2.4.3 x86](docs/engine/sdk-runtime-references.md).
+Las versiones actuales conservan el sufijo de juego en los binarios y bloquean
+fakelag con `sv_lan 1` salvo que se habilite la excepción de pruebas.
 
 ## Configuración
 
@@ -120,8 +133,3 @@ Los ZIP de canal usan `custom-fakelag-develop-linux.zip`,
 `custom-fakelag-develop-windows.zip`, `custom-fakelag-latest-linux.zip` y
 `custom-fakelag-latest-windows.zip`. Los enlaces antiguos con plataforma antes
 del canal deberán actualizarse cuando se publique la migración.
-
-Al actualizar desde los paquetes antiguos, descargar la extensión y retirar
-`custom_fakelag.ext.so` o `custom_fakelag.ext.dll` antes de instalar el binario
-canónico de la misma plataforma. Conservar una sola copia evita cargas duplicadas.
-El nombre lógico de carga y los includes públicos permanecen iguales.

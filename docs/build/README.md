@@ -30,3 +30,8 @@ o custom_fakelag.ext.2.l4d2.dll. No se renombra al empaquetar. Antes de actualiz
 descargar y retirar la antigua copia sin sufijo de juego para evitar duplicados.
 
 Análisis C/C++ explícito y cobertura: [Sonar local](sonar.md), fuera de CI.
+
+El ZIP incluye el README de instalación generado desde el README raíz,
+`LICENSE` y `CHANGELOG.md`. Para archivos de fuente sin Git, `SOURCE_REVISION` admite
+el SHA completo de la fuente cuando se conoce. Revisa la [procedencia](licensing.md)
+antes de publicar.

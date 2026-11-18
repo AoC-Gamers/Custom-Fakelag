@@ -48,30 +48,7 @@
   },
   "documentation": [
     "README.md",
-    "CHANGELOG.md",
     "LICENSE",
-    "docs/README.md",
-    "docs/build/README.md",
-    "docs/build/build-system.md",
-    "docs/build/dependencies.md",
-    "docs/build/development.md",
-    "docs/console-tables/console-table-library-design.md",
-    "docs/engine/sdk-runtime-references.md",
-    "docs/engine/windows-load-order.md",
-    "docs/lan-policy/lan-policy.md",
-    "docs/latency/player-fakelag-latency-reference.md",
-    "docs/packet-loss/custom-fakelag-packet-loss-modes.md",
-    "docs/packet-loss/player-fakelag-packet-loss-model.md",
-    "docs/testing/README.md",
-    "docs/testing/balance-report-validation.md",
-    "docs/testing/engine-integration-validation.md",
-    "docs/testing/fakelag-safety-validation.md",
-    "docs/testing/plugin-pending-validation.md",
-    "docs/testing/validation.md",
-    "docs/testing/windows-engine-validation.md",
-    "docs/testing/windows-load-order-validation.md",
-    "docs/testing/windows-shutdown-investigation.md",
-    "docs/testing/windows-steam-debug-validation.md",
-    "docs/build/sonar.md"
+    "CHANGELOG.md"
   ]
 }

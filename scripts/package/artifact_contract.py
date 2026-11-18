@@ -6,6 +6,9 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[2]
 
 
+INSTALLER_DOCUMENTATION = {'README.md', 'LICENSE', 'CHANGELOG.md'}
+
+
 def relative(name):
     p = PurePosixPath(name)
     if p.is_absolute() or '\\' in name or any(x in ('', '.', '..') for x in name.split('/')):
@@ -22,6 +25,9 @@ ALLOWED_NODES = {'', 'addons/', 'addons/sourcemod/', 'addons/sourcemod/plugins/'
 def validate_manifest(manifest):
     if set(manifest) != {'build', 'artifact', 'documentation'}:
         raise ValueError('Unknown or missing manifest keys')
+    documentation = manifest['documentation']
+    if set(documentation) != INSTALLER_DOCUMENTATION or len(documentation) != len(INSTALLER_DOCUMENTATION):
+        raise ValueError('Expected only README.md, LICENSE and CHANGELOG.md in package documentation')
     if manifest['build'] != {'plugins': {'root': ['player_fakelag']}, 'extensions': {'root': ['custom_fakelag']}}:
         raise ValueError('Unsupported build inventory')
     artifact = manifest['artifact']
@@ -91,13 +97,21 @@ def validate_pe(data):
         raise ValueError('Expected PE32 i386')
 
 
+def validate_license(data):
+    reference = (ROOT / 'LICENSE').read_bytes()
+    if not reference.strip() or data != reference:
+        raise ValueError('Missing, empty or altered LICENSE')
+
+
 def validate(files, platform):
     expected = inventory(platform)
     if set(files) != expected:
         raise ValueError(f'Artifact mismatch: missing={sorted(expected-set(files))}, extra={sorted(set(files)-expected)}')
     for name, data in files.items():
         relative(name)
-        if name.endswith('.so'):
+        if name == 'LICENSE':
+            validate_license(data)
+        elif name.endswith('.so'):
             validate_elf(data)
         elif name.endswith('.dll'):
             validate_pe(data)

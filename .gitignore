@@ -42,6 +42,9 @@ build/
 .deps/
 dist/
 .env
+.env.*
+!.env.example
+!.env.secret.example
 __pycache__/
 
 # Temporary directories

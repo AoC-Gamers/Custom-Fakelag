@@ -62,3 +62,16 @@ class PackageTests(unittest.TestCase):
         pe[88:90] = (0x20b).to_bytes(2, 'little')
         with self.assertRaisesRegex(ValueError, 'PE32 i386'):
             c.validate_pe(pe)
+
+    def test_installer_documentation_and_license(self):
+        manifest = {'build': {}, 'artifact': {}, 'documentation': ['README.md', 'CHANGELOG.md']}
+        with self.assertRaisesRegex(ValueError, 'package documentation'):
+            c.validate_manifest(manifest)
+        for platform in ('linux', 'windows'):
+            self.assertEqual(
+                {path for path in c.inventory(platform) if not path.startswith('addons/')},
+                {'README.md', 'LICENSE', 'CHANGELOG.md'},
+            )
+        c.validate_license((c.ROOT / 'LICENSE').read_bytes())
+        with self.assertRaisesRegex(ValueError, 'altered LICENSE'):
+            c.validate_license(b'')

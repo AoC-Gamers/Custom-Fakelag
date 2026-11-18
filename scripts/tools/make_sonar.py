@@ -45,19 +45,26 @@ def file_settings(path, allowed):
             continue
         key, value = pair
         if path.name == ".env" and key == "SONAR_TOKEN":
-            raise SonarError("SONAR_TOKEN debe estar en env.secret o en el entorno.")
+            raise SonarError("SONAR_TOKEN debe estar en .env.secret o en el entorno.")
         if key in allowed:
             values.setdefault(key, value)
     return values
 
 
-def configuration(root):
+def configuration(root, *, analyze=True):
     # Explicit environment wins; files remain data, never shell commands.
     env = os.environ.copy()
-    for name, allowed in ((".env", SETTINGS), ("env.secret", {"SONAR_TOKEN"})):
-        for key, value in file_settings(root / name, allowed).items():
-            env.setdefault(key, value)
+    for key, value in file_settings(root / ".env", SETTINGS).items():
+        env.setdefault(key, value)
+    if not analyze or "SONAR_TOKEN" in env:
+        return env
+
+    secret = root / ".env.secret"
+    if secret.is_file() and os.name == "posix" and secret.stat().st_mode & 0o077:
+        raise SonarError("Restringe los permisos del fichero de credenciales a 600.")
+    env.update(file_settings(secret, {"SONAR_TOKEN"}))
     return env
+
 
 def scanner_context(env):
     base = env.get("SONAR_HOST_URL", "").strip().rstrip("/")
@@ -68,7 +75,7 @@ def scanner_context(env):
     if url.scheme == "http" and url.hostname not in {"localhost", "127.0.0.1", "::1"}:
         raise SonarError("Usa HTTPS para SonarQube; HTTP solo se admite en loopback.")
     if not env.get("SONAR_TOKEN", "").strip():
-        raise SonarError("Falta SONAR_TOKEN en env.secret o en el entorno.")
+        raise SonarError("Falta SONAR_TOKEN en .env.secret o en el entorno.")
     wait = env.get("SONAR_QUALITY_GATE_WAIT", "true")
     timeout = env.get("SONAR_QUALITY_GATE_TIMEOUT", "300")
     if wait not in {"true", "false"} or not timeout.isdecimal() or int(timeout) < 1:
@@ -287,7 +294,7 @@ def coverage_reports(root, env):
 
 
 def run(action, default_database, root=ROOT):
-    env = configuration(root)
+    env = configuration(root, analyze=action == "analyze")
     context = scanner_context(env) if action == "analyze" else None
     if context:
         coverage_reports(root, env)

@@ -36,7 +36,8 @@ class SonarToolingTests(unittest.TestCase):
                       "arguments": ["g++", "-m32", "-DTEST=1", "-c", str(self.source)]}
         self.db.write_text(json.dumps([self.entry]))
         (self.root / ".env").write_text('SONAR_HOST_URL=https://sonar.example.invalid\nSONAR_PROJECT_KEY=Custom-Fakelag-test\n')
-        (self.root / "env.secret").write_text('SONAR_TOKEN="test-only-token"\n')
+        (self.root / ".env.secret").write_text('SONAR_TOKEN="test-only-token"\n')
+        (self.root / ".env.secret").chmod(0o600)
         self.bin = self.root / "bin"
         self.bin.mkdir()
         self.trace = self.root / "calls.jsonl"
@@ -230,7 +231,7 @@ sys.exit(int(os.environ.get('SCANNER_CODE','0')))
 
     def test_local_cppcheck_needs_no_server_or_token(self):
         (self.root / '.env').unlink()
-        (self.root / 'env.secret').unlink()
+        (self.root / '.env.secret').unlink()
         result = self.make('sonar-cppcheck')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual([c['tool'] for c in self.calls()], ['cppcheck'])
@@ -259,6 +260,24 @@ sys.exit(int(os.environ.get('SCANNER_CODE','0')))
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(self.calls(), [])
                 self.assertNotIn('test-only-token', result.stdout + result.stderr)
+
+    def test_legacy_secret_file_is_ignored(self):
+        (self.root / '.env.secret').rename(self.root / 'env.secret')
+        result = self.make()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Falta SONAR_TOKEN en .env.secret', result.stderr)
+        self.assertEqual(self.calls(), [])
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX file permissions')
+    def test_cppcheck_does_not_read_token_file_with_insecure_permissions(self):
+        (self.root / '.env.secret').chmod(0o644)
+        rejected = self.make()
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('600', rejected.stderr)
+        self.assertEqual(self.calls(), [])
+        local = self.make(target='sonar-cppcheck')
+        self.assertEqual(local.returncode, 0, local.stderr)
+        self.assertIsNone(self.calls()[-1]['token'])
 
     def test_nonsecret_file_cannot_supply_token(self):
         with (self.root / '.env').open('a') as f:

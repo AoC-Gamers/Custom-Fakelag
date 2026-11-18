@@ -54,9 +54,12 @@ e informe. Fuentes o informes alterados/fallidos bloquean el uso del recibo.
 
 .env contiene SONAR_HOST_URL, SONAR_PROJECT_KEY, SONAR_PROJECT_NAME y las rutas
 SONAR_COVERAGE_RECEIPT/SONAR_PYTHON_COVERAGE_RECEIPT a los recibos anteriores.
-.env.example contiene valores genéricos. SONAR_TOKEN va únicamente en env.secret
+.env.example contiene valores genéricos. SONAR_TOKEN va únicamente en .env.secret
 (modo 600) o el entorno. Las variables exportadas prevalecen y no se evalúa shell.
 El token se transmite por entorno al scanner, sin argumentos ni informes públicos.
+El token del entorno tiene prioridad sobre `.env.secret`. Si aún usas el
+nombre anterior `env.secret`, renómbralo manualmente y conserva sus permisos
+restrictivos. Cppcheck local funciona sin credenciales.
 HTTPS es obligatorio salvo ensayos por loopback. No reutilizar tokens de otro
 proyecto ni crear credenciales como efecto de configurar esta integración.
 

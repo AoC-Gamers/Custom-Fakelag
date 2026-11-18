@@ -2,53 +2,52 @@
 
 ## [Unreleased]
 
-- Integración local de Sonar C/C++ con contexto de compilación x86, cobertura medida y controles de procedencia, fuera del pipeline de CI.
+**Antes de actualizar.** Sustituye la extensión, el plugin y los includes juntos.
+Retira el binario antiguo si todavía usa el nombre sin sufijo de juego.
+Consulta la [guía de instalación](README.md#instalación).
 
+### Añadido
 
-- Los binarios conservan el nombre AMBuild `custom_fakelag.ext.2.l4d2.so/dll`; retirar las copias antiguas al actualizar.
+- **API:** `CFakeLag_IsLanBlocked` permite consultar el bloqueo LAN.
+  `CFakeLag_OnLanPolicyChanged` y `CFakeLagChange_LanPolicy` permiten detectar
+  el cambio de política y su efecto en los perfiles.
+- **Diagnóstico:** Steam Lifecycle Debug puede instalarse por separado. Carga
+  desactivado por defecto.
 
+### Cambiado
 
-- Repositorio organizado por responsabilidad; Make comparte operaciones con CI.
-- Instaladores sin informes de ejecución ni fuentes internas, con validación de contenido y arquitectura por plataforma.
-- Nombres de canal uniformes con plataforma al final; actualizar enlaces antiguos.
-- Los informes de balance consultan perfiles efectivos tras forwards y vetos.
+- **Política LAN:** `sv_lan 1` bloquea perfiles nuevos y limpia perfiles, colas,
+  persistencia y votos pendientes. Volver a `sv_lan 0` no restaura perfiles.
+  `sm_custom_fakelag_allow_lan 1` habilita una excepción explícita para pruebas.
+- **Compatibilidad:** la extensión admite las identidades verificadas del motor
+  L4D2 2.2.4.3 x86 en Linux y Windows. En Windows admite carga y recarga con
+  Left4DHooks activo para el motor comprobado.
+- **Distribución:** los binarios usan `custom_fakelag.ext.2.l4d2.so` y
+  `custom_fakelag.ext.2.l4d2.dll`. Los ZIP de canal usan el nombre
+  `custom-fakelag-<canal>-<plataforma>.zip`. Actualiza los enlaces de descarga y
+  los instaladores que todavía busquen el orden anterior.
+- **Instalador:** la documentación del ZIP incluye la guía de instalación,
+  `LICENSE` y `CHANGELOG.md`.
 
+### Corregido
 
-### Política LAN
+- **Balance:** los informes muestran los perfiles efectivos después de que un
+  forward modifique o vete el cambio. Un veto cancela la operación sin notificar
+  éxito ni provocar un error nativo.
+- **Pérdida de paquetes:** Gilbert-Elliott respeta la pérdida configurada y trata
+  explícitamente los extremos de 0 % y 100 %.
+- **Extensión:** la cola conserva sus propias copias de los paquetes para evitar
+  liberar memoria del motor. La sesión, el cambio de mapa y el reset limpian
+  los datos pendientes.
+- **Descarga:** si no se puede retirar el hook, se propaga el fallo y se conserva
+  la infraestructura necesaria para evitar callbacks a código liberado.
 
-- `sv_lan 1` bloquea perfiles nuevos y limpia perfiles, colas y pérdida, con
-  prioridad sobre always-on. Excepción de pruebas: `sm_custom_fakelag_allow_lan 1`,
-  desactivada por defecto. Volver a LAN 0 no restaura perfiles.
-- `player_fakelag` descarta persistencia, snapshots y votos pendientes.
-  API nueva: `CFakeLag_IsLanBlocked`, `CFakeLag_OnLanPolicyChanged` y razón
-  `CFakeLagChange_LanPolicy`. [Contrato](docs/lan-policy/lan-policy.md).
+### Desarrollo
 
-### Integración y seguridad
-
-- Adaptadores para los motores Linux x86 y Windows PE32 identificados de L4D2
-  2.2.4.3; otros módulos rechazan activación. El adaptador Windows admite el
-  detour conocido de Left4DHooks sin descargarlo ni modificarlo.
-- Memoria prestada del motor separada del payload propietario de las colas;
-  capacidad verificada por asignación, lector reconstruido por su caller.
-- Colas acotadas y limpieza por sesión, desconexión, edición, reset y mapa.
-  Validación de latencia finita, pérdida y resultados de forwards.
-- Veto normal separado de errores. Los listeners se ejecutan con referencias
-  estables para detectar excepciones y rechazar mutaciones reentrantes.
-- Retirada del hook comprobada: un fallo conserva infraestructura y se propaga.
-  Una descarga irrecuperable aborta antes de dejar callbacks en código liberado.
-- Bernoulli y Gilbert-Elliott, con extremos 0/100 % y calibración coherente.
-
-### Herramientas y validación
-
-- Build automatizado de SMX y extensiones x86, paquetes por plataforma y canales
-  `channel/develop` / `channel/latest`.
-- Diagnóstico independiente Steam Lifecycle Debug, apagado por defecto, con
-  ConVar, muestreo de solo lectura y logs acotados; artefactos separados.
-- Regresiones Linux ASan/UBSan, Windows nativas, SourcePawn y herramientas Python
-  en CI. La [matriz](docs/testing/validation.md) distingue esos checks del runtime.
-- En Windows se validaron API con cliente real, ambos órdenes con Left4DHooks
-  activo y recargas. La investigación de cierre reprodujo el fallo también en
-  vanilla con LAN 1; los antiguos `0xc0000409` siguen sin atribución completa.
+- **Compilación:** Make ofrece las mismas fases de compilación, pruebas y
+  empaquetado en local y en CI.
+- **Sonar:** análisis C/C++ y cobertura mediante Make, fuera de CI. Si guardas el
+  token en un archivo local, usa `.env.secret`.
 
 ## 2.0.0
 
