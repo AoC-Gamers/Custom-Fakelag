@@ -1,11 +1,22 @@
 # Referencias SDK y runtime
 
-Actualizado: 2026-11-14. Existe un adaptador real para **un módulo Linux x86
-identificado**. Windows tiene un adaptador PE32 para una identidad exacta, comprobado en SRCDS
+El adaptador Linux x86 admite dos identidades exactas de motor dedicado.
+Windows tiene un adaptador PE32 para una identidad exacta, comprobado en SRCDS
 Windows con UDP y un cliente Steam real. Otros módulos se rechazan.
 Véase [validación Windows](../testing/windows-engine-validation.md). No hay una ConVar que salte esta comprobación.
 
 ## Identidad del motor soportado
+
+Los builds Linux `23990100` y `26770943` comparten versión de juego `2.2.4.3`.
+Para `26770943`, la comparación de las rutinas de recepción y de sus datos
+referenciados conservó el layout, la asignación del buffer y la reconstrucción
+del lector. El adaptador usa un RVA distinto para `NET_LagPacket`. El puntero a
+la tabla y el reloj conservan sus RVAs.
+
+Se pueden verificar el SHA-256 y los símbolos de ambos módulos con
+`make test-linux-engine ENGINE_MODULE=/ruta/al/engine_srv.so`.
+
+### Evidencia del build 23990100
 
 - Juego: L4D2 `2.2.4.3`, Steam build `23990100`; exe build `10097`,
   `Jun 30 2026 18:39:58`.

@@ -10,9 +10,16 @@ ROOT = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('module', type=Path)
 args = parser.parse_args()
-manifest = json.loads((ROOT / 'tests/fixtures/linux-engine-2.2.4.3.json').read_text())
 data = args.module.read_bytes()
-if hashlib.sha256(data).hexdigest() != manifest['sha256']:
+digest = hashlib.sha256(data).hexdigest()
+fixtures = ROOT / 'tests/fixtures'
+manifests = (
+    json.loads((fixtures / name).read_text()) for name in (
+        'linux-engine-2.2.4.3.json', 'linux-engine-26770943.json'
+    )
+)
+manifest = next((entry for entry in manifests if entry['sha256'] == digest), None)
+if manifest is None:
     raise SystemExit('Unsupported engine SHA-256')
 if data[:6] != b'\x7fELF\x01\x01':
     raise SystemExit('Expected ELF32 little endian')
@@ -33,4 +40,5 @@ for section in sections:
 for name, address in manifest['symbols'].items():
     if symbols.get(name) != int(address, 16):
         raise SystemExit(f'Symbol mismatch: {name}')
-print(json.dumps({'sha256': manifest['sha256'], 'architecture': 'ELF32 i386', 'symbols_verified': manifest['symbols']}, indent=2))
+print(json.dumps({'sha256': digest, 'steam_build_id': manifest['steam_build_id'],
+                  'architecture': 'ELF32 i386', 'symbols_verified': manifest['symbols']}, indent=2))
