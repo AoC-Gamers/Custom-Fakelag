@@ -34,7 +34,7 @@ help:
 		'  sonar-build sonar-cppcheck sonar (explicit local analysis)' \
 		'  sonar-tooling-test coverage-tooling-test test-coverage test-python-coverage' \
 		'  deps-sonar deps-test-coverage (explicit tool preparation)' \
-		'  test-python test-consumers test-diagnostic-linux test-diagnostic-windows' \
+		'  test-python test-consumers test-linux-engine test-diagnostic-linux test-diagnostic-windows' \
 		'  test-sdk-windows test-collection-windows validate-artifact-linux validate-artifact-windows' \
 		'  make help                  Show this help message' \
 		'  make deps-smx              Fetch SourceMod package deps for plugin compilation' \
@@ -90,6 +90,11 @@ release-windows:
 
 test-exts-linux:
 	bash "$(ROOT_DIR)/scripts/ci/run-linux-tests.sh"
+
+.PHONY: test-linux-engine
+test-linux-engine:
+	@test -n "$(ENGINE_MODULE)" || { echo 'Set ENGINE_MODULE to an engine_srv.so to verify' >&2; exit 2; }
+	$(PYTHON) "$(ROOT_DIR)/tests/python/verify_linux_engine.py" "$(ENGINE_MODULE)"
 
 test-exts-windows:
 	pwsh -File "$(ROOT_DIR)/scripts/ci/run-windows-tests.ps1"

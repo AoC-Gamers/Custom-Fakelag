@@ -20,8 +20,9 @@ Consulta la [guía de instalación](README.md#instalación).
   persistencia y votos pendientes. Volver a `sv_lan 0` no restaura perfiles.
   `sm_custom_fakelag_allow_lan 1` habilita una excepción explícita para pruebas.
 - **Compatibilidad:** la extensión admite las identidades verificadas del motor
-  L4D2 2.2.4.3 x86 en Linux y Windows. En Windows admite carga y recarga con
-  Left4DHooks activo para el motor comprobado.
+  L4D2 2.2.4.3 x86 en Linux y Windows. En Linux admite también el build de Steam
+  26770943. En Windows admite carga y recarga con Left4DHooks activo para el
+  motor comprobado.
 - **Distribución:** los binarios usan `custom_fakelag.ext.2.l4d2.so` y
   `custom_fakelag.ext.2.l4d2.dll`. Los ZIP de canal usan el nombre
   `custom-fakelag-<canal>-<plataforma>.zip`. Actualiza los enlaces de descarga y

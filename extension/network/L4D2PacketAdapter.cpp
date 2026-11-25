@@ -64,12 +64,22 @@ bool L4D2PacketAdapter::Initialize(const void* lagFunction, const double* netTim
     if (std::memcmp(header->e_ident, ELFMAG, SELFMAG) || header->e_ident[EI_CLASS] != ELFCLASS32 ||
         header->e_machine != EM_386 || header->e_phentsize != sizeof(Elf32_Phdr) || header->e_phnum > 128) return false;
     const auto* program = reinterpret_cast<const Elf32_Phdr*>(base + header->e_phoff);
-    // engine_srv.so: PatchVersion 2.2.4.3, build-id from the local server volume.
-    static constexpr unsigned char buildId[] = {
-        0xb1,0x52,0x43,0x91,0x70,0xaf,0x08,0x1a,0x0d,0x31,
-        0xfc,0x35,0x73,0x64,0xa4,0xcd,0x4c,0xaa,0x56,0xac
+    struct LinuxEngineProfile {
+        unsigned char buildId[20];
+        uintptr_t lagFunctionRva;
+        uintptr_t netTimeRva;
+        uintptr_t packetTableRva;
+        const char* diagnostic;
     };
-    bool identified = false;
+    static constexpr LinuxEngineProfile profiles[] = {
+        {{0xb1,0x52,0x43,0x91,0x70,0xaf,0x08,0x1a,0x0d,0x31,
+          0xfc,0x35,0x73,0x64,0xa4,0xcd,0x4c,0xaa,0x56,0xac},
+         0x1b36b0, 0x39c140, 0x39c4d0, "Identified Linux x86 engine (23990100)"},
+        {{0x4b,0x8e,0x22,0xa6,0xfb,0x77,0x94,0x7a,0xd4,0x1b,
+          0x05,0xd7,0x4f,0x2b,0xcb,0x5a,0x7e,0x0e,0x24,0x24},
+         0x1b3730, 0x39c140, 0x39c4d0, "Identified Linux x86 engine (26770943)"},
+    };
+    const LinuxEngineProfile* identified = nullptr;
     for (unsigned i = 0; i < header->e_phnum; ++i) {
         if (program[i].p_type != PT_NOTE) continue;
         const auto* cursor = base + program[i].p_vaddr;
@@ -81,13 +91,19 @@ bool L4D2PacketAdapter::Initialize(const void* lagFunction, const double* netTim
             const size_t dataBytes = (size_t(note->n_descsz) + 3) & ~size_t(3);
             if (nameBytes > size_t(end - cursor) || dataBytes > size_t(end - cursor) - nameBytes) break;
             if (note->n_type == NT_GNU_BUILD_ID && note->n_namesz == 4 &&
-                !std::memcmp(cursor, "GNU", 4) && note->n_descsz == sizeof(buildId) &&
-                !std::memcmp(cursor + nameBytes, buildId, sizeof(buildId))) identified = true;
+                !std::memcmp(cursor, "GNU", 4) && note->n_descsz == sizeof(profiles[0].buildId)) {
+                for (const auto& profile : profiles) {
+                    if (!std::memcmp(cursor + nameBytes, profile.buildId, sizeof(profile.buildId))) {
+                        identified = &profile;
+                        break;
+                    }
+                }
+            }
             cursor += nameBytes + dataBytes;
         }
     }
-    if (!identified || lagFunction != base + 0x1b36b0 ||
-        reinterpret_cast<const void*>(netTime) != base + 0x39c140) return false;
+    if (!identified || lagFunction != base + identified->lagFunctionRva ||
+        reinterpret_cast<const void*>(netTime) != base + identified->netTimeRva) return false;
     // Check SDK field placement using a real object, without offsetof on its
     // non-standard-layout reader type or fabricated packing directives.
     netpacket_t packet;
@@ -100,10 +116,10 @@ bool L4D2PacketAdapter::Initialize(const void* lagFunction, const double* netTim
         reinterpret_cast<uintptr_t>(&packet.wiresize) - object != 68 ||
         reinterpret_cast<uintptr_t>(&packet.stream) - object != 72 ||
         reinterpret_cast<uintptr_t>(&packet.pNext) - object != 76) return false;
-    m_PacketTable = reinterpret_cast<_netpacket_t**>(const_cast<unsigned char*>(base + 0x39c4d0));
+    m_PacketTable = reinterpret_cast<_netpacket_t**>(const_cast<unsigned char*>(base + identified->packetTableRva));
     m_NetTime = netTime;
     m_Validated = true;
-    m_Diagnostic = "Identified Linux x86 engine";
+    m_Diagnostic = identified->diagnostic;
     return true;
 #elif defined(_WIN32) && !defined(UNIT_TEST) && UINTPTR_MAX == UINT32_MAX
     static_assert(sizeof(netadr_t) == 12 && alignof(netadr_t) == 4, "identified Windows netadr ABI");
